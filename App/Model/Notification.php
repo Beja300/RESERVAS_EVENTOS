@@ -8,6 +8,6 @@ class Notification{
 
   private int $idNotification;
   private int $idRol;
-    
+  
 
 }
