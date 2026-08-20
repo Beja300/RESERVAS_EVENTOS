@@ -1,22 +1,32 @@
 <?php
 
 require_once __DIR__ . '/Role.php';
+
 /**
  * ENTIDAD: Admin
  *
- * "extends Role" -- hereda pk, nombre, correo, contrasena, telefono y
- * activo de la clase Role, y agrega SOLO lo propio de tbroladmin.
+ * "extends Role" -- hereda pk, nombre, correo, contraseña, teléfono y
+ * activo de la clase Role, y agrega SOLO lo propio de tbroleadmin.
  */
 class Admin extends Role
 {
-
   private int $idAdmin;
   private bool $isAdminActive;
   private int $idRol;
   private string $imageAdmin;
 
-  public function __construct(int $id, string $name, string $email, string $password, bool $isActive, int $idAdmin, bool $isAdminActive, int $idRol, string $imageAdmin, ?string $phoneNumber = null)
-  {
+  public function __construct(
+    int $id,
+    string $name,
+    string $email,
+    string $password,
+    bool $isActive,
+    int $idAdmin,
+    bool $isAdminActive,
+    int $idRol,
+    string $imageAdmin,
+    ?string $phoneNumber = null
+  ) {
     parent::__construct($id, $name, $email, $password, $phoneNumber, $isActive);
     $this->idAdmin = $idAdmin;
     $this->isAdminActive = $isAdminActive;
@@ -24,15 +34,17 @@ class Admin extends Role
     $this->imageAdmin = $imageAdmin;
   }
 
-  //Getters
+  // Getters
   public function getIdAdmin(): int
   {
     return $this->idAdmin;
   }
+
   public function getIsAdminActive(): bool
   {
     return $this->isAdminActive;
   }
+
   public function getIdRol(): int
   {
     return $this->idRol;
@@ -43,7 +55,7 @@ class Admin extends Role
     return $this->imageAdmin;
   }
 
-  //Setters
+  // Setters
   public function setIdAdmin(int $idAdmin): void
   {
     $this->idAdmin = $idAdmin;

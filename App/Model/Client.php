@@ -1,22 +1,30 @@
 <?php
 
-
 require_once __DIR__ . '/Role.php';
 
 /**
  * ENTIDAD: Client
- * Mismo patrón que Admin: hereda de Role, agrega lo propio de tbrolcliente.
+ * Mismo patrón que Admin: hereda de Role, agrega lo propio de tbroleclient.
  */
 class Client extends Role
 {
-
   private int $idClient;
   private bool $isClientActive;
   private int $idRol;
   private string $imageClient;
 
-  public function __construct(int $id, string $name, string $email, string $password, bool $isActive, int $idClient, bool $isClientActive, int $idRol, string $imageClient, ?string $phoneNumber = null)
-  {
+  public function __construct(
+    int $id,
+    string $name,
+    string $email,
+    string $password,
+    bool $isActive,
+    int $idClient,
+    bool $isClientActive,
+    int $idRol,
+    string $imageClient,
+    ?string $phoneNumber = null
+  ) {
     parent::__construct($id, $name, $email, $password, $phoneNumber, $isActive);
     $this->idClient = $idClient;
     $this->isClientActive = $isClientActive;
@@ -24,11 +32,12 @@ class Client extends Role
     $this->imageClient = $imageClient;
   }
 
-  //Getters
+  // Getters
   public function getIdClient(): int
   {
     return $this->idClient;
   }
+
   public function getIsClientActive(): bool
   {
     return $this->isClientActive;
@@ -44,7 +53,7 @@ class Client extends Role
     return $this->imageClient;
   }
 
-  //Setters
+  // Setters
   public function setIdClient(int $idClient): void
   {
     $this->idClient = $idClient;

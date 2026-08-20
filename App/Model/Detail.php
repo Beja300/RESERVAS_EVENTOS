@@ -3,17 +3,25 @@
 /**
  * ENTIDAD: Detail — una línea del "carrito" de una reserva.
  */
-class Detail {
+class Detail
+{
+  private int $idDetail;
+  private int $idClientBooking;
+  private int $idLocalService;
+  private int $quantityDetail;
+  private float $unitPrice;
+  private float $discount;
+  private bool $isActiveDetail;
 
- private int $idDetail;
- private int $idClientBooking;
- private int $idLocalService;
- private int $quantityDetail; 
- private float $unitPrice;
- private float $discount;
- private bool $isActiveDetail;
-
-  public function __construct($idDetail, $idClientBooking, $idLocalService, $quantityDetail, $unitPrice, $discount, $isActiveDetail) {
+  public function __construct(
+    int $idDetail,
+    int $idClientBooking,
+    int $idLocalService,
+    int $quantityDetail,
+    float $unitPrice,
+    float $discount,
+    bool $isActiveDetail
+  ) {
     $this->idDetail = $idDetail;
     $this->idClientBooking = $idClientBooking;
     $this->idLocalService = $idLocalService;
@@ -23,65 +31,75 @@ class Detail {
     $this->isActiveDetail = $isActiveDetail;
   }
 
-
-  //Getters
-  public function getIdDetail() {
+  // Getters
+  public function getIdDetail(): int
+  {
     return $this->idDetail;
   }
 
-  public function getIdClientBooking() {
+  public function getIdClientBooking(): int
+  {
     return $this->idClientBooking;
   }
 
-  public function getIdLocalService() {
+  public function getIdLocalService(): int
+  {
     return $this->idLocalService;
   }
 
-  public function getQuantityDetail() {
+  public function getQuantityDetail(): int
+  {
     return $this->quantityDetail;
   }
 
-  public function getUnitPrice() {
+  public function getUnitPrice(): float
+  {
     return $this->unitPrice;
   }
 
-  public function getDiscount() {
+  public function getDiscount(): float
+  {
     return $this->discount;
   }
 
-  public function getIsActiveDetail() {
+  public function getIsActiveDetail(): bool
+  {
     return $this->isActiveDetail;
   }
 
-  //Setters
-
-  public function setIdDetail($idDetail) {
-    $this->idDetail = $idDetail;  
+  // Setters
+  public function setIdDetail(int $idDetail): void
+  {
+    $this->idDetail = $idDetail;
   }
 
-  public function setIdClientBooking($idClientBooking) {
+  public function setIdClientBooking(int $idClientBooking): void
+  {
     $this->idClientBooking = $idClientBooking;
   }
 
-  public function setIdLocalService($idLocalService) {
+  public function setIdLocalService(int $idLocalService): void
+  {
     $this->idLocalService = $idLocalService;
   }
 
-  public function setQuantityDetail($quantityDetail) {
+  public function setQuantityDetail(int $quantityDetail): void
+  {
     $this->quantityDetail = $quantityDetail;
   }
 
-  public function setUnitPrice($unitPrice) {
+  public function setUnitPrice(float $unitPrice): void
+  {
     $this->unitPrice = $unitPrice;
   }
 
-  public function setDiscount($discount) {
+  public function setDiscount(float $discount): void
+  {
     $this->discount = $discount;
   }
 
-  public function setIsActiveDetail($isActiveDetail) {
+  public function setIsActiveDetail(bool $isActiveDetail): void
+  {
     $this->isActiveDetail = $isActiveDetail;
   }
-
-  
 }

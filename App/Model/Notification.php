@@ -3,10 +3,8 @@
 /**
  * ENTIDAD: Notification — un mensaje dirigido a un Role (cualquier subtipo).
  */
-
 class Notification
 {
-
   private int $idNotification;
   private int $idRol;
   private string $messageNotification;
@@ -14,11 +12,8 @@ class Notification
   private bool $isRead;
   private bool $isActive;
 
-
-
   public function __construct(int $idNotification, int $idRol, string $messageNotification, string $dateNotification, bool $isActive, bool $isRead = false)
   {
-
     $this->idNotification = $idNotification;
     $this->idRol = $idRol;
     $this->messageNotification = $messageNotification;
@@ -28,7 +23,6 @@ class Notification
   }
 
   // Getters
-
   public function getIdNotification(): int
   {
     return $this->idNotification;
@@ -60,7 +54,6 @@ class Notification
   }
 
   // Setters
-
   public function setIdNotification(int $idNotification): void
   {
     $this->idNotification = $idNotification;

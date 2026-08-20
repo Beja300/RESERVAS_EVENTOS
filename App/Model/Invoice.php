@@ -3,18 +3,23 @@
 /**
  * ENTIDAD: Invoice — la factura generada para una reserva (1:1).
  */
-
-class Invoice extends Model
+class Invoice
 {
     private int $idInvoice;
     private int $idClientBooking;
     private int $idPaymentMethod;
-    private date $dateInvoice;
+    private string $dateInvoice;
     private string $statusInvoice;
-    private bool $isActiveInvoice; 
+    private bool $isActiveInvoice;
 
-
-    public function __construct($idInvoice, $idClientBooking, $idPaymentMethod, $dateInvoice, $statusInvoice, $isActiveInvoice) {
+    public function __construct(
+        int $idInvoice,
+        int $idClientBooking,
+        int $idPaymentMethod,
+        string $dateInvoice,
+        string $statusInvoice,
+        bool $isActiveInvoice
+    ) {
         $this->idInvoice = $idInvoice;
         $this->idClientBooking = $idClientBooking;
         $this->idPaymentMethod = $idPaymentMethod;
@@ -23,58 +28,65 @@ class Invoice extends Model
         $this->isActiveInvoice = $isActiveInvoice;
     }
 
-
-    //Getters
-
-    public function getIdInvoice() {
+    // Getters
+    public function getIdInvoice(): int
+    {
         return $this->idInvoice;
     }
 
-    public function getIdClientBooking() {
+    public function getIdClientBooking(): int
+    {
         return $this->idClientBooking;
     }
 
-    public function getIdPaymentMethod() {
+    public function getIdPaymentMethod(): int
+    {
         return $this->idPaymentMethod;
     }
 
-    public function getDateInvoice() {
+    public function getDateInvoice(): string
+    {
         return $this->dateInvoice;
     }
 
-    public function getStatusInvoice() {
+    public function getStatusInvoice(): string
+    {
         return $this->statusInvoice;
     }
 
-    public function getIsActiveInvoice() {
+    public function getIsActiveInvoice(): bool
+    {
         return $this->isActiveInvoice;
     }
 
-    //Setters
-
-    public function setIdInvoice($idInvoice) {
-        $this->idInvoice = $idInvoice;  
+    // Setters
+    public function setIdInvoice(int $idInvoice): void
+    {
+        $this->idInvoice = $idInvoice;
     }
 
-    public function setIdClientBooking($idClientBooking) {
-        $this->idClientBooking = $idClientBooking;  
+    public function setIdClientBooking(int $idClientBooking): void
+    {
+        $this->idClientBooking = $idClientBooking;
     }
 
-    public function setIdPaymentMethod($idPaymentMethod) {
-        $this->idPaymentMethod = $idPaymentMethod;  
+    public function setIdPaymentMethod(int $idPaymentMethod): void
+    {
+        $this->idPaymentMethod = $idPaymentMethod;
     }
 
-    public function setDateInvoice($dateInvoice) {
-        $this->dateInvoice = $dateInvoice;  
+    public function setDateInvoice(string $dateInvoice): void
+    {
+        $this->dateInvoice = $dateInvoice;
     }
 
-    public function setStatusInvoice($statusInvoice) {
-        $this->statusInvoice = $statusInvoice;  
+    public function setStatusInvoice(string $statusInvoice): void
+    {
+        $this->statusInvoice = $statusInvoice;
     }
 
-
-    public function setIsActiveInvoice($isActiveInvoice) {
-        $this->isActiveInvoice = $isActiveInvoice;  
+    public function setIsActiveInvoice(bool $isActiveInvoice): void
+    {
+        $this->isActiveInvoice = $isActiveInvoice;
     }
-
 }
