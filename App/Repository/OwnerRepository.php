@@ -41,7 +41,7 @@ class OwnerRepository
       $stmtRole->execute([
         ':name' => $owner->getName(),
         ':email' => $owner->getEmail(),
-        ':password' => $owner->getPassword(),
+        ':password' => password_hash($owner->getPassword(), PASSWORD_DEFAULT),
         ':phoneNumber' => $owner->getPhoneNumber(),
         ':isActive' => $owner->getIsActive()
       ]);

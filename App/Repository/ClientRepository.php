@@ -41,7 +41,7 @@ class ClientRepository
       $stmtRole->execute([
         ':name' => $client->getName(),
         ':email' => $client->getEmail(),
-        ':password' => $client->getPassword(),
+        ':password' => password_hash($client->getPassword(), PASSWORD_DEFAULT),
         ':phoneNumber' => $client->getPhoneNumber(),
         ':isActive' => $client->getIsActive()
       ]);

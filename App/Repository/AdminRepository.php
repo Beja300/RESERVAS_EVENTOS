@@ -42,7 +42,7 @@ class AdminRepository
             $stmtRole->execute([
                 ':name' => $admin->getName(),
                 ':email' => $admin->getEmail(),
-                ':password' => $admin->getPassword(),
+                ':password' => password_hash($admin->getPassword(), PASSWORD_DEFAULT),
                 ':phoneNumber' => $admin->getPhoneNumber(),
                 ':isActive' => $admin->getIsActive()
             ]);
@@ -83,7 +83,6 @@ class AdminRepository
             $this->connection->commit();
 
             return true;
-
         } catch (PDOException $e) {
 
             $this->connection->rollBack();
@@ -229,7 +228,6 @@ class AdminRepository
             $this->connection->commit();
 
             return true;
-
         } catch (PDOException $e) {
 
             $this->connection->rollBack();
@@ -273,7 +271,6 @@ class AdminRepository
             $this->connection->commit();
 
             return true;
-
         } catch (PDOException $e) {
 
             $this->connection->rollBack();
@@ -319,7 +316,6 @@ class AdminRepository
             $this->connection->commit();
 
             return true;
-
         } catch (PDOException $e) {
 
             $this->connection->rollBack();
