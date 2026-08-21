@@ -1,8 +1,8 @@
 <?php
 
 require_once __DIR__ . '/BusinessRuleException.php';
-require_once __DIR__ . '/../Model/LocationRepository.php';
-require_once __DIR__ . '/../Model/Location.php';
+require_once __DIR__ . '/../Repository/LocationRepository.php';
+require_once __DIR__ . '/../Repository/Location.php';
 
 class LocationService
 {
