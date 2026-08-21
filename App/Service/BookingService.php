@@ -14,9 +14,11 @@ class BookingService
 
     public function __construct()
     {
-        $this->bookingRepo = new BookingRepository();
-        $this->detailRepo = new DetailRepository();
-        $this->venueRepo = new VenueRepository();
+        $connection = DataBase::getConnection();
+
+        $this->bookingRepo = new BookingRepository($connection);
+        $this->detailRepo = new DetailRepository($connection);
+        $this->venueRepo = new VenueRepository($connection);
     }
 
     public function createBooking(
@@ -33,7 +35,7 @@ class BookingService
 
         $venue = $this->venueRepo->findById($venuePk);
 
-        if ($venue === null || !$venue->isActive()) {
+        if ($venue === null || !$venue->getIsActive()) {
             throw new BusinessRuleException(
                 'Este local no está disponible para reservas.'
             );
@@ -51,11 +53,12 @@ class BookingService
         }
 
         $booking = new Booking(
+            0,
             $clientPk,
             $venuePk,
             $date,
-            $eventType,
-            status: 'pendiente'
+            'pendiente',
+            false
         );
 
         return $this->bookingRepo->save($booking);
@@ -105,7 +108,7 @@ class BookingService
         }
 
         if (
-            $booking->getStatus() !== 'pendiente'
+            $booking->getBookingState() !== 'pendiente'
         ) {
             throw new BusinessRuleException(
                 'Solo se pueden cancelar reservas pendientes.'
