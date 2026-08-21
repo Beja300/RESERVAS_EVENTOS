@@ -33,7 +33,7 @@ class AdminService
     // =========================================================
     // DESACTIVAR
     // =========================================================
-    public function deactivate(int $idRole, string $targetType): void
+    public function desactivate(int $idRole, string $targetType): void
     {
         if ($targetType === 'admin' && $this->countActiveAdmins() <= 1) {
             throw new BusinessRuleException(

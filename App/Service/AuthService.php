@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/BusinessRuleException.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../Model/RoleRepository.php';
 require_once __DIR__ . '/../Model/AdminRepository.php';
 require_once __DIR__ . '/../Model/ClientRepository.php';
@@ -15,12 +16,17 @@ class AuthService
 
     public function __construct()
     {
-        $this->roleRepo = new RoleRepository();
-        $this->adminRepo = new AdminRepository();
-        $this->clientRepo = new ClientRepository();
-        $this->ownerRepo = new OwnerRepository();
+        $connection = DataBase::getConnection();
+
+        $this->roleRepo = new RoleRepository($connection);
+        $this->adminRepo = new AdminRepository($connection);
+        $this->clientRepo = new ClientRepository($connection);
+        $this->ownerRepo = new OwnerRepository($connection);
     }
 
+    // =========================================================
+    // VALIDACIONES
+    // =========================================================
     public function validateEmailIsUnique(string $email): void
     {
         if ($this->roleRepo->findByEmail($email) !== null) {
@@ -35,58 +41,113 @@ class AuthService
         }
     }
 
-    public function validatePhoneFormat(?string $phone): void
+    public function validatePhoneFormat(?string $phoneNumber): void
     {
-        if ($phone !== null && $phone !== '' && !preg_match('/^[0-9]{8}$/', $phone)) {
+        if ($phoneNumber !== null && $phoneNumber !== '' && !preg_match('/^[0-9]{8}$/', $phoneNumber)) {
             throw new BusinessRuleException("El teléfono debe tener 8 dígitos.");
         }
     }
 
-    public function registerClient(string $name, string $email, string $password, ?string $phone = null): Client
+
+    // =========================================================
+    // REGISTRAR CLIENTE
+    // =========================================================
+    public function registerClient(string $name, string $email, string $password, ?string $phoneNumber = null): Client
     {
         $this->validateEmailIsUnique($email);
         $this->validatePasswordStrength($password);
-        $this->validatePhoneFormat($phone);
+        $this->validatePhoneFormat($phoneNumber);
 
-        $client = new Client(name: $name, email: $email, password: $password, phone: $phone);
+        $client = new Client(
+            id: 0,
+            name: $name,
+            email: $email,
+            password: $password,
+            isActive: true,
+            idClient: 0,
+            isClientActive: true,
+            idRol: 1,
+            imageClient: '',
+            phoneNumber: $phoneNumber
+        );
+
         $this->clientRepo->save($client);
+
         return $this->clientRepo->findByEmail($email);
     }
 
+
+    // =========================================================
+    // REGISTRAR PROPIETARIO
+    // =========================================================
     public function registerOwner(
         string $name,
         string $email,
         string $password,
-        string $ownerName,
+        string $ownerFirstName,
         ?string $ownerLastName = null,
-        ?string $phone = null,
+        ?string $phoneNumber = null,
         ?string $ownerAlias = null,
         ?string $ownerIdentification = null
     ): Owner {
         $this->validateEmailIsUnique($email);
         $this->validatePasswordStrength($password);
-        $this->validatePhoneFormat($phone);
+        $this->validatePhoneFormat($phoneNumber);
 
         $owner = new Owner(
-            name: $name, email: $email, password: $password, ownerName: $ownerName,
-            ownerLastName: $ownerLastName, phone: $phone, ownerAlias: $ownerAlias,
-            ownerIdentification: $ownerIdentification
+            id: 0,
+            name: $name,
+            email: $email,
+            password: $password,
+            isActive: true,
+            idOwner: 0,
+            firstName: $ownerFirstName,
+            lastName: $ownerLastName ?? '',
+            alias: $ownerAlias ?? '',
+            identificationNumber: $ownerIdentification ?? '',
+            isOwnerActive: true,
+            idRol: 1,
+            imageOwner: '',
+            phoneNumber: $phoneNumber
         );
+
         $this->ownerRepo->save($owner);
+
         return $this->ownerRepo->findByEmail($email);
     }
 
-    public function registerAdmin(string $name, string $email, string $password, ?string $phone = null): Admin
-{
-    $this->validateEmailIsUnique($email);
-    $this->validatePasswordStrength($password);
-    $this->validatePhoneFormat($phone);
 
-    $admin = new Admin(name: $name, email: $email, password: $password, phone: $phone);
-    $this->adminRepo->save($admin);
-    return $this->adminRepo->findByEmail($email);
-}
+    // =========================================================
+    // REGISTRAR ADMIN
+    // =========================================================
+    public function registerAdmin(string $name, string $email, string $password, ?string $phoneNumber = null): Admin
+    {
+        $this->validateEmailIsUnique($email);
+        $this->validatePasswordStrength($password);
+        $this->validatePhoneFormat($phoneNumber);
 
+        $admin = new Admin(
+            id: 0,
+            name: $name,
+            email: $email,
+            password: $password,
+            isActive: true,
+            idAdmin: 0,
+            isAdminActive: true,
+            idRol: 1,
+            imageAdmin: '',
+            phoneNumber: $phoneNumber
+        );
+
+        $this->adminRepo->save($admin);
+
+        return $this->adminRepo->findByEmail($email);
+    }
+
+
+    // =========================================================
+    // LOGIN
+    // =========================================================
     /** @return array{type: string, user: Admin|Client|Owner} */
     public function login(string $email, string $password): array
     {
@@ -98,15 +159,19 @@ class AuthService
 
         foreach ($finders as $type => $find) {
             $user = $find();
+
             if ($user === null) {
                 continue;
             }
+
             if (!password_verify($password, $user->getPassword())) {
                 throw new BusinessRuleException("Correo o contraseña incorrectos.");
             }
-            if (!$user->isActive()) {
+
+            if (!$user->getIsActive()) {
                 throw new BusinessRuleException("Esta cuenta está desactivada.");
             }
+
             return ['type' => $type, 'user' => $user];
         }
 
