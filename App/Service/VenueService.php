@@ -2,16 +2,14 @@
 
 require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/LocationService.php';
-require_once __DIR__ . '/../Model/VenueRepository.php';
+require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Model/Venue.php';
 
-class VenueService
-{
+class VenueService {
     private VenueRepository $venueRepo;
     private LocationService $locationService;
 
-    public function __construct()
-    {
+    public function __construct() {
         $this->venueRepo = new VenueRepository();
         $this->locationService = new LocationService();
     }
@@ -40,8 +38,7 @@ class VenueService
         return $this->venueRepo->save($venue);
     }
 
-    public function validateAndUpdate(Venue $venue, string $name, ?string $type, ?int $capacity, ?string $image, bool $active): void
-    {
+    public function validateAndUpdate(Venue $venue, string $name, ?string $type, ?int $capacity, ?string $image, bool $active): void {
         if ($capacity !== null && $capacity <= 0) {
             throw new BusinessRuleException("La capacidad del local debe ser mayor a 0.");
         }
