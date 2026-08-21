@@ -1,5 +1,4 @@
 <?php
-
 require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/LocationService.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
@@ -9,9 +8,9 @@ class VenueService {
     private VenueRepository $venueRepo;
     private LocationService $locationService;
 
-    public function __construct() {
-        $this->venueRepo = new VenueRepository();
-        $this->locationService = new LocationService();
+    public function __construct(PDO $connection) {
+        $this->venueRepo = new VenueRepository($connection);
+        $this->locationService = new LocationService(new LocationRepository($connection));
     }
 
     public function validateAndCreate(
@@ -34,7 +33,17 @@ class VenueService {
 
         $locationPk = $this->locationService->validateAndCreate($province, $canton, $district, $locationDetail);
 
-        $venue = new Venue($ownerPk, $locationPk, $name, $type, $capacity, $image);
+        $venue = new Venue(
+            idVenue: 0, // lo asigna la BD (AUTO_INCREMENT), save() no lo usa
+            idOwner: $ownerPk,
+            idUbication: $locationPk,
+            nameVenue: $name,
+            typeVenue: $type ?? '',
+            capacityVenue: $capacity ?? 0,
+            imageVenue: $image ?? '',
+            isActive: true
+        );
+
         return $this->venueRepo->save($venue);
     }
 
@@ -42,11 +51,11 @@ class VenueService {
         if ($capacity !== null && $capacity <= 0) {
             throw new BusinessRuleException("La capacidad del local debe ser mayor a 0.");
         }
-        $venue->setName($name);
-        $venue->setType($type);
-        $venue->setCapacity($capacity);
-        $venue->setImage($image);
-        $venue->setActive($active);
+        $venue->setNameVenue($name);
+        $venue->setTypeVenue($type ?? $venue->getTypeVenue());
+        $venue->setCapacityVenue($capacity ?? $venue->getCapacityVenue());
+        $venue->setImageVenue($image ?? $venue->getImageVenue());
+        $venue->setIsActive($active);
         $this->venueRepo->update($venue);
     }
 }
