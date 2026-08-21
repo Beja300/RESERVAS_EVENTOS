@@ -11,14 +11,16 @@ class ClientService
 
     public function __construct()
     {
-        $this->clientRepo = new ClientRepository();
-        $this->bookingRepo = new BookingRepository();
+        $connection = DataBase::getConnection();
+
+        $this->clientRepo = new ClientRepository($connection);
+        $this->bookingRepo = new BookingRepository($connection);
     }
 
     public function assertCanBook(int $clientPk): void
     {
         $client = $this->clientRepo->findByClientPk($clientPk);
-        if ($client === null || !$client->isClientActive() || !$client->isActive()) {
+        if ($client === null || !$client->getIsClientActive() || !$client->getIsActive()) {
             throw new BusinessRuleException("Tu cuenta está desactivada; no puedes crear reservas.");
         }
     }
@@ -26,7 +28,7 @@ class ClientService
     public function assertOwnsBooking(int $clientPk, int $bookingPk): void
     {
         $booking = $this->bookingRepo->findById($bookingPk);
-        if ($booking === null || $booking->getClientFk() !== $clientPk) {
+        if ($booking === null || $booking->getIdClient() !== $clientPk) {
             throw new BusinessRuleException("No tienes permiso sobre esta reserva.");
         }
     }
