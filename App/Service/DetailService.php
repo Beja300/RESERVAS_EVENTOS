@@ -17,7 +17,7 @@ class DetailService {
         $this->detailRepo = new DetailRepository($connection);
         $this->serviceRepo = new ServiceRepository($connection);
         $this->bookingRepo = new BookingRepository($connection);
-        $this->serviceService = new ServiceService($connection);
+        $this->serviceService = new ServiceService(new ServiceRepository($connection));
     }
 
     public function addLine(int $bookingPk, int $servicePk, int $quantity): int {
