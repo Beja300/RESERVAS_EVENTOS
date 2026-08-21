@@ -1,7 +1,9 @@
 <?php
 
 require_once __DIR__ . '/BusinessRuleException.php';
-require_once __DIR__ . '/../Model/VenueRepository.php';
+require_once __DIR__ . '/../Repository/VenueRepository.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
+
 
 class OwnerService
 {
@@ -9,13 +11,13 @@ class OwnerService
 
     public function __construct()
     {
-        $this->venueRepo = new VenueRepository();
+        $this->venueRepo = new VenueRepository(DataBase::getConnection());
     }
 
     public function hasActiveVenue(int $ownerPk): bool
     {
         foreach ($this->venueRepo->findByOwner($ownerPk) as $venue) {
-            if ($venue->isActive()) {
+            if ($venue->getIsActive()) {
                 return true;
             }
         }
@@ -25,7 +27,7 @@ class OwnerService
     public function assertOwnsVenue(int $ownerPk, int $venuePk): void
     {
         $venue = $this->venueRepo->findById($venuePk);
-        if ($venue === null || $venue->getOwnerFk() !== $ownerPk) {
+        if ($venue === null || $venue->getIdOwner() !== $ownerPk) {
             throw new BusinessRuleException("No tienes permiso sobre este local.");
         }
     }

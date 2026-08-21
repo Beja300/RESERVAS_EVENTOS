@@ -1,8 +1,10 @@
 <?php
 
 require_once __DIR__ . '/BusinessRuleException.php';
-require_once __DIR__ . '/../Model/PaymentMethodRepository.php';
+require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
 require_once __DIR__ . '/../Model/PaymentMethod.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
+
 
 class PaymentMethodService
 {
@@ -10,7 +12,7 @@ class PaymentMethodService
 
     public function __construct()
     {
-        $this->paymentMethodRepo = new PaymentMethodRepository();
+        $this->paymentMethodRepo = new PaymentMethodRepository(DataBase::getConnection());
     }
 
     public function validateTypeIsUnique(string $type): void
@@ -25,7 +27,7 @@ class PaymentMethodService
     public function assertIsSelectable(int $paymentMethodPk): void
     {
         $method = $this->paymentMethodRepo->findById($paymentMethodPk);
-        if ($method === null || !$method->isActive()) {
+        if ($method === null || !$method->getIsActive()) {
             throw new BusinessRuleException("Este método de pago no está disponible.");
         }
     }
