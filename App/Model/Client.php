@@ -12,7 +12,6 @@ class Client extends Role
   private bool $isClientActive;
   private int $idRol;
   private string $imageClient;
-
   public function __construct(
     int $id,
     string $name,
