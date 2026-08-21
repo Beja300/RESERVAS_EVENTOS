@@ -1,6 +1,7 @@
 <?php
 
-require_once __DIR__ . '/../models/Service.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
+require_once __DIR__ . '/Service.php';
 
 class ServiceRepository
 {
@@ -14,86 +15,46 @@ class ServiceRepository
   // =========================================================
   // GUARDAR
   // =========================================================
-  public function saveService(Service $service): bool
-  {
-    try {
-      $sql = "
-                INSERT INTO tbservice (
-                    tbservicelocalid,
-                    tbservicename,
-                    tbservicetype,
-                    tbserviceprice,
-                    tbservicestate,
-                    tbserviceisactive
-                )
-                VALUES (
-                    :idLocal,
-                    :nameService,
-                    :typeService,
-                    :priceService,
-                    :stateService,
-                    :isActive
-                )
-            ";
-
-      $stmt = $this->connection->prepare($sql);
-
-      $stmt->execute([
-        ':idLocal' => $service->getIdLocal(),
-        ':nameService' => $service->getNameService(),
-        ':typeService' => $service->getTypeService(),
-        ':priceService' => $service->getPriceService(),
-        ':stateService' => $service->getStateService(),
-        ':isActive' => $service->getIsActive()
-      ]);
-
-      $service->setIdService((int) $this->connection->lastInsertId());
-
-      return true;
-    } catch (PDOException $e) {
-
-      return false;
-    }
-  }
-
-
-  // =========================================================
-  // OBTENER TODOS
-  // =========================================================
-  public function getAllService(): array
+  public function save(Service $service): int
   {
     $sql = "
-            SELECT
-                tbserviceid,
+            INSERT INTO tbservice (
                 tbservicelocalid,
                 tbservicename,
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
                 tbserviceisactive
-
-            FROM tbservice
-
-            ORDER BY tbservicename ASC
+            )
+            VALUES (
+                :idLocal,
+                :nameService,
+                :typeService,
+                :priceService,
+                :stateService,
+                :isActive
+            )
         ";
 
     $stmt = $this->connection->prepare($sql);
-    $stmt->execute();
 
-    $services = [];
+    $stmt->execute([
+      ':idLocal'      => $service->getIdLocal(),
+      ':nameService'  => $service->getNameService(),
+      ':typeService'  => $service->getTypeService(),
+      ':priceService' => $service->getPriceService(),
+      ':stateService' => $service->getStateService(),
+      ':isActive'     => $service->getIsActive()
+    ]);
 
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $services[] = $this->mapRowToService($row);
-    }
-
-    return $services;
+    return (int) $this->connection->lastInsertId();
   }
 
 
   // =========================================================
-  // OBTENER POR ID
+  // BUSCAR POR ID
   // =========================================================
-  public function getByIdService(int $idService): ?Service
+  public function findById(int $idService): ?Service
   {
     $sql = "
             SELECT
@@ -118,18 +79,15 @@ class ServiceRepository
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$row) {
-      return null;
-    }
-
-    return $this->mapRowToService($row);
+    return $row ? $this->mapRow($row) : null;
   }
 
 
   // =========================================================
-  // OBTENER POR LOCAL (servicios de un local, solo activos)
+  // OBTENER DISPONIBLES DE UN LOCAL (lo que ve el Cliente:
+  // solo aprobados y activos)
   // =========================================================
-  public function getByLocalService(int $idLocal): array
+  public function findAvailableByLocal(int $idLocal): array
   {
     $sql = "
             SELECT
@@ -144,9 +102,8 @@ class ServiceRepository
             FROM tbservice
 
             WHERE tbservicelocalid = :idLocal
+              AND tbservicestate = 'aprobado'
               AND tbserviceisactive = true
-
-            ORDER BY tbservicename ASC
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -155,20 +112,15 @@ class ServiceRepository
       ':idLocal' => $idLocal
     ]);
 
-    $services = [];
-
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $services[] = $this->mapRowToService($row);
-    }
-
-    return $services;
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
 
   // =========================================================
-  // OBTENER POR ESTADO (solicitado / aprobado / rechazado)
+  // OBTENER PENDIENTES (lo que ve el Admin: todos los servicios
+  // en estado 'solicitado')
   // =========================================================
-  public function getByStateService(string $stateService): array
+  public function findPending(): array
   {
     $sql = "
             SELECT
@@ -182,68 +134,51 @@ class ServiceRepository
 
             FROM tbservice
 
-            WHERE tbservicestate = :stateService
-              AND tbserviceisactive = true
+            WHERE tbservicestate = 'solicitado'
+        ";
 
-            ORDER BY tbservicename ASC
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute();
+
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+  }
+
+
+  // =========================================================
+  // OBTENER POR LOCAL (lo que ve el Owner en su panel: TODOS
+  // sus servicios, cualquier estado)
+  // =========================================================
+  public function findByLocal(int $idLocal): array
+  {
+    $sql = "
+            SELECT
+                tbserviceid,
+                tbservicelocalid,
+                tbservicename,
+                tbservicetype,
+                tbserviceprice,
+                tbservicestate,
+                tbserviceisactive
+
+            FROM tbservice
+
+            WHERE tbservicelocalid = :idLocal
         ";
 
     $stmt = $this->connection->prepare($sql);
 
     $stmt->execute([
-      ':stateService' => $stateService
+      ':idLocal' => $idLocal
     ]);
 
-    $services = [];
-
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $services[] = $this->mapRowToService($row);
-    }
-
-    return $services;
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
 
   // =========================================================
-  // EDITAR
+  // CAMBIAR ESTADO
   // =========================================================
-  public function updateService(Service $service): bool
-  {
-    try {
-      $sql = "
-                UPDATE tbservice
-                SET
-                    tbservicelocalid = :idLocal,
-                    tbservicename = :nameService,
-                    tbservicetype = :typeService,
-                    tbserviceprice = :priceService,
-                    tbservicestate = :stateService,
-                    tbserviceisactive = :isActive
-                WHERE tbserviceid = :idService
-            ";
-
-      $stmt = $this->connection->prepare($sql);
-
-      return $stmt->execute([
-        ':idLocal' => $service->getIdLocal(),
-        ':nameService' => $service->getNameService(),
-        ':typeService' => $service->getTypeService(),
-        ':priceService' => $service->getPriceService(),
-        ':stateService' => $service->getStateService(),
-        ':isActive' => $service->getIsActive(),
-        ':idService' => $service->getIdService()
-      ]);
-    } catch (PDOException $e) {
-
-      return false;
-    }
-  }
-
-
-  // =========================================================
-  // CAMBIAR ESTADO (aprobar / rechazar)
-  // =========================================================
-  public function updateStateService(int $idService, string $stateService): bool
+  public function updateState(int $idService, string $stateService): bool
   {
     $sql = "
             UPDATE tbservice
@@ -255,66 +190,51 @@ class ServiceRepository
 
     return $stmt->execute([
       ':stateService' => $stateService,
-      ':idService' => $idService
+      ':idService'    => $idService
     ]);
   }
 
 
   // =========================================================
-  // DESACTIVAR
+  // EDITAR
   // =========================================================
-  public function deactivateService(int $idService): bool
+  public function update(Service $service): bool
   {
     $sql = "
             UPDATE tbservice
-            SET tbserviceisactive = false
+            SET
+                tbservicename = :nameService,
+                tbservicetype = :typeService,
+                tbserviceprice = :priceService,
+                tbserviceisactive = :isActive
             WHERE tbserviceid = :idService
         ";
 
     $stmt = $this->connection->prepare($sql);
 
     return $stmt->execute([
-      ':idService' => $idService
+      ':nameService'  => $service->getNameService(),
+      ':typeService'  => $service->getTypeService(),
+      ':priceService' => $service->getPriceService(),
+      ':isActive'     => $service->getIsActive(),
+      ':idService'    => $service->getIdService()
     ]);
-  }
-
-
-  // =========================================================
-  // ELIMINAR
-  // =========================================================
-  public function deleteService(int $idService): bool
-  {
-    try {
-      $sql = "
-                DELETE FROM tbservice
-                WHERE tbserviceid = :idService
-            ";
-
-      $stmt = $this->connection->prepare($sql);
-
-      return $stmt->execute([
-        ':idService' => $idService
-      ]);
-    } catch (PDOException $e) {
-
-      return false;
-    }
   }
 
 
   // =========================================================
   // MAPEO FILA -> OBJETO
   // =========================================================
-  private function mapRowToService(array $row): Service
+  private function mapRow(array $row): Service
   {
     return new Service(
-      (int) $row['tbserviceid'],
-      (int) $row['tbservicelocalid'],
-      $row['tbservicename'],
-      $row['tbservicetype'],
-      (float) $row['tbserviceprice'],
-      $row['tbservicestate'],
-      (bool) $row['tbserviceisactive']
+      idService: (int) $row['tbserviceid'],
+      idLocal: (int) $row['tbservicelocalid'],
+      nameService: $row['tbservicename'],
+      typeService: $row['tbservicetype'],
+      priceService: (float) $row['tbserviceprice'],
+      stateService: $row['tbservicestate'],
+      isActive: (bool) $row['tbserviceisactive']
     );
   }
 }

@@ -1,6 +1,7 @@
 <?php
 
-require_once __DIR__ . '/../models/Booking.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
+require_once __DIR__ . '/Booking.php';
 
 class BookingRepository
 {
@@ -14,82 +15,43 @@ class BookingRepository
   // =========================================================
   // GUARDAR
   // =========================================================
-  public function saveBooking(Booking $booking): bool
-  {
-    try {
-      $sql = "
-                INSERT INTO tbbooking (
-                    tbbookingclientid,
-                    tbbookinglocalid,
-                    tbbookingdate,
-                    tbbookingstate,
-                    tbbookingisactive
-                )
-                VALUES (
-                    :idClient,
-                    :idLocal,
-                    :bookingDate,
-                    :bookingState,
-                    :isBookingActive
-                )
-            ";
-
-      $stmt = $this->connection->prepare($sql);
-
-      $stmt->execute([
-        ':idClient' => $booking->getIdClient(),
-        ':idLocal' => $booking->getIdLocal(),
-        ':bookingDate' => $booking->getBookingDate(),
-        ':bookingState' => $booking->getBookingState(),
-        ':isBookingActive' => $booking->getIsBookingActive()
-      ]);
-
-      $booking->setIdBooking((int) $this->connection->lastInsertId());
-
-      return true;
-    } catch (PDOException $e) {
-
-      return false;
-    }
-  }
-
-
-  // =========================================================
-  // OBTENER TODOS
-  // =========================================================
-  public function getAllBooking(): array
+  public function save(Booking $booking): int
   {
     $sql = "
-            SELECT
-                tbbookingid,
+            INSERT INTO tbbooking (
                 tbbookingclientid,
                 tbbookinglocalid,
                 tbbookingdate,
                 tbbookingstate,
                 tbbookingisactive
-
-            FROM tbbooking
-
-            ORDER BY tbbookingid ASC
+            )
+            VALUES (
+                :idClient,
+                :idLocal,
+                :bookingDate,
+                :bookingState,
+                :isBookingActive
+            )
         ";
 
     $stmt = $this->connection->prepare($sql);
-    $stmt->execute();
 
-    $bookings = [];
+    $stmt->execute([
+      ':idClient'         => $booking->getIdClient(),
+      ':idLocal'          => $booking->getIdLocal(),
+      ':bookingDate'      => $booking->getBookingDate(),
+      ':bookingState'     => $booking->getBookingState(),
+      ':isBookingActive'  => $booking->getIsBookingActive()
+    ]);
 
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $bookings[] = $this->mapRowToBooking($row);
-    }
-
-    return $bookings;
+    return (int) $this->connection->lastInsertId();
   }
 
 
   // =========================================================
-  // OBTENER POR ID
+  // BUSCAR POR ID
   // =========================================================
-  public function getByIdBooking(int $idBooking): ?Booking
+  public function findById(int $idBooking): ?Booking
   {
     $sql = "
             SELECT
@@ -113,18 +75,14 @@ class BookingRepository
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$row) {
-      return null;
-    }
-
-    return $this->mapRowToBooking($row);
+    return $row ? $this->mapRow($row) : null;
   }
 
 
   // =========================================================
-  // OBTENER POR CLIENTE
+  // BUSCAR POR CLIENTE
   // =========================================================
-  public function getByClient(int $idClient): array
+  public function findByClient(int $idClient): array
   {
     $sql = "
             SELECT
@@ -148,20 +106,14 @@ class BookingRepository
       ':idClient' => $idClient
     ]);
 
-    $bookings = [];
-
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $bookings[] = $this->mapRowToBooking($row);
-    }
-
-    return $bookings;
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
 
   // =========================================================
-  // OBTENER POR LOCAL
+  // BUSCAR POR LOCAL (VENUE)
   // =========================================================
-  public function getByLocalBooking(int $idLocal): array
+  public function findByVenue(int $idLocal): array
   {
     $sql = "
             SELECT
@@ -185,83 +137,96 @@ class BookingRepository
       ':idLocal' => $idLocal
     ]);
 
-    $bookings = [];
-
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $bookings[] = $this->mapRowToBooking($row);
-    }
-
-    return $bookings;
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
 
   // =========================================================
-  // EDITAR
+  // BUSCAR POR MES ('YYYY-MM' -- para estadísticas del Admin)
   // =========================================================
-  public function updateBooking(Booking $booking): bool
+  public function findByMonth(string $yearMonth): array
   {
-    try {
-      $sql = "
-                UPDATE tbbooking
-                SET
-                    tbbookingclientid = :idClient,
-                    tbbookinglocalid = :idLocal,
-                    tbbookingdate = :bookingDate,
-                    tbbookingstate = :bookingState,
-                    tbbookingisactive = :isBookingActive
-                WHERE tbbookingid = :idBooking
-            ";
+    $sql = "
+            SELECT
+                tbbookingid,
+                tbbookingclientid,
+                tbbookinglocalid,
+                tbbookingdate,
+                tbbookingstate,
+                tbbookingisactive
 
-      $stmt = $this->connection->prepare($sql);
+            FROM tbbooking
 
-      return $stmt->execute([
-        ':idClient' => $booking->getIdClient(),
-        ':idLocal' => $booking->getIdLocal(),
-        ':bookingDate' => $booking->getBookingDate(),
-        ':bookingState' => $booking->getBookingState(),
-        ':isBookingActive' => $booking->getIsBookingActive(),
-        ':idBooking' => $booking->getIdBooking()
-      ]);
-    } catch (PDOException $e) {
+            WHERE tbbookingdate LIKE :yearMonth
+        ";
 
-      return false;
-    }
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':yearMonth' => $yearMonth . '%'
+    ]);
+
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
 
   // =========================================================
-  // CAMBIAR ESTADO (ej: pendiente, confirmada, cancelada)
+  // LOCALES MÁS ACTIVOS (venues con más reservas)
   // =========================================================
-  public function updateStateBooking(int $idBooking, string $bookingState): bool
+  public function topActiveVenues(int $limit = 5): array
   {
-    try {
-      $sql = "
-                UPDATE tbbooking
-                SET tbbookingstate = :bookingState
-                WHERE tbbookingid = :idBooking
-            ";
+    $sql = "
+            SELECT
+                v.tbvenuename AS name,
+                COUNT(*) AS bookingCount
 
-      $stmt = $this->connection->prepare($sql);
+            FROM tbbooking b
 
-      return $stmt->execute([
-        ':bookingState' => $bookingState,
-        ':idBooking' => $idBooking
-      ]);
-    } catch (PDOException $e) {
+            INNER JOIN tbvenue v
+                ON v.tbvenueid = b.tbbookinglocalid
 
-      return false;
-    }
+            GROUP BY b.tbbookinglocalid, v.tbvenuename
+
+            ORDER BY bookingCount DESC
+
+            LIMIT :limit
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
 
   // =========================================================
-  // DESACTIVAR
+  // CAMBIAR ESTADO
   // =========================================================
-  public function deactivateBooking(int $idBooking): bool
+  public function updateStatus(int $idBooking, string $bookingState): bool
   {
     $sql = "
             UPDATE tbbooking
-            SET tbbookingisactive = false
+            SET tbbookingstate = :bookingState
+            WHERE tbbookingid = :idBooking
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    return $stmt->execute([
+      ':bookingState' => $bookingState,
+      ':idBooking'    => $idBooking
+    ]);
+  }
+
+
+  // =========================================================
+  // ELIMINAR
+  // =========================================================
+  public function delete(int $idBooking): bool
+  {
+    $sql = "
+            DELETE FROM tbbooking
             WHERE tbbookingid = :idBooking
         ";
 
@@ -274,40 +239,41 @@ class BookingRepository
 
 
   // =========================================================
-  // ELIMINAR
+  // VERIFICAR SI YA HAY UNA RESERVA ACTIVA EN ESA FECHA
   // =========================================================
-  public function deleteBooking(int $idBooking): bool
+  public function hasActiveBookingOnDate(int $idLocal, string $bookingDate): bool
   {
-    try {
-      $sql = "
-                DELETE FROM tbbooking
-                WHERE tbbookingid = :idBooking
-            ";
+    $sql = "
+            SELECT COUNT(*)
+            FROM tbbooking
+            WHERE tbbookinglocalid = :idLocal
+              AND tbbookingdate = :bookingDate
+              AND tbbookingstate IN ('pendiente', 'confirmado')
+        ";
 
-      $stmt = $this->connection->prepare($sql);
+    $stmt = $this->connection->prepare($sql);
 
-      return $stmt->execute([
-        ':idBooking' => $idBooking
-      ]);
-    } catch (PDOException $e) {
+    $stmt->execute([
+      ':idLocal'     => $idLocal,
+      ':bookingDate' => $bookingDate
+    ]);
 
-      return false;
-    }
+    return ((int) $stmt->fetchColumn()) > 0;
   }
 
 
   // =========================================================
   // MAPEO FILA -> OBJETO
   // =========================================================
-  private function mapRowToBooking(array $row): Booking
+  private function mapRow(array $row): Booking
   {
     return new Booking(
-      (int) $row['tbbookingid'],
-      (int) $row['tbbookingclientid'],
-      (int) $row['tbbookinglocalid'],
-      $row['tbbookingdate'],
-      $row['tbbookingstate'],
-      (bool) $row['tbbookingisactive']
+      idBooking: (int) $row['tbbookingid'],
+      idClient: (int) $row['tbbookingclientid'],
+      idLocal: (int) $row['tbbookinglocalid'],
+      bookingDate: $row['tbbookingdate'],
+      bookingState: $row['tbbookingstate'],
+      isBookingActive: (bool) $row['tbbookingisactive']
     );
   }
 }

@@ -1,6 +1,7 @@
 <?php
 
-require_once __DIR__ . '/../models/Admin.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
+require_once __DIR__ . '/Admin.php';
 
 class AdminRepository
 {
@@ -19,9 +20,8 @@ class AdminRepository
         try {
             $this->connection->beginTransaction();
 
-            // Primero guardamos los datos que vienen de Role
             $sqlRole = "
-                INSERT INTO role (
+                INSERT INTO tbrole (
                     tbrolename,
                     tbroleemail,
                     tbrolepassword,
@@ -40,18 +40,16 @@ class AdminRepository
             $stmtRole = $this->connection->prepare($sqlRole);
 
             $stmtRole->execute([
-                ':name' => $admin->getName(),
-                ':email' => $admin->getEmail(),
-                ':password' => password_hash($admin->getPassword(), PASSWORD_DEFAULT),
+                ':name'        => $admin->getName(),
+                ':email'       => $admin->getEmail(),
+                ':password'    => password_hash($admin->getPassword(), PASSWORD_DEFAULT),
                 ':phoneNumber' => $admin->getPhoneNumber(),
-                ':isActive' => $admin->getIsActive()
+                ':isActive'    => $admin->getIsActive()
             ]);
 
-            // El id que genera `role` es el mismo que usamos como tbroleadminid
-            // (no hay FK real, la relación es 1:1 por PK compartida)
+            // tbroleadminid comparte el mismo valor que tbroleid (PK compartida, no es FK)
             $idRole = (int) $this->connection->lastInsertId();
 
-            // Después guardamos los datos propios de Admin
             $sqlAdmin = "
                 INSERT INTO tbroleadmin (
                     tbroleadminid,
@@ -70,14 +68,12 @@ class AdminRepository
             $stmtAdmin = $this->connection->prepare($sqlAdmin);
 
             $stmtAdmin->execute([
-                ':idAdmin' => $idRole,
+                ':idAdmin'       => $idRole,
                 ':isAdminActive' => $admin->getIsAdminActive(),
-                ':idRol' => $admin->getIdRol(),
-                ':imageAdmin' => $admin->getImageAdmin()
+                ':idRol'         => $admin->getIdRol(),
+                ':imageAdmin'    => $admin->getImageAdmin()
             ]);
 
-            // Reflejamos el id generado en el objeto para que el caller lo tenga
-            $admin->setIdRole($idRole);
             $admin->setIdAdmin($idRole);
 
             $this->connection->commit();
@@ -93,9 +89,54 @@ class AdminRepository
 
 
     // =========================================================
-    // OBTENER TODOS
+    // BUSCAR POR EMAIL
     // =========================================================
-    public function getAll(): array
+    public function findByEmail(string $email): ?Admin
+    {
+        $sql = "
+            SELECT
+                r.tbroleid,
+                r.tbrolename,
+                r.tbroleemail,
+                r.tbrolepassword,
+                r.tbrolephonenumber,
+                r.tbroleisactive,
+
+                a.tbroleadminid,
+                a.tbroleadminisactive,
+                a.tbroleadminrolid,
+                a.tbroleadminimage
+
+            FROM tbrole r
+
+            INNER JOIN tbroleadmin a
+                ON a.tbroleadminid = r.tbroleid
+
+            WHERE r.tbroleemail = :email
+
+            LIMIT 1
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+
+        $stmt->execute([
+            ':email' => $email
+        ]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            return null;
+        }
+
+        return $this->mapRow($row);
+    }
+
+
+    // =========================================================
+    // BUSCAR POR ID DE ADMIN
+    // =========================================================
+    public function findByAdminPk(int $adminPk): ?Admin
     {
         $sql = "
             SELECT
@@ -113,8 +154,53 @@ class AdminRepository
 
             FROM tbroleadmin a
 
-            INNER JOIN role r
-                ON a.tbroleadminid = r.tbroleid
+            INNER JOIN tbrole r
+                ON r.tbroleid = a.tbroleadminid
+
+            WHERE a.tbroleadminid = :idAdmin
+
+            LIMIT 1
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+
+        $stmt->execute([
+            ':idAdmin' => $adminPk
+        ]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row) {
+            return null;
+        }
+
+        return $this->mapRow($row);
+    }
+
+
+    // =========================================================
+    // OBTENER TODOS
+    // =========================================================
+    public function findAll(): array
+    {
+        $sql = "
+            SELECT
+                r.tbroleid,
+                r.tbrolename,
+                r.tbroleemail,
+                r.tbrolepassword,
+                r.tbrolephonenumber,
+                r.tbroleisactive,
+
+                a.tbroleadminid,
+                a.tbroleadminisactive,
+                a.tbroleadminrolid,
+                a.tbroleadminimage
+
+            FROM tbroleadmin a
+
+            INNER JOIN tbrole r
+                ON r.tbroleid = a.tbroleadminid
 
             ORDER BY a.tbroleadminid ASC
         ";
@@ -125,7 +211,7 @@ class AdminRepository
         $admins = [];
 
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            $admins[] = $this->mapRowToAdmin($row);
+            $admins[] = $this->mapRow($row);
         }
 
         return $admins;
@@ -133,214 +219,21 @@ class AdminRepository
 
 
     // =========================================================
-    // OBTENER POR ID
-    // =========================================================
-    public function getById(int $idAdmin): ?Admin
-    {
-        $sql = "
-            SELECT
-                r.tbroleid,
-                r.tbrolename,
-                r.tbroleemail,
-                r.tbrolepassword,
-                r.tbrolephonenumber,
-                r.tbroleisactive,
-
-                a.tbroleadminid,
-                a.tbroleadminisactive,
-                a.tbroleadminrolid,
-                a.tbroleadminimage
-
-            FROM tbroleadmin a
-
-            INNER JOIN role r
-                ON a.tbroleadminid = r.tbroleid
-
-            WHERE a.tbroleadminid = :idAdmin
-        ";
-
-        $stmt = $this->connection->prepare($sql);
-
-        $stmt->execute([
-            ':idAdmin' => $idAdmin
-        ]);
-
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$row) {
-            return null;
-        }
-
-        return $this->mapRowToAdmin($row);
-    }
-
-
-    // =========================================================
-    // EDITAR
-    // =========================================================
-    public function update(Admin $admin): bool
-    {
-        try {
-            $this->connection->beginTransaction();
-
-            // Actualizar datos de Role
-            $sqlRole = "
-                UPDATE role
-                SET
-                    tbrolename = :name,
-                    tbroleemail = :email,
-                    tbrolepassword = :password,
-                    tbrolephonenumber = :phoneNumber,
-                    tbroleisactive = :isActive
-                WHERE tbroleid = :id
-            ";
-
-            $stmtRole = $this->connection->prepare($sqlRole);
-
-            $stmtRole->execute([
-                ':name' => $admin->getName(),
-                ':email' => $admin->getEmail(),
-                ':password' => $admin->getPassword(),
-                ':phoneNumber' => $admin->getPhoneNumber(),
-                ':isActive' => $admin->getIsActive(),
-                ':id' => $admin->getIdRole()
-            ]);
-
-            // Actualizar datos propios de Admin
-            $sqlAdmin = "
-                UPDATE tbroleadmin
-                SET
-                    tbroleadminisactive = :isAdminActive,
-                    tbroleadminrolid = :idRol,
-                    tbroleadminimage = :imageAdmin
-                WHERE tbroleadminid = :idAdmin
-            ";
-
-            $stmtAdmin = $this->connection->prepare($sqlAdmin);
-
-            $stmtAdmin->execute([
-                ':isAdminActive' => $admin->getIsAdminActive(),
-                ':idRol' => $admin->getIdRol(),
-                ':imageAdmin' => $admin->getImageAdmin(),
-                ':idAdmin' => $admin->getIdAdmin()
-            ]);
-
-            $this->connection->commit();
-
-            return true;
-        } catch (PDOException $e) {
-
-            $this->connection->rollBack();
-
-            return false;
-        }
-    }
-
-
-    // =========================================================
-    // DESACTIVAR
-    // =========================================================
-    public function deactivate(int $idAdmin): bool
-    {
-        try {
-            $this->connection->beginTransaction();
-
-            $sqlAdmin = "
-                UPDATE tbroleadmin
-                SET tbroleadminisactive = false
-                WHERE tbroleadminid = :idAdmin
-            ";
-
-            $stmtAdmin = $this->connection->prepare($sqlAdmin);
-            $stmtAdmin->execute([
-                ':idAdmin' => $idAdmin
-            ]);
-
-            // Reflejamos el mismo estado en role para que ambos lados queden alineados
-            $sqlRole = "
-                UPDATE role
-                SET tbroleisactive = false
-                WHERE tbroleid = :id
-            ";
-
-            $stmtRole = $this->connection->prepare($sqlRole);
-            $stmtRole->execute([
-                ':id' => $idAdmin
-            ]);
-
-            $this->connection->commit();
-
-            return true;
-        } catch (PDOException $e) {
-
-            $this->connection->rollBack();
-
-            return false;
-        }
-    }
-
-
-    // =========================================================
-    // ELIMINAR
-    // =========================================================
-    public function delete(int $idAdmin): bool
-    {
-        try {
-
-            $this->connection->beginTransaction();
-
-            // Primero eliminamos de tbroleadmin
-            $sqlAdmin = "
-                DELETE FROM tbroleadmin
-                WHERE tbroleadminid = :idAdmin
-            ";
-
-            $stmtAdmin = $this->connection->prepare($sqlAdmin);
-
-            $stmtAdmin->execute([
-                ':idAdmin' => $idAdmin
-            ]);
-
-            // Después eliminamos de Role
-            $sqlRole = "
-                DELETE FROM role
-                WHERE tbroleid = :id
-            ";
-
-            $stmtRole = $this->connection->prepare($sqlRole);
-
-            $stmtRole->execute([
-                ':id' => $idAdmin
-            ]);
-
-            $this->connection->commit();
-
-            return true;
-        } catch (PDOException $e) {
-
-            $this->connection->rollBack();
-
-            return false;
-        }
-    }
-
-
-    // =========================================================
     // MAPEO FILA -> OBJETO
     // =========================================================
-    private function mapRowToAdmin(array $row): Admin
+    private function mapRow(array $row): Admin
     {
         return new Admin(
-            (int) $row['tbroleid'],
-            $row['tbrolename'],
-            $row['tbroleemail'],
-            $row['tbrolepassword'],
-            (bool) $row['tbroleisactive'],
-            (int) $row['tbroleadminid'],
-            (bool) $row['tbroleadminisactive'],
-            (int) $row['tbroleadminrolid'],
-            $row['tbroleadminimage'],
-            $row['tbrolephonenumber']
+            id: (int) $row['tbroleid'],
+            name: $row['tbrolename'],
+            email: $row['tbroleemail'],
+            password: $row['tbrolepassword'],
+            isActive: (bool) $row['tbroleisactive'],
+            idAdmin: (int) $row['tbroleadminid'],
+            isAdminActive: (bool) $row['tbroleadminisactive'],
+            idRol: (int) $row['tbroleadminrolid'],
+            imageAdmin: $row['tbroleadminimage'],
+            phoneNumber: $row['tbrolephonenumber']
         );
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
-require_once __DIR__ . '/../models/Notification.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
+require_once __DIR__ . '/Notification.php';
 
 class NotificationRepository
 {
@@ -14,50 +15,43 @@ class NotificationRepository
   // =========================================================
   // GUARDAR
   // =========================================================
-  public function saveNotification(Notification $notification): bool
+  public function save(Notification $notification): int
   {
-    try {
-      $sql = "
-                INSERT INTO tbnotification (
-                    tbnotificationroleid,
-                    tbnotificationmessage,
-                    tbnotificationdate,
-                    tbnotificationisread,
-                    tbnotificationisactive
-                )
-                VALUES (
-                    :idRol,
-                    :message,
-                    :date,
-                    :isRead,
-                    :isActive
-                )
-            ";
+    $sql = "
+            INSERT INTO tbnotification (
+                tbnotificationroleid,
+                tbnotificationmessage,
+                tbnotificationdate,
+                tbnotificationisread,
+                tbnotificationisactive
+            )
+            VALUES (
+                :idRol,
+                :message,
+                :date,
+                :isRead,
+                :isActive
+            )
+        ";
 
-      $stmt = $this->connection->prepare($sql);
+    $stmt = $this->connection->prepare($sql);
 
-      $stmt->execute([
-        ':idRol' => $notification->getIdRol(),
-        ':message' => $notification->getMessageNotification(),
-        ':date' => $notification->getDateNotification(),
-        ':isRead' => $notification->getIsRead(),
-        ':isActive' => $notification->getIsActive()
-      ]);
+    $stmt->execute([
+      ':idRol'    => $notification->getIdRol(),
+      ':message'  => $notification->getMessageNotification(),
+      ':date'     => $notification->getDateNotification(),
+      ':isRead'   => $notification->getIsRead(),
+      ':isActive' => $notification->getIsActive()
+    ]);
 
-      $notification->setIdNotification((int) $this->connection->lastInsertId());
-
-      return true;
-    } catch (PDOException $e) {
-
-      return false;
-    }
+    return (int) $this->connection->lastInsertId();
   }
 
 
   // =========================================================
-  // OBTENER TODOS
+  // OBTENER POR ROLE (bandeja de un usuario, solo activas)
   // =========================================================
-  public function getAllNotification(): array
+  public function findByRole(int $idRol): array
   {
     $sql = "
             SELECT
@@ -70,26 +64,26 @@ class NotificationRepository
 
             FROM tbnotification
 
+            WHERE tbnotificationroleid = :idRol
+              AND tbnotificationisactive = true
+
             ORDER BY tbnotificationdate DESC
         ";
 
     $stmt = $this->connection->prepare($sql);
-    $stmt->execute();
 
-    $notifications = [];
+    $stmt->execute([
+      ':idRol' => $idRol
+    ]);
 
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $notifications[] = $this->mapRowToNotification($row);
-    }
-
-    return $notifications;
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
 
   // =========================================================
-  // OBTENER POR ID
+  // OBTENER POR ID (solo si está activa)
   // =========================================================
-  public function getByIdNotification(int $idNotification): ?Notification
+  public function findById(int $idNotification): ?Notification
   {
     $sql = "
             SELECT
@@ -103,6 +97,7 @@ class NotificationRepository
             FROM tbnotification
 
             WHERE tbnotificationid = :idNotification
+              AND tbnotificationisactive = true
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -113,117 +108,14 @@ class NotificationRepository
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$row) {
-      return null;
-    }
-
-    return $this->mapRowToNotification($row);
-  }
-
-
-  // =========================================================
-  // OBTENER POR ROLE (bandeja de un usuario, solo activas)
-  // =========================================================
-  public function getByRoleNotification(int $idRol): array
-  {
-    $sql = "
-            SELECT
-                tbnotificationid,
-                tbnotificationroleid,
-                tbnotificationmessage,
-                tbnotificationdate,
-                tbnotificationisread,
-                tbnotificationisactive
-
-            FROM tbnotification
-
-            WHERE tbnotificationroleid = :idRol
-              AND tbnotificationisactive = true
-
-            ORDER BY tbnotificationdate DESC
-        ";
-
-    $stmt = $this->connection->prepare($sql);
-
-    $stmt->execute([
-      ':idRol' => $idRol
-    ]);
-
-    $notifications = [];
-
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $notifications[] = $this->mapRowToNotification($row);
-    }
-
-    return $notifications;
-  }
-
-
-  // =========================================================
-  // CONTAR NO LEÍDAS DE UN ROLE
-  // =========================================================
-  public function countUnreadByRoleNotification(int $idRol): int
-  {
-    $sql = "
-            SELECT COUNT(*) AS total
-
-            FROM tbnotification
-
-            WHERE tbnotificationroleid = :idRol
-              AND tbnotificationisread = false
-              AND tbnotificationisactive = true
-        ";
-
-    $stmt = $this->connection->prepare($sql);
-
-    $stmt->execute([
-      ':idRol' => $idRol
-    ]);
-
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    return (int) ($row['total'] ?? 0);
-  }
-
-
-  // =========================================================
-  // EDITAR
-  // =========================================================
-  public function updateNotification(Notification $notification): bool
-  {
-    try {
-      $sql = "
-                UPDATE tbnotification
-                SET
-                    tbnotificationroleid = :idRol,
-                    tbnotificationmessage = :message,
-                    tbnotificationdate = :date,
-                    tbnotificationisread = :isRead,
-                    tbnotificationisactive = :isActive
-                WHERE tbnotificationid = :idNotification
-            ";
-
-      $stmt = $this->connection->prepare($sql);
-
-      return $stmt->execute([
-        ':idRol' => $notification->getIdRol(),
-        ':message' => $notification->getMessageNotification(),
-        ':date' => $notification->getDateNotification(),
-        ':isRead' => $notification->getIsRead(),
-        ':isActive' => $notification->getIsActive(),
-        ':idNotification' => $notification->getIdNotification()
-      ]);
-    } catch (PDOException $e) {
-
-      return false;
-    }
+    return $row ? $this->mapRow($row) : null;
   }
 
 
   // =========================================================
   // MARCAR COMO LEÍDA
   // =========================================================
-  public function markAsReadNotification(int $idNotification): bool
+  public function markRead(int $idNotification): bool
   {
     $sql = "
             UPDATE tbnotification
@@ -242,13 +134,13 @@ class NotificationRepository
   // =========================================================
   // MARCAR TODAS COMO LEÍDAS (de un role)
   // =========================================================
-  public function markAllAsReadByRoleNotification(int $idRol): bool
+  public function markAllRead(int $idRol): bool
   {
     $sql = "
             UPDATE tbnotification
             SET tbnotificationisread = true
             WHERE tbnotificationroleid = :idRol
-              AND tbnotificationisread = false
+              AND tbnotificationisactive = true
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -260,59 +152,57 @@ class NotificationRepository
 
 
   // =========================================================
-  // DESACTIVAR
+  // CONTAR NO LEÍDAS DE UN ROLE
   // =========================================================
-  public function deactivateNotification(int $idNotification): bool
+  public function countUnread(int $idRol): int
   {
     $sql = "
-            UPDATE tbnotification
-            SET tbnotificationisactive = false
-            WHERE tbnotificationid = :idNotification
+            SELECT COUNT(*)
+            FROM tbnotification
+            WHERE tbnotificationroleid = :idRol
+              AND tbnotificationisread = false
+              AND tbnotificationisactive = true
         ";
 
     $stmt = $this->connection->prepare($sql);
 
-    return $stmt->execute([
-      ':idNotification' => $idNotification
+    $stmt->execute([
+      ':idRol' => $idRol
     ]);
+
+    return (int) $stmt->fetchColumn();
   }
 
 
   // =========================================================
-  // ELIMINAR
+  // OBTENER IDS DE ROLES ADMIN ACTIVOS
   // =========================================================
-  public function deleteNotification(int $idNotification): bool
+  public function findAdminRoleIds(): array
   {
-    try {
-      $sql = "
-                DELETE FROM tbnotification
-                WHERE tbnotificationid = :idNotification
-            ";
+    $sql = "
+            SELECT tbroleadminid
+            FROM tbroleadmin
+            WHERE tbroleadminisactive = true
+        ";
 
-      $stmt = $this->connection->prepare($sql);
+    $stmt = $this->connection->query($sql);
 
-      return $stmt->execute([
-        ':idNotification' => $idNotification
-      ]);
-    } catch (PDOException $e) {
-
-      return false;
-    }
+    return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
   }
 
 
   // =========================================================
   // MAPEO FILA -> OBJETO
   // =========================================================
-  private function mapRowToNotification(array $row): Notification
+  private function mapRow(array $row): Notification
   {
     return new Notification(
-      (int) $row['tbnotificationid'],
-      (int) $row['tbnotificationroleid'],
-      $row['tbnotificationmessage'],
-      $row['tbnotificationdate'],
-      (bool) $row['tbnotificationisactive'],
-      (bool) $row['tbnotificationisread']
+      idNotification: (int) $row['tbnotificationid'],
+      idRol: (int) $row['tbnotificationroleid'],
+      messageNotification: $row['tbnotificationmessage'],
+      dateNotification: $row['tbnotificationdate'],
+      isActive: (bool) $row['tbnotificationisactive'],
+      isRead: (bool) $row['tbnotificationisread']
     );
   }
 }

@@ -6,118 +6,223 @@ require_once __DIR__ . '/Role.php';
 /**
  * REPOSITORIO: RoleRepository
  *
- * Traduce entre objetos Role y filas de la tabla tbrol.
- * Es la base que usarán los repositorios de los subtipos
+ * Traduce entre objetos Role y filas de la tabla tbrole.
+ * Es la base que usan los repositorios de los subtipos
  * (AdminRepository, ClientRepository, OwnerRepository)
- * cuando necesiten crear primero el registro base en tbrol.
+ * cuando necesitan crear primero el registro base en tbrole.
  */
 class RoleRepository
 {
-  private PDO $db;
+  private PDO $connection;
 
-  public function __construct()
+  public function __construct(PDO $connection)
   {
-    $this->db = DataBase::getConnection();
+    $this->connection = $connection;
   }
 
-  /**
-   * Inserta un nuevo registro en tbrol y devuelve el id generado.
-   * Se devuelve el id (en vez de bool) porque los subtipos lo
-   * necesitan para insertar su propia fila con la FK correcta.
-   */
-  public function guardar(Role $rol): int
+  // =========================================================
+  // GUARDAR
+  // Devuelve el id generado (no bool) porque los subtipos
+  // lo necesitan para insertar su propia fila con el mismo id.
+  // =========================================================
+  public function save(Role $role): int
   {
-    $sql = "INSERT INTO tbrol (tbrolnombre, tbrolcorreo, tbrolcontrasena, tbroltelefono, tbrolactivo)
-                VALUES (:nombre, :correo, :contrasena, :telefono, :activo)";
+    $sql = "
+            INSERT INTO tbrole (
+                tbrolename,
+                tbroleemail,
+                tbrolepassword,
+                tbrolephonenumber,
+                tbroleisactive
+            )
+            VALUES (
+                :name,
+                :email,
+                :password,
+                :phoneNumber,
+                :isActive
+            )
+        ";
 
-    $stmt = $this->db->prepare($sql);
+    $stmt = $this->connection->prepare($sql);
+
     $stmt->execute([
-      ':nombre'     => $rol->getNombre(),
-      ':correo'     => $rol->getCorreo(),
-      ':contrasena' => password_hash($rol->getContrasena(), PASSWORD_DEFAULT),
-      ':telefono'   => $rol->getTelefono(),
-      ':activo'     => $rol->isActivo() ? 1 : 0,
+      ':name'        => $role->getName(),
+      ':email'       => $role->getEmail(),
+      ':password'    => password_hash($role->getPassword(), PASSWORD_DEFAULT),
+      ':phoneNumber' => $role->getPhoneNumber(),
+      ':isActive'    => $role->getIsActive()
     ]);
 
-    // lastInsertId() devuelve el AUTO_INCREMENT que MySQL acaba
-    // de generar para esta fila -- es el tbrolpk del nuevo registro.
-    return (int) $this->db->lastInsertId();
+    // lastInsertId() devuelve el AUTO_INCREMENT que la base
+    // acaba de generar -- es el tbroleid del nuevo registro.
+    return (int) $this->connection->lastInsertId();
   }
 
-  public function buscarPorCorreo(string $correo): ?Role
+
+  // =========================================================
+  // BUSCAR POR EMAIL
+  // =========================================================
+  public function findByEmail(string $email): ?Role
   {
-    $sql = "SELECT * FROM tbrol WHERE tbrolcorreo = :correo LIMIT 1";
-    $stmt = $this->db->prepare($sql);
-    $stmt->execute([':correo' => $correo]);
-    $fila = $stmt->fetch();
+    $sql = "
+            SELECT
+                tbroleid,
+                tbrolename,
+                tbroleemail,
+                tbrolepassword,
+                tbrolephonenumber,
+                tbroleisactive
 
-    if (!$fila) {
-      return null;
-    }
+            FROM tbrole
 
-    return $this->mapearFila($fila);
+            WHERE tbroleemail = :email
+
+            LIMIT 1
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':email' => $email
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $row ? $this->mapRow($row) : null;
   }
 
-  public function buscarPorId(int $pk): ?Role
+
+  // =========================================================
+  // BUSCAR POR ID
+  // =========================================================
+  public function findById(int $idRole): ?Role
   {
-    $sql = "SELECT * FROM tbrol WHERE tbrolpk = :pk LIMIT 1";
-    $stmt = $this->db->prepare($sql);
-    $stmt->execute([':pk' => $pk]);
-    $fila = $stmt->fetch();
+    $sql = "
+            SELECT
+                tbroleid,
+                tbrolename,
+                tbroleemail,
+                tbrolepassword,
+                tbrolephonenumber,
+                tbroleisactive
 
-    return $fila ? $this->mapearFila($fila) : null;
+            FROM tbrole
+
+            WHERE tbroleid = :idRole
+
+            LIMIT 1
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':idRole' => $idRole
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $row ? $this->mapRow($row) : null;
   }
 
-  /**
-   * Método auxiliar privado: convierte una fila (array) en un
-   * objeto Role. Se separó en su propio método porque tanto
-   * buscarPorCorreo() como buscarPorId() necesitan hacer lo mismo
-   * -- así no se repite el mismo "new Role(...)" dos veces.
-   */
-  private function mapearFila(array $fila): Role
+
+  // =========================================================
+  // ACTUALIZAR CAMPOS BASE (nombre, correo, teléfono)
+  // NO toca la contraseña -- eso se maneja aparte, con su propio
+  // flujo de verificación, para no exponerlo en un formulario
+  // de perfil normal.
+  // =========================================================
+  public function update(Role $role): bool
+  {
+    $sql = "
+            UPDATE tbrole
+            SET
+                tbrolename = :name,
+                tbroleemail = :email,
+                tbrolephonenumber = :phoneNumber
+            WHERE tbroleid = :idRole
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    return $stmt->execute([
+      ':name'        => $role->getName(),
+      ':email'       => $role->getEmail(),
+      ':phoneNumber' => $role->getPhoneNumber(),
+      ':idRole'      => $role->getIdRole()
+    ]);
+  }
+
+
+  // =========================================================
+  // ACTIVAR / DESACTIVAR CUENTA (controla el login)
+  // La usan AdminService/ClientService/OwnerService antes de
+  // tocar sus propias tablas de subtipo.
+  // =========================================================
+  public function setActive(int $idRole, bool $isActive): bool
+  {
+    $sql = "
+            UPDATE tbrole
+            SET tbroleisactive = :isActive
+            WHERE tbroleid = :idRole
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    return $stmt->execute([
+      ':isActive' => $isActive,
+      ':idRole'   => $idRole
+    ]);
+  }
+
+
+  // =========================================================
+  // CONTAR CUENTAS ACTIVAS
+  // =========================================================
+  public function countActive(): int
+  {
+    $sql = "
+            SELECT COUNT(*)
+            FROM tbrole
+            WHERE tbroleisactive = true
+        ";
+
+    $stmt = $this->connection->query($sql);
+
+    return (int) $stmt->fetchColumn();
+  }
+
+
+  // =========================================================
+  // ELIMINAR
+  // =========================================================
+  public function delete(int $idRole): bool
+  {
+    $sql = "
+            DELETE FROM tbrole
+            WHERE tbroleid = :idRole
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    return $stmt->execute([
+      ':idRole' => $idRole
+    ]);
+  }
+
+
+  // =========================================================
+  // MAPEO FILA -> OBJETO
+  // =========================================================
+  private function mapRow(array $row): Role
   {
     return new Role(
-      nombre: $fila['tbrolnombre'],
-      correo: $fila['tbrolcorreo'],
-      contrasena: $fila['tbrolcontrasena'],
-      activo: (bool) $fila['tbrolactivo'],
-      pk: $fila['tbrolpk'],
-      telefono: $fila['tbroltelefono']
+      idRole: (int) $row['tbroleid'],
+      name: $row['tbrolename'],
+      email: $row['tbroleemail'],
+      password: $row['tbrolepassword'],
+      phoneNumber: $row['tbrolephonenumber'],
+      isActive: (bool) $row['tbroleisactive']
     );
-  }
-
-  public function eliminar(int $pk): bool
-  {
-    $stmt = $this->db->prepare("DELETE FROM tbrol WHERE tbrolpk = :pk");
-    return $stmt->execute([':pk' => $pk]);
-  }
-
-  /**
-   * Activa o desactiva la cuenta base (controla si puede iniciar sesión).
-   * La usan AdminService/ClientService/OwnerService antes de tocar sus
-   * propias tablas de subtipo.
-   */
-  public function setActive(int $pk, bool $active): bool
-  {
-    $stmt = $this->db->prepare("UPDATE tbrol SET tbrolactivo = :activo WHERE tbrolpk = :pk");
-    return $stmt->execute([':activo' => $active ? 1 : 0, ':pk' => $pk]);
-  }
-
-  /**
-   * Actualiza los campos base de identidad (nombre, correo, telefono).
-   * NO toca la contraseña -- eso se maneja aparte, con su propio flujo
-   * de verificación, para no exponerlo en un formulario de perfil normal.
-   */
-  public function actualizar(Role $role): bool
-  {
-    $sql = "UPDATE tbrol SET tbrolnombre = :nombre, tbrolcorreo = :correo, tbroltelefono = :telefono
-                WHERE tbrolpk = :pk";
-    $stmt = $this->db->prepare($sql);
-    return $stmt->execute([
-      ':pk'       => $role->getPk(),
-      ':nombre'   => $role->getNombre(),
-      ':correo'   => $role->getCorreo(),
-      ':telefono' => $role->getTelefono(),
-    ]);
   }
 }

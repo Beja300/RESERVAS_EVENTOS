@@ -1,6 +1,7 @@
 <?php
 
-require_once __DIR__ . '/../models/Client.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
+require_once __DIR__ . '/Client.php';
 
 class ClientRepository
 {
@@ -14,13 +15,13 @@ class ClientRepository
   // =========================================================
   // GUARDAR
   // =========================================================
-  public function saveClient(Client $client): bool
+  public function save(Client $client): bool
   {
     try {
       $this->connection->beginTransaction();
 
       $sqlRole = "
-                INSERT INTO role (
+                INSERT INTO tbrole (
                     tbrolename,
                     tbroleemail,
                     tbrolepassword,
@@ -39,13 +40,14 @@ class ClientRepository
       $stmtRole = $this->connection->prepare($sqlRole);
 
       $stmtRole->execute([
-        ':name' => $client->getName(),
-        ':email' => $client->getEmail(),
-        ':password' => password_hash($client->getPassword(), PASSWORD_DEFAULT),
+        ':name'        => $client->getName(),
+        ':email'       => $client->getEmail(),
+        ':password'    => password_hash($client->getPassword(), PASSWORD_DEFAULT),
         ':phoneNumber' => $client->getPhoneNumber(),
-        ':isActive' => $client->getIsActive()
+        ':isActive'    => $client->getIsActive()
       ]);
 
+      // tbroleclientid comparte el mismo valor que tbroleid (PK compartida, no es FK)
       $idRole = (int) $this->connection->lastInsertId();
 
       $sqlClient = "
@@ -66,13 +68,12 @@ class ClientRepository
       $stmtClient = $this->connection->prepare($sqlClient);
 
       $stmtClient->execute([
-        ':idClient' => $idRole,
+        ':idClient'       => $idRole,
         ':isClientActive' => $client->getIsClientActive(),
-        ':idRol' => $client->getIdRol(),
-        ':imageClient' => $client->getImageClient()
+        ':idRol'          => $client->getIdRol(),
+        ':imageClient'    => $client->getImageClient()
       ]);
 
-      $client->setIdRole($idRole);
       $client->setIdClient($idRole);
 
       $this->connection->commit();
@@ -88,9 +89,54 @@ class ClientRepository
 
 
   // =========================================================
-  // OBTENER TODOS
+  // BUSCAR POR EMAIL
   // =========================================================
-  public function getAllClient(): array
+  public function findByEmail(string $email): ?Client
+  {
+    $sql = "
+            SELECT
+                r.tbroleid,
+                r.tbrolename,
+                r.tbroleemail,
+                r.tbrolepassword,
+                r.tbrolephonenumber,
+                r.tbroleisactive,
+
+                c.tbroleclientid,
+                c.tbroleclientisactive,
+                c.tbroleclientrolid,
+                c.tbroleclientimage
+
+            FROM tbrole r
+
+            INNER JOIN tbroleclient c
+                ON c.tbroleclientid = r.tbroleid
+
+            WHERE r.tbroleemail = :email
+
+            LIMIT 1
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':email' => $email
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+      return null;
+    }
+
+    return $this->mapRow($row);
+  }
+
+
+  // =========================================================
+  // BUSCAR POR ID DE CLIENTE
+  // =========================================================
+  public function findByClientPk(int $clientPk): ?Client
   {
     $sql = "
             SELECT
@@ -108,8 +154,53 @@ class ClientRepository
 
             FROM tbroleclient c
 
-            INNER JOIN role r
-                ON c.tbroleclientid = r.tbroleid
+            INNER JOIN tbrole r
+                ON r.tbroleid = c.tbroleclientid
+
+            WHERE c.tbroleclientid = :idClient
+
+            LIMIT 1
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':idClient' => $clientPk
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$row) {
+      return null;
+    }
+
+    return $this->mapRow($row);
+  }
+
+
+  // =========================================================
+  // OBTENER TODOS
+  // =========================================================
+  public function findAll(): array
+  {
+    $sql = "
+            SELECT
+                r.tbroleid,
+                r.tbrolename,
+                r.tbroleemail,
+                r.tbrolepassword,
+                r.tbrolephonenumber,
+                r.tbroleisactive,
+
+                c.tbroleclientid,
+                c.tbroleclientisactive,
+                c.tbroleclientrolid,
+                c.tbroleclientimage
+
+            FROM tbroleclient c
+
+            INNER JOIN tbrole r
+                ON r.tbroleid = c.tbroleclientid
 
             ORDER BY c.tbroleclientid ASC
         ";
@@ -120,7 +211,7 @@ class ClientRepository
     $clients = [];
 
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $clients[] = $this->mapRowToClient($row);
+      $clients[] = $this->mapRow($row);
     }
 
     return $clients;
@@ -128,209 +219,21 @@ class ClientRepository
 
 
   // =========================================================
-  // OBTENER POR ID
-  // =========================================================
-  public function getByIdClient(int $idClient): ?Client
-  {
-    $sql = "
-            SELECT
-                r.tbroleid,
-                r.tbrolename,
-                r.tbroleemail,
-                r.tbrolepassword,
-                r.tbrolephonenumber,
-                r.tbroleisactive,
-
-                c.tbroleclientid,
-                c.tbroleclientisactive,
-                c.tbroleclientrolid,
-                c.tbroleclientimage
-
-            FROM tbroleclient c
-
-            INNER JOIN role r
-                ON c.tbroleclientid = r.tbroleid
-
-            WHERE c.tbroleclientid = :idClient
-        ";
-
-    $stmt = $this->connection->prepare($sql);
-
-    $stmt->execute([
-      ':idClient' => $idClient
-    ]);
-
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$row) {
-      return null;
-    }
-
-    return $this->mapRowToClient($row);
-  }
-
-
-  // =========================================================
-  // EDITAR
-  // =========================================================
-  public function updateClient(Client $client): bool
-  {
-    try {
-      $this->connection->beginTransaction();
-
-      $sqlRole = "
-                UPDATE role
-                SET
-                    tbrolename = :name,
-                    tbroleemail = :email,
-                    tbrolepassword = :password,
-                    tbrolephonenumber = :phoneNumber,
-                    tbroleisactive = :isActive
-                WHERE tbroleid = :id
-            ";
-
-      $stmtRole = $this->connection->prepare($sqlRole);
-
-      $stmtRole->execute([
-        ':name' => $client->getName(),
-        ':email' => $client->getEmail(),
-        ':password' => $client->getPassword(),
-        ':phoneNumber' => $client->getPhoneNumber(),
-        ':isActive' => $client->getIsActive(),
-        ':id' => $client->getIdRole()
-      ]);
-
-      $sqlClient = "
-                UPDATE tbroleclient
-                SET
-                    tbroleclientisactive = :isClientActive,
-                    tbroleclientrolid = :idRol,
-                    tbroleclientimage = :imageClient
-                WHERE tbroleclientid = :idClient
-            ";
-
-      $stmtClient = $this->connection->prepare($sqlClient);
-
-      $stmtClient->execute([
-        ':isClientActive' => $client->getIsClientActive(),
-        ':idRol' => $client->getIdRol(),
-        ':imageClient' => $client->getImageClient(),
-        ':idClient' => $client->getIdClient()
-      ]);
-
-      $this->connection->commit();
-
-      return true;
-    } catch (PDOException $e) {
-
-      $this->connection->rollBack();
-
-      return false;
-    }
-  }
-
-
-  // =========================================================
-  // DESACTIVAR
-  // =========================================================
-  public function deactivateClient(int $idClient): bool
-  {
-    try {
-      $this->connection->beginTransaction();
-
-      $sqlClient = "
-                UPDATE tbroleclient
-                SET tbroleclientisactive = false
-                WHERE tbroleclientid = :idClient
-            ";
-
-      $stmtClient = $this->connection->prepare($sqlClient);
-      $stmtClient->execute([
-        ':idClient' => $idClient
-      ]);
-
-      $sqlRole = "
-                UPDATE role
-                SET tbroleisactive = false
-                WHERE tbroleid = :id
-            ";
-
-      $stmtRole = $this->connection->prepare($sqlRole);
-      $stmtRole->execute([
-        ':id' => $idClient
-      ]);
-
-      $this->connection->commit();
-
-      return true;
-    } catch (PDOException $e) {
-
-      $this->connection->rollBack();
-
-      return false;
-    }
-  }
-
-
-  // =========================================================
-  // ELIMINAR
-  // =========================================================
-  public function deleteClient(int $idClient): bool
-  {
-    try {
-
-      $this->connection->beginTransaction();
-
-      $sqlClient = "
-                DELETE FROM tbroleclient
-                WHERE tbroleclientid = :idClient
-            ";
-
-      $stmtClient = $this->connection->prepare($sqlClient);
-
-      $stmtClient->execute([
-        ':idClient' => $idClient
-      ]);
-
-      $sqlRole = "
-                DELETE FROM role
-                WHERE tbroleid = :id
-            ";
-
-      $stmtRole = $this->connection->prepare($sqlRole);
-
-      $stmtRole->execute([
-        ':id' => $idClient
-      ]);
-
-      $this->connection->commit();
-
-      return true;
-    } catch (PDOException $e) {
-
-      $this->connection->rollBack();
-
-      return false;
-    }
-  }
-
-
-  // =========================================================
   // MAPEO FILA -> OBJETO
   // =========================================================
-  private function mapRowToClient(array $row): Client
+  private function mapRow(array $row): Client
   {
     return new Client(
-      (int) $row['tbroleid'],
-      $row['tbrolename'],
-      $row['tbroleemail'],
-      $row['tbrolepassword'],
-      (bool) $row['tbroleisactive'],
-      (int) $row['tbroleclientid'],
-      (bool) $row['tbroleclientisactive'],
-      (int) $row['tbroleclientrolid'],
-      $row['tbroleclientimage'],
-      $row['tbrolephonenumber']
+      id: (int) $row['tbroleid'],
+      name: $row['tbrolename'],
+      email: $row['tbroleemail'],
+      password: $row['tbrolepassword'],
+      isActive: (bool) $row['tbroleisactive'],
+      idClient: (int) $row['tbroleclientid'],
+      isClientActive: (bool) $row['tbroleclientisactive'],
+      idRol: (int) $row['tbroleclientrolid'],
+      imageClient: $row['tbroleclientimage'],
+      phoneNumber: $row['tbrolephonenumber']
     );
   }
 }

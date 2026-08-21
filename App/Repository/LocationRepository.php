@@ -1,6 +1,7 @@
 <?php
 
-require_once __DIR__ . '/../models/Location.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
+require_once __DIR__ . '/Location.php';
 
 class LocationRepository
 {
@@ -14,78 +15,40 @@ class LocationRepository
   // =========================================================
   // GUARDAR
   // =========================================================
-  public function saveLocation(Location $location): bool
-  {
-    try {
-      $sql = "
-                INSERT INTO tblocation (
-                    tblocationprovince,
-                    tblocationcanton,
-                    tblocationdistrict,
-                    tblocationaddress
-                )
-                VALUES (
-                    :province,
-                    :canton,
-                    :district,
-                    :address
-                )
-            ";
-
-      $stmt = $this->connection->prepare($sql);
-
-      $stmt->execute([
-        ':province' => $location->getProvinceLocation(),
-        ':canton' => $location->getCantonLocation(),
-        ':district' => $location->getDistrictLocation(),
-        ':address' => $location->getAddressLocation()
-      ]);
-
-      $location->setIdLocation((int) $this->connection->lastInsertId());
-
-      return true;
-    } catch (PDOException $e) {
-
-      return false;
-    }
-  }
-
-
-  // =========================================================
-  // OBTENER TODOS
-  // =========================================================
-  public function getAllLocation(): array
+  public function save(Location $location): int
   {
     $sql = "
-            SELECT
-                tblocationid,
+            INSERT INTO tblocation (
                 tblocationprovince,
                 tblocationcanton,
                 tblocationdistrict,
                 tblocationaddress
-
-            FROM tblocation
-
-            ORDER BY tblocationid ASC
+            )
+            VALUES (
+                :province,
+                :canton,
+                :district,
+                :address
+            )
         ";
 
     $stmt = $this->connection->prepare($sql);
-    $stmt->execute();
 
-    $locations = [];
+    $stmt->execute([
+      ':province' => $location->getProvinceLocation(),
+      ':canton'   => $location->getCantonLocation(),
+      ':district' => $location->getDistrictLocation(),
+      ':address'  => $location->getAddressLocation()
+    ]);
 
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $locations[] = $this->mapRowToLocation($row);
-    }
-
-    return $locations;
+    return (int) $this->connection->lastInsertId();
   }
 
 
   // =========================================================
-  // OBTENER POR ID
+  // BUSCAR POR ID
   // =========================================================
-  public function getByIdLocation(int $idLocation): ?Location
+  public function findById(int $idLocation): ?Location
   {
     $sql = "
             SELECT
@@ -108,80 +71,46 @@ class LocationRepository
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$row) {
-      return null;
-    }
-
-    return $this->mapRowToLocation($row);
+    return $row ? $this->mapRow($row) : null;
   }
 
 
   // =========================================================
-  // EDITAR
+  // OBTENER TODOS
   // =========================================================
-  public function updateLocation(Location $location): bool
+  public function findAll(): array
   {
-    try {
-      $sql = "
-                UPDATE tblocation
-                SET
-                    tblocationprovince = :province,
-                    tblocationcanton = :canton,
-                    tblocationdistrict = :district,
-                    tblocationaddress = :address
-                WHERE tblocationid = :idLocation
-            ";
+    $sql = "
+            SELECT
+                tblocationid,
+                tblocationprovince,
+                tblocationcanton,
+                tblocationdistrict,
+                tblocationaddress
 
-      $stmt = $this->connection->prepare($sql);
+            FROM tblocation
 
-      return $stmt->execute([
-        ':province' => $location->getProvinceLocation(),
-        ':canton' => $location->getCantonLocation(),
-        ':district' => $location->getDistrictLocation(),
-        ':address' => $location->getAddressLocation(),
-        ':idLocation' => $location->getIdLocation()
-      ]);
-    } catch (PDOException $e) {
+            ORDER BY tblocationid ASC
+        ";
 
-      return false;
-    }
-  }
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute();
 
-
-  // =========================================================
-  // ELIMINAR
-  // =========================================================
-  public function deleteLocation(int $idLocation): bool
-  {
-    try {
-      $sql = "
-                DELETE FROM tblocation
-                WHERE tblocationid = :idLocation
-            ";
-
-      $stmt = $this->connection->prepare($sql);
-
-      return $stmt->execute([
-        ':idLocation' => $idLocation
-      ]);
-    } catch (PDOException $e) {
-
-      return false;
-    }
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
 
   // =========================================================
   // MAPEO FILA -> OBJETO
   // =========================================================
-  private function mapRowToLocation(array $row): Location
+  private function mapRow(array $row): Location
   {
     return new Location(
-      (int) $row['tblocationid'],
-      $row['tblocationprovince'],
-      $row['tblocationcanton'],
-      $row['tblocationdistrict'],
-      $row['tblocationaddress']
+      idLocation: (int) $row['tblocationid'],
+      provinceLocation: $row['tblocationprovince'],
+      cantonLocation: $row['tblocationcanton'],
+      districtLocation: $row['tblocationdistrict'],
+      addressLocation: $row['tblocationaddress']
     );
   }
 }

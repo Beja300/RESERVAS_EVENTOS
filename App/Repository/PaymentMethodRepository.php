@@ -1,6 +1,7 @@
 <?php
 
-require_once __DIR__ . '/../models/PaymentMethod.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
+require_once __DIR__ . '/PaymentMethod.php';
 
 class PaymentMethodRepository
 {
@@ -12,46 +13,9 @@ class PaymentMethodRepository
   }
 
   // =========================================================
-  // GUARDAR
+  // OBTENER ACTIVOS
   // =========================================================
-  public function savePaymentMethod(PaymentMethod $paymentMethod): bool
-  {
-    try {
-      $sql = "
-                INSERT INTO tbpaymentmethod (
-                    tbpaymentmethodid,
-                    tbpaymentmethodname,
-                    tbpaymentmethodisactive
-                )
-                VALUES (
-                    :id
-                    :name,
-                    :isActive
-                )
-            ";
-
-      $stmt = $this->connection->prepare($sql);
-
-      $stmt->execute([
-        ':id' => $paymentMethod->getIdPaymentMethod(),
-        ':name' => $paymentMethod->getPaymentMethod(),
-        ':isActive' => $paymentMethod->getIsActive()
-      ]);
-
-      $paymentMethod->setIdPaymentMethod((int) $this->connection->lastInsertId());
-
-      return true;
-    } catch (PDOException $e) {
-
-      return false;
-    }
-  }
-
-
-  // =========================================================
-  // OBTENER TODOS
-  // =========================================================
-  public function getAllPaymentMethod(): array
+  public function findActive(): array
   {
     $sql = "
             SELECT
@@ -61,26 +25,22 @@ class PaymentMethodRepository
 
             FROM tbpaymentmethod
 
+            WHERE tbpaymentmethodisactive = true
+
             ORDER BY tbpaymentmethodname ASC
         ";
 
     $stmt = $this->connection->prepare($sql);
     $stmt->execute();
 
-    $paymentMethods = [];
-
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $paymentMethods[] = $this->mapRowToPaymentMethod($row);
-    }
-
-    return $paymentMethods;
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
 
   // =========================================================
-  // OBTENER POR ID
+  // BUSCAR POR ID
   // =========================================================
-  public function getByIdPaymentMethod(int $idPaymentMethod): ?PaymentMethod
+  public function findById(int $idPaymentMethod): ?PaymentMethod
   {
     $sql = "
             SELECT
@@ -101,124 +61,19 @@ class PaymentMethodRepository
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$row) {
-      return null;
-    }
-
-    return $this->mapRowToPaymentMethod($row);
-  }
-
-
-  // =========================================================
-  // OBTENER SOLO ACTIVOS (para selects/formularios)
-  // =========================================================
-  public function getActivePaymentMethod(): array
-  {
-    $sql = "
-            SELECT
-                tbpaymentmethodid,
-                tbpaymentmethodname,
-                tbpaymentmethodisactive
-
-            FROM tbpaymentmethod
-
-            WHERE tbpaymentmethodisactive = true
-
-            ORDER BY tbpaymentmethodname ASC
-        ";
-
-    $stmt = $this->connection->prepare($sql);
-    $stmt->execute();
-
-    $paymentMethods = [];
-
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $paymentMethods[] = $this->mapRowToPaymentMethod($row);
-    }
-
-    return $paymentMethods;
-  }
-
-
-  // =========================================================
-  // EDITAR
-  // =========================================================
-  public function updatePaymentMethod(PaymentMethod $paymentMethod): bool
-  {
-    try {
-      $sql = "
-                UPDATE tbpaymentmethod
-                SET
-                    tbpaymentmethodname = :name,
-                    tbpaymentmethodisactive = :isActive
-                WHERE tbpaymentmethodid = :idPaymentMethod
-            ";
-
-      $stmt = $this->connection->prepare($sql);
-
-      return $stmt->execute([
-        ':name' => $paymentMethod->getPaymentMethod(),
-        ':isActive' => $paymentMethod->getIsActive(),
-        ':idPaymentMethod' => $paymentMethod->getIdPaymentMethod()
-      ]);
-    } catch (PDOException $e) {
-
-      return false;
-    }
-  }
-
-
-  // =========================================================
-  // DESACTIVAR
-  // =========================================================
-  public function deactivatePaymentMethod(int $idPaymentMethod): bool
-  {
-    $sql = "
-            UPDATE tbpaymentmethod
-            SET tbpaymentmethodisactive = false
-            WHERE tbpaymentmethodid = :idPaymentMethod
-        ";
-
-    $stmt = $this->connection->prepare($sql);
-
-    return $stmt->execute([
-      ':idPaymentMethod' => $idPaymentMethod
-    ]);
-  }
-
-
-  // =========================================================
-  // ELIMINAR
-  // =========================================================
-  public function deletePaymentMethod(int $idPaymentMethod): bool
-  {
-    try {
-      $sql = "
-                DELETE FROM tbpaymentmethod
-                WHERE tbpaymentmethodid = :idPaymentMethod
-            ";
-
-      $stmt = $this->connection->prepare($sql);
-
-      return $stmt->execute([
-        ':idPaymentMethod' => $idPaymentMethod
-      ]);
-    } catch (PDOException $e) {
-
-      return false;
-    }
+    return $row ? $this->mapRow($row) : null;
   }
 
 
   // =========================================================
   // MAPEO FILA -> OBJETO
   // =========================================================
-  private function mapRowToPaymentMethod(array $row): PaymentMethod
+  private function mapRow(array $row): PaymentMethod
   {
     return new PaymentMethod(
-      (int) $row['tbpaymentmethodid'],
-      $row['tbpaymentmethodname'],
-      (bool) $row['tbpaymentmethodisactive']
+      idPaymentMethod: (int) $row['tbpaymentmethodid'],
+      paymentMethod: $row['tbpaymentmethodname'],
+      isActive: (bool) $row['tbpaymentmethodisactive']
     );
   }
 }
