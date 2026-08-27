@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/ServiceRepository.php';
-require_once __DIR__ . '/../Repository/Service.php';
+require_once __DIR__ . '/../Model/Service.php';
 
 class ServiceService
 {

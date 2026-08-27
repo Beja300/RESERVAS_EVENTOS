@@ -1,15 +1,15 @@
 <?php
 
 require_once __DIR__ . '/BusinessRuleException.php';
-require_once __DIR__ . '/../Model/VenueRepository.php';
+require_once __DIR__ . '/../Repository/VenueRepository.php';
 
 class OwnerService
 {
     private VenueRepository $venueRepo;
 
-    public function __construct()
+    public function __construct(PDO $connection)
     {
-        $this->venueRepo = new VenueRepository();
+        $this->venueRepo = new VenueRepository($connection);
     }
 
     public function hasActiveVenue(int $ownerPk): bool

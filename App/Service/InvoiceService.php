@@ -2,8 +2,8 @@
 
 require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/PaymentMethodService.php';
-require_once __DIR__ . '/../Model/InvoiceRepository.php';
-require_once __DIR__ . '/../Model/BookingRepository.php';
+require_once __DIR__ . '/../Repository/InvoiceRepository.php';
+require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Model/Invoice.php';
 
 class InvoiceService
@@ -224,7 +224,6 @@ class InvoiceService
                 $bookingPk,
                 'confirmado'
             );
-
         } else {
 
             $this->bookingRepo->updateStatus(

@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/BusinessRuleException.php';
-require_once __DIR__ . '/../Model/PaymentMethodRepository.php';
+require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
 require_once __DIR__ . '/../Model/PaymentMethod.php';
 
 class PaymentMethodService

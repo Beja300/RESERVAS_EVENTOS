@@ -1,8 +1,8 @@
 <?php
 
 require_once __DIR__ . '/BusinessRuleException.php';
-require_once __DIR__ . '/../Model/ClientRepository.php';
-require_once __DIR__ . '/../Model/BookingRepository.php';
+require_once __DIR__ . '/../Repository/ClientRepository.php';
+require_once __DIR__ . '/../Repository/BookingRepository.php';
 
 class ClientService
 {
