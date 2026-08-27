@@ -145,6 +145,41 @@ App/
               │ Recomendaciones │
               └─────────────────┘
 
+# ARQUITECTURA DE RECOMENDACIONES
+                 ┌───────────────┐
+                 │     USER      │
+                 └───────┬───────┘
+                         │
+                         ▼
+                acciones realizadas
+                         │
+                         ▼
+                 ┌──────────────┐
+                 │  HISTORY     │
+                 └───────┬──────┘
+                         │
+                         ▼
+                HistoryService
+                         │
+                         ▼
+                 analizar acciones
+                         │
+                         ▼
+               ┌─────────────────┐
+               │ USER PREFERENCE │
+               └────────┬────────┘
+                        │
+                        ▼
+                     SCORE
+                        │
+                        ▼
+             RecommendationService
+                        │
+                        ▼
+                 EventRepository
+                        │
+                        ▼
+                 RECOMENDACIONES
 
 
 

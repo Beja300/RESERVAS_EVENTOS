@@ -14,7 +14,7 @@ USE dbeventhall;
 -- =========================================================
 
 CREATE TABLE tbrole (
-    tbrolepk INT AUTO_INCREMENT PRIMARY KEY,
+    tbroleid INT AUTO_INCREMENT PRIMARY KEY,
     tbrolename VARCHAR(300) NOT NULL,
     tbroleemail VARCHAR(300) NOT NULL UNIQUE,
     tbrolepassword VARCHAR(300) NOT NULL,
@@ -28,8 +28,8 @@ CREATE TABLE tbrole (
 -- =========================================================
 
 CREATE TABLE tbroleadmin (
-    tbroleadminpk INT AUTO_INCREMENT PRIMARY KEY,
-    tbroleadminrolepk INT NOT NULL UNIQUE,
+    tbroleadminid INT AUTO_INCREMENT PRIMARY KEY,
+    tbroleadminroleid INT NOT NULL UNIQUE,
     tbroleadminactive CHAR(1) DEFAULT '1'
 ) ENGINE=InnoDB;
 
@@ -39,8 +39,8 @@ CREATE TABLE tbroleadmin (
 -- =========================================================
 
 CREATE TABLE tbroleclient (
-    tbroleclientpk INT AUTO_INCREMENT PRIMARY KEY,
-    tbroleclientrolepk INT NOT NULL UNIQUE,
+    tbroleclientid INT AUTO_INCREMENT PRIMARY KEY,
+    tbroleclientroleid INT NOT NULL UNIQUE,
     tbroleclientactive CHAR(1) DEFAULT '1'
 ) ENGINE=InnoDB;
 
@@ -50,12 +50,12 @@ CREATE TABLE tbroleclient (
 -- =========================================================
 
 CREATE TABLE tbowner (
-    tbownerpk INT AUTO_INCREMENT PRIMARY KEY,
-    tbownerrolepk INT NOT NULL UNIQUE,
-    tbownername VARCHAR(250) NOT NULL,
+    tbownerid INT AUTO_INCREMENT PRIMARY KEY,
+    tbownerroleid INT NOT NULL UNIQUE,
+    tbownername VARCHAR(250) NOT NULL,--quitar
     tbownerlastname VARCHAR(250),
     tbowneralias VARCHAR(100),
-    tbowneridentification VARCHAR(30),
+    tbowneridentificationnumber VARCHAR(30),
     tbowneractive CHAR(1) DEFAULT '1'
 ) ENGINE=InnoDB;
 
@@ -65,7 +65,7 @@ CREATE TABLE tbowner (
 -- =========================================================
 
 CREATE TABLE tblocation (
-    tblocationpk INT AUTO_INCREMENT PRIMARY KEY,
+    tblocationid INT AUTO_INCREMENT PRIMARY KEY,
     tblocationprovince VARCHAR(60) NOT NULL,
     tblocationcanton VARCHAR(60) NOT NULL,
     tblocationdistrict VARCHAR(60) NOT NULL,
@@ -78,9 +78,9 @@ CREATE TABLE tblocation (
 -- =========================================================
 
 CREATE TABLE tblocalowner (
-    tblocalownerpk INT AUTO_INCREMENT PRIMARY KEY,
-    tblocalownerownerpk INT NOT NULL,
-    tblocalownerlocationpk INT NOT NULL UNIQUE,
+    tblocalownerid INT AUTO_INCREMENT PRIMARY KEY,
+    tblocalownerownerid INT NOT NULL,
+    tblocalownerlocationid INT NOT NULL UNIQUE,
     tblocalname VARCHAR(150) NOT NULL,
     tblocaltype VARCHAR(50),
     tblocalcapacity INT,
@@ -94,8 +94,8 @@ CREATE TABLE tblocalowner (
 -- =========================================================
 
 CREATE TABLE tblocalservice (
-    tblocalservicepk INT AUTO_INCREMENT PRIMARY KEY,
-    tblocalservicelocalownerpk INT NOT NULL,
+    tblocalserviceid INT AUTO_INCREMENT PRIMARY KEY,
+    tblocalservicelocalownerid INT NOT NULL,
     tblocalservicename VARCHAR(200) NOT NULL,
     tblocalservicetype VARCHAR(100),
     tblocalserviceprice DECIMAL(10,2) NOT NULL,
@@ -109,9 +109,9 @@ CREATE TABLE tblocalservice (
 -- =========================================================
 
 CREATE TABLE tbclientbooking (
-    tbclientbookingpk INT AUTO_INCREMENT PRIMARY KEY,
-    tbclientbookingclientpk INT NOT NULL,
-    tbclientbookinglocalownerpk INT NOT NULL,
+    tbclientbookingid INT AUTO_INCREMENT PRIMARY KEY,
+    tbclientbookingclientid INT NOT NULL,
+    tbclientbookinglocalownerid INT NOT NULL,
     tbclientbookingdate DATE NOT NULL,
     tbclientbookingeventtype VARCHAR(50),
     tbclientbookingstatus VARCHAR(30) DEFAULT 'pendiente',
@@ -124,9 +124,9 @@ CREATE TABLE tbclientbooking (
 -- =========================================================
 
 CREATE TABLE tbbookingdetail (
-    tbbookingdetailpk INT AUTO_INCREMENT PRIMARY KEY,
-    tbbookingdetailbookingpk INT NOT NULL,
-    tbbookingdetailservicepk INT NOT NULL,
+    tbbookingdetailid INT AUTO_INCREMENT PRIMARY KEY,
+    tbbookingdetailbookingid INT NOT NULL,
+    tbbookingdetailserviceid INT NOT NULL,
     tbbookingdetailquantity INT NOT NULL DEFAULT 1,
     tbbookingdetailunitprice DECIMAL(10,2) NOT NULL,
     tbbookingdetaildiscount DECIMAL(10,2) DEFAULT 0,
@@ -139,7 +139,7 @@ CREATE TABLE tbbookingdetail (
 -- =========================================================
 
 CREATE TABLE tbpaymentmethod (
-    tbpaymentmethodpk INT AUTO_INCREMENT PRIMARY KEY,
+    tbpaymentmethodid INT AUTO_INCREMENT PRIMARY KEY,
     tbpaymentmethodtype VARCHAR(50) NOT NULL,
     tbpaymentmethodactive CHAR(1) DEFAULT '1'
 ) ENGINE=InnoDB;
@@ -150,9 +150,9 @@ CREATE TABLE tbpaymentmethod (
 -- =========================================================
 
 CREATE TABLE tbbookinginvoice (
-    tbbookinginvoicepk INT AUTO_INCREMENT PRIMARY KEY,
-    tbbookinginvoicebookingpk INT NOT NULL UNIQUE,
-    tbbookinginvoicepaymentmethodpk INT NOT NULL,
+    tbbookinginvoiceid INT AUTO_INCREMENT PRIMARY KEY,
+    tbbookinginvoicebookingid INT NOT NULL UNIQUE,
+    tbbookinginvoicepaymentmethodid INT NOT NULL,
     tbbookinginvoicedate DATETIME DEFAULT CURRENT_TIMESTAMP,
     tbbookinginvoicestatus VARCHAR(30) DEFAULT 'pending',
     tbbookinginvoiceactive CHAR(1) DEFAULT '1'
@@ -164,8 +164,8 @@ CREATE TABLE tbbookinginvoice (
 -- =========================================================
 
 CREATE TABLE tbnotification (
-    tbnotificationpk INT AUTO_INCREMENT PRIMARY KEY,
-    tbnotificationrolepk INT NOT NULL,
+    tbnotificationid INT AUTO_INCREMENT PRIMARY KEY,
+    tbnotificationroleid INT NOT NULL,
     tbnotificationmessage VARCHAR(255) NOT NULL,
     tbnotificationdate DATETIME DEFAULT CURRENT_TIMESTAMP,
     tbnotificationread TINYINT(1) DEFAULT 0,
@@ -195,7 +195,7 @@ VALUES
 -- =========================================================
 
 INSERT INTO tbroleadmin
-(tbroleadminrolepk)
+(tbroleadminroleid)
 VALUES
 (1);
 
@@ -205,7 +205,7 @@ VALUES
 -- =========================================================
 
 INSERT INTO tbroleclient
-(tbroleclientrolepk)
+(tbroleclientroleid)
 VALUES
 (2),
 (3);
@@ -216,7 +216,7 @@ VALUES
 -- =========================================================
 
 INSERT INTO tbowner
-(tbownerrolepk, tbownername, tbownerlastname, tbowneralias, tbowneridentification)
+(tbownerroleid, tbownername, tbownerlastname, tbowneralias, tbowneridentification)
 VALUES
 (1,'Carlos','Ramirez','Carlitos','101110111');
 
@@ -237,8 +237,8 @@ VALUES
 
 INSERT INTO tblocalowner
 (
-    tblocalownerownerpk,
-    tblocalownerlocationpk,
+    tblocalownerownerid,
+    tblocalownerlocationid,
     tblocalname,
     tblocaltype,
     tblocalcapacity,
@@ -261,7 +261,7 @@ VALUES
 
 INSERT INTO tblocalservice
 (
-    tblocalservicelocalownerpk,
+    tblocalservicelocalownerid,
     tblocalservicename,
     tblocalservicetype,
     tblocalserviceprice
@@ -279,8 +279,8 @@ VALUES
 
 INSERT INTO tbclientbooking
 (
-    tbclientbookingclientpk,
-    tbclientbookinglocalownerpk,
+    tbclientbookingclientid,
+    tbclientbookinglocalownerid,
     tbclientbookingdate,
     tbclientbookingeventtype
 )
@@ -295,8 +295,8 @@ VALUES
 
 INSERT INTO tbbookingdetail
 (
-    tbbookingdetailbookingpk,
-    tbbookingdetailservicepk,
+    tbbookingdetailbookingid,
+    tbbookingdetailserviceid,
     tbbookingdetailquantity,
     tbbookingdetailunitprice,
     tbbookingdetaildiscount
@@ -328,8 +328,8 @@ VALUES
 
 INSERT INTO tbbookinginvoice
 (
-    tbbookinginvoicebookingpk,
-    tbbookinginvoicepaymentmethodpk,
+    tbbookinginvoicebookingid,
+    tbbookinginvoicepaymentmethodid,
     tbbookinginvoicestatus
 )
 VALUES
@@ -343,7 +343,7 @@ VALUES
 
 INSERT INTO tbnotification
 (
-    tbnotificationrolepk,
+    tbnotificationroleid,
     tbnotificationmessage
 )
 VALUES
