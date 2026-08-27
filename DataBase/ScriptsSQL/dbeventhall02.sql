@@ -52,7 +52,6 @@ CREATE TABLE tbroleclient (
 CREATE TABLE tbowner (
     tbownerid INT AUTO_INCREMENT PRIMARY KEY,
     tbownerroleid INT NOT NULL UNIQUE,
-    tbownername VARCHAR(250) NOT NULL,--quitar
     tbownerlastname VARCHAR(250),
     tbowneralias VARCHAR(100),
     tbowneridentificationnumber VARCHAR(30),
@@ -172,6 +171,17 @@ CREATE TABLE tbnotification (
     tbnotificationactive CHAR(1) DEFAULT '1'
 ) ENGINE=InnoDB;
 
+-- =========================================================
+-- TABLE: tbuserhistory
+-- =========================================================
+CREATE TABLE tbuserhistory (
+    tbuserhistoryid INT AUTO_INCREMENT PRIMARY KEY,
+    tbuserhistoryroleid INT NOT NULL,
+    tbuserhistoryaction VARCHAR(50) NOT NULL,
+    tbuserhistoryentity VARCHAR(50),
+    tbuserhistoryentityid INT,
+    tbuserhistorydate DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
 
 -- =========================================================
 -- TEST DATA
@@ -216,9 +226,9 @@ VALUES
 -- =========================================================
 
 INSERT INTO tbowner
-(tbownerroleid, tbownername, tbownerlastname, tbowneralias, tbowneridentification)
+(tbownerroleid, tbownerlastname, tbowneralias, tbowneridentificationnumber)
 VALUES
-(1,'Carlos','Ramirez','Carlitos','101110111');
+(1,'Ramirez','Carlitos','101110111');
 
 
 -- =========================================================
@@ -350,3 +360,23 @@ VALUES
 (1,'A new booking has been created.'),
 (2,'Your booking has been confirmed.'),
 (3,'Your payment is pending.');
+
+
+
+-- =========================================================
+-- History
+-- =========================================================
+INSERT INTO tbuserhistory
+(
+    tbuserhistoryroleid,
+    tbuserhistoryaction,
+    tbuserhistoryentity,
+    tbuserhistoryentityid
+)
+VALUES
+(
+    2,
+    'VIEW',
+    'LOCAL',
+    1
+);
