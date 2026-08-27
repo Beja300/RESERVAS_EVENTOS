@@ -111,6 +111,44 @@ App/
         └── footer.php
 
 
+
+
+# ALGORITMO PARA RECOMENDACION DE USUARIO
+
+                    USUARIO
+                       │
+                       ▼
+              ┌─────────────────┐
+              │ Acciones en web │
+              └────────┬────────┘
+                       │
+          ┌────────────┼────────────┐
+          ▼            ▼            ▼
+        Ver          Buscar       Favorito
+          │            │            │
+          └────────────┼────────────┘
+                       ▼
+                 ┌───────────┐
+                 │ Historial │
+                 └─────┬─────┘
+                       │
+                       ▼
+              Calcular preferencias
+                       │
+                       ▼
+                 ┌───────────┐
+                 │   Score   │
+                 └─────┬─────┘
+                       │
+                       ▼
+              ┌─────────────────┐
+              │ Recomendaciones │
+              └─────────────────┘
+
+
+
+
+
 # SERVICE
 Van los servicios de cada uno para manejar por separado las reglas de negocio
 **/
