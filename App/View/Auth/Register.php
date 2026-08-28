@@ -1,4 +1,4 @@
-<?php require_once __DIR__ . '/_helpers.php'; ?>
+<?php require_once __DIR__ . '/../_helpers.php'; ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
