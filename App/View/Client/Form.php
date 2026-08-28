@@ -2,6 +2,10 @@
 // Vista de respaldo para edición de perfil de cliente.
 $error = $error ?? null;
 $client = $client ?? ($_SESSION['user'] ?? null);
+if ($client === null) {
+  echo '<div class="auth-card container-narrow"><div class="alert alert-error">Sesión no válida. Inicia sesión de nuevo.</div></div>';
+  exit;
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">

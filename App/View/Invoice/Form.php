@@ -1,4 +1,10 @@
-<?php require_once __DIR__ . '/../_header.php'; ?>
+<?php require_once __DIR__ . '/../_header.php';
+if ($booking === null) {
+  echo '<div class="alert alert-error">Reserva no encontrada.</div>';
+  require_once __DIR__ . '/../_footer.php';
+  exit;
+}
+?>
 
 <div class="page-head">
   <div>
