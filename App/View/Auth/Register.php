@@ -32,7 +32,10 @@
       <button type="button" data-tab="owner" onclick="showTab('owner')">Soy propietario</button>
     </div>
 
-    <form id="registerForm" method="post" action="<?= e(base_url('auth', 'registerClient')) ?>">
+    <form id="registerForm" method="post"
+          data-action-client="<?= e(base_url('auth', 'registerClient')) ?>"
+          data-action-owner="<?= e(base_url('auth', 'registerOwner')) ?>"
+          action="<?= e(base_url('auth', 'registerClient')) ?>">
 
       <!-- Panel Cliente -->
       <div class="tab-panel active" id="panel-client">
@@ -107,20 +110,8 @@
     </div>
   </div>
 
-  <script>
-    var currentTab = 'client';
-    function showTab(tab) {
-      currentTab = tab;
-      document.querySelectorAll('.tabs button').forEach(function (b) {
-        b.classList.toggle('active', b.dataset.tab === tab);
-      });
-      document.getElementById('panel-client').classList.toggle('active', tab === 'client');
-      document.getElementById('panel-owner').classList.toggle('active', tab === 'owner');
-      var form = document.getElementById('registerForm');
-      form.action = (tab === 'owner')
-        ? '<?= e(base_url('auth', 'registerOwner')) ?>'
-        : '<?= e(base_url('auth', 'registerClient')) ?>';
-    }
-  </script>
+  <script src="<?= e(js_url()) ?>"></script>
+  <script src="<?= e(js_url('auth-register')) ?>"></script>
+  <script>document.addEventListener('DOMContentLoaded', App.init);</script>
 </body>
 </html>

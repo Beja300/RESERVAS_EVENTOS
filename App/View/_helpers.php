@@ -19,6 +19,21 @@ if (!function_exists('css_url')) {
     }
 }
 
+if (!function_exists('js_url')) {
+    /**
+     * Devuelve la URL absoluta hacia un JavaScript de la aplicación.
+     *
+     * Sin argumentos devuelve el núcleo común (app.js). Con un nombre,
+     * devuelve el script específico de una vista (Public/js/{name}.js).
+     */
+    function js_url(?string $name = null): string
+    {
+        $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'), '/');
+        $file = ($name === null || $name === '') ? 'app' : $name;
+        return $base . '/js/' . $file . '.js';
+    }
+}
+
 if (!function_exists('base_url')) {
     /**
      * Devuelve la URL hacia el front controller con el controller/acción

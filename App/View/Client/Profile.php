@@ -20,7 +20,7 @@ if ($client === null) {
     <div class="alert alert-error"><?= e($error) ?></div>
   <?php endif; ?>
 
-  <form method="post" action="<?= e(base_url('client', 'updateProfile')) ?>">
+  <form method="post" action="<?= e(base_url('client', 'updateProfile')) ?>" data-validate-form>
     <div class="form-group">
       <label for="name">Nombre</label>
       <input class="form-control" type="text" id="name" name="name" required
@@ -30,12 +30,14 @@ if ($client === null) {
     <div class="form-group">
       <label for="email">Correo electrónico</label>
       <input class="form-control" type="email" id="email" name="email" required
+             data-validate="email"
              value="<?= e($client->getEmail()) ?>">
     </div>
 
     <div class="form-group">
       <label for="phoneNumber">Teléfono</label>
       <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
+             data-validate="phone"
              maxlength="8" value="<?= e($client->getPhoneNumber() ?? '') ?>">
     </div>
 

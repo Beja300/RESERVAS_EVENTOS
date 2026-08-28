@@ -76,7 +76,7 @@ $isPending = $booking->getBookingState() === 'pendiente';
       </form>
 
       <form method="post" action="<?= e(base_url('booking', 'cancel')) ?>"
-            onsubmit="return confirm('¿Cancelar esta reserva?');">
+            data-booking-cancel>
         <input type="hidden" name="id" value="<?= (int) $booking->getIdBooking() ?>">
         <button class="btn btn-danger" type="submit">Cancelar reserva</button>
       </form>
@@ -88,4 +88,5 @@ $isPending = $booking->getBookingState() === 'pendiente';
   <?php endif; ?>
 </div>
 
+<script src="<?= e(js_url('booking-detail')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>
