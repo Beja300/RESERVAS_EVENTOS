@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../Configuration/DataBase.php';
-require_once __DIR__ . '/Admin.php';
+require_once __DIR__ . '/../Model/Admin.php';
 
 class AdminRepository
 {

@@ -15,7 +15,7 @@ class OwnerService
     public function hasActiveVenue(int $ownerPk): bool
     {
         foreach ($this->venueRepo->findByOwner($ownerPk) as $venue) {
-            if ($venue->isActive()) {
+            if ($venue->getIsActive()) {
                 return true;
             }
         }
@@ -25,7 +25,7 @@ class OwnerService
     public function assertOwnsVenue(int $ownerPk, int $venuePk): void
     {
         $venue = $this->venueRepo->findById($venuePk);
-        if ($venue === null || $venue->getOwnerFk() !== $ownerPk) {
+        if ($venue === null || $venue->getIdOwner() !== $ownerPk) {
             throw new BusinessRuleException("No tienes permiso sobre este local.");
         }
     }

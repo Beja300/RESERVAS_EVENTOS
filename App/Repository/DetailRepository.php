@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../Configuration/DataBase.php';
-require_once __DIR__ . '/Detail.php';
+require_once __DIR__ . '/../Model/Detail.php';
 
 class DetailRepository
 {

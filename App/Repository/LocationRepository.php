@@ -1,5 +1,8 @@
 <?php
 
+require_once __DIR__ . '/../../Configuration/DataBase.php';
+require_once __DIR__ . '/../Model/Location.php';
+
 class LocationRepository
 {
     private PDO $connection;

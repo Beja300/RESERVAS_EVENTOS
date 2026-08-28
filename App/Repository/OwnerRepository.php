@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../Configuration/DataBase.php';
-require_once __DIR__ . '/Owner.php';
+require_once __DIR__ . '/../Model/Owner.php';
 
 class OwnerRepository
 {

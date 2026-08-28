@@ -2,7 +2,7 @@
 
 require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/NotificationRepository.php';
-require_once __DIR__ . '/../Repository/Notification.php';
+require_once __DIR__ . '/../Model/Notification.php';
 
 /**
  * Service class for managing notifications.

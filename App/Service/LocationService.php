@@ -1,5 +1,9 @@
 <?php
 
+require_once __DIR__ . '/BusinessRuleException.php';
+require_once __DIR__ . '/../Repository/LocationRepository.php';
+require_once __DIR__ . '/../Model/Location.php';
+
 class LocationService
 {
     private LocationRepository $locationRepo;

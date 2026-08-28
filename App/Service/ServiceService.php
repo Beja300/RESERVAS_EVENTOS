@@ -75,4 +75,36 @@ class ServiceService
 
         $this->serviceRepo->update($service);
     }
+
+    // =========================================================
+    // BUSCAR POR ID
+    // =========================================================
+    public function findById(int $servicePk): ?Service
+    {
+        return $this->serviceRepo->findById($servicePk);
+    }
+
+    // =========================================================
+    // TODOS LOS SERVICIOS DE UN LOCAL (panel del Owner)
+    // =========================================================
+    public function findByLocal(int $venueFk): array
+    {
+        return $this->serviceRepo->findByLocal($venueFk);
+    }
+
+    // =========================================================
+    // SERVICIOS DISPONIBLES DE UN LOCAL (catálogo del Cliente)
+    // =========================================================
+    public function findAvailableByLocal(int $venueFk): array
+    {
+        return $this->serviceRepo->findAvailableByLocal($venueFk);
+    }
+
+    // =========================================================
+    // SERVICIOS PENDIENTES DE APROBACIÓN (panel del Admin)
+    // =========================================================
+    public function findPending(): array
+    {
+        return $this->serviceRepo->findPending();
+    }
 }

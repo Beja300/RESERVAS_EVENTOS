@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../Configuration/DataBase.php';
-require_once __DIR__ . '/History.php';
+require_once __DIR__ . '/../Model/History.php';
 
 class HistoryRepository
 {

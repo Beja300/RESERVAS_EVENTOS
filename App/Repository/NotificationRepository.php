@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../Configuration/DataBase.php';
-require_once __DIR__ . '/Notification.php';
+require_once __DIR__ . '/../Model/Notification.php';
 
 class NotificationRepository
 {

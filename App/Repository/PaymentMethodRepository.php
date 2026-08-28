@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../Configuration/DataBase.php';
-require_once __DIR__ . '/PaymentMethod.php';
+require_once __DIR__ . '/../Model/PaymentMethod.php';
 
 class PaymentMethodRepository
 {
@@ -11,6 +11,33 @@ class PaymentMethodRepository
   {
     $this->connection = $connection;
   }
+
+  // =========================================================
+  // GUARDAR
+  // =========================================================
+  public function save(PaymentMethod $paymentMethod): int
+  {
+    $sql = "
+            INSERT INTO tbpaymentmethod (
+                tbpaymentmethodname,
+                tbpaymentmethodisactive
+            )
+            VALUES (
+                :paymentMethod,
+                :isActive
+            )
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':paymentMethod' => $paymentMethod->getPaymentMethod(),
+      ':isActive'      => $paymentMethod->getIsActive()
+    ]);
+
+    return (int) $this->connection->lastInsertId();
+  }
+
 
   // =========================================================
   // OBTENER ACTIVOS
