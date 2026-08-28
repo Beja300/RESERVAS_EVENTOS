@@ -7,6 +7,7 @@
   </div>
   <?php if ($unreadCount > 0): ?>
     <form method="post" action="<?= e(base_url('notification', 'markAllAsRead')) ?>">
+      <?= csrf_field() ?>
       <button class="btn btn-outline" type="submit">Marcar todas como leídas</button>
     </form>
   <?php endif; ?>
@@ -30,6 +31,7 @@
         </div>
         <?php if (!$n->getIsRead()): ?>
           <form method="post" action="<?= e(base_url('notification', 'markAsRead')) ?>">
+            <?= csrf_field() ?>
             <input type="hidden" name="id" value="<?= (int) $n->getIdNotification() ?>">
             <button class="btn btn-sm btn-outline" type="submit">Marcar leído</button>
           </form>

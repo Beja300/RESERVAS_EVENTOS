@@ -13,6 +13,7 @@
   <?php endif; ?>
 
   <form method="post" action="<?= e(base_url('location', 'create')) ?>">
+    <?= csrf_field() ?>
     <div class="grid grid-3">
       <div class="form-group">
         <label for="province">Provincia *</label>

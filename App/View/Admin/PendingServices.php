@@ -36,10 +36,12 @@
             <td>
               <div class="actions">
                 <form method="post" action="<?= e(base_url('service', 'approve')) ?>" style="display:inline">
+                  <?= csrf_field() ?>
                   <input type="hidden" name="id" value="<?= (int) $s->getIdService() ?>">
                   <button class="btn btn-sm btn-success" type="submit">Aprobar</button>
                 </form>
                 <form method="post" action="<?= e(base_url('service', 'reject')) ?>" style="display:inline">
+                  <?= csrf_field() ?>
                   <input type="hidden" name="id" value="<?= (int) $s->getIdService() ?>">
                   <button class="btn btn-sm btn-danger" type="submit">Rechazar</button>
                 </form>

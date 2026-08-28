@@ -16,6 +16,7 @@ $action = $isEdit ? base_url('service', 'update') : base_url('service', 'create'
   <?php endif; ?>
 
   <form method="post" action="<?= e($action) ?>">
+    <?= csrf_field() ?>
     <input type="hidden" name="venueId" value="<?= (int) $idVenue ?>">
     <?php if ($isEdit): ?>
       <input type="hidden" name="idService" value="<?= (int) $service->getIdService() ?>">

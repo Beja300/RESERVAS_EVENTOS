@@ -8,16 +8,35 @@
 (function (window, document) {
   'use strict';
 
+  function setPanels(tab) {
+    var clientPanel = document.getElementById('panel-client');
+    var ownerPanel = document.getElementById('panel-owner');
+
+    clientPanel.classList.toggle('active', tab === 'client');
+    ownerPanel.classList.toggle('active', tab === 'owner');
+
+    // Habilitar solo los campos del panel activo para evitar duplicados
+    // y que los "required" del panel oculto bloqueen el envío.
+    toggleFields(clientPanel, tab === 'client');
+    toggleFields(ownerPanel, tab === 'owner');
+  }
+
+  function toggleFields(panel, enabled) {
+    var fields = panel.querySelectorAll('input, select, textarea');
+    for (var i = 0; i < fields.length; i++) {
+      fields[i].disabled = !enabled;
+    }
+  }
+
   function showTab(tab) {
     document.querySelectorAll('.tabs button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-tab') === tab);
     });
-    document.getElementById('panel-client').classList.toggle('active', tab === 'client');
-    document.getElementById('panel-owner').classList.toggle('active', tab === 'owner');
+    setPanels(tab);
     var form = document.getElementById('registerForm');
     form.action = (tab === 'owner')
-      ? document.getElementById('registerForm').getAttribute('data-action-owner')
-      : document.getElementById('registerForm').getAttribute('data-action-client');
+      ? form.getAttribute('data-action-owner')
+      : form.getAttribute('data-action-client');
   }
 
   function init() {
@@ -29,6 +48,8 @@
         });
       })(tabButtons[i]);
     }
+    // Sincronizar con el estado inicial del DOM (pestaña por defecto).
+    setPanels('client');
   }
 
   // Exponer para uso global (compatibilidad) y arrancar en DOM ready.

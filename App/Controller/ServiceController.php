@@ -14,7 +14,7 @@ class ServiceController
   {
     $connection = DataBase::getConnection();
 
-    $this->serviceService = new ServiceService(new ServiceRepository($connection));
+    $this->serviceService = new ServiceService(new ServiceRepository($connection), new ServiceHistoryRepository($connection));
     $this->ownerService = new OwnerService($connection);
   }
 

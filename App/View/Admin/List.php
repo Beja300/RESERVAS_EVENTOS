@@ -15,6 +15,7 @@
 
   <div class="card" style="max-width:320px;margin-bottom:18px;">
     <form method="post" action="<?= e(base_url('admin', 'bookings')) ?>">
+      <?= csrf_field() ?>
       <div class="form-group">
         <label for="month">Mes</label>
         <input class="form-control" type="month" id="month" name="month" value="<?= e(date('Y-m')) ?>">
@@ -54,11 +55,13 @@
               <td>
                 <div class="actions">
                   <form method="post" action="<?= e(base_url('admin', 'approvePayment')) ?>">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="id" value="<?= (int) $b->getIdBooking() ?>">
                     <button class="btn btn-sm btn-success" type="submit">Aprobar pago</button>
                   </form>
                   <form method="post" action="<?= e(base_url('admin', 'rejectPayment')) ?>"
                         data-confirm="¿Rechazar el pago de esta reserva?">
+                    <?= csrf_field() ?>
                     <input type="hidden" name="id" value="<?= (int) $b->getIdBooking() ?>">
                     <button class="btn btn-sm btn-danger" type="submit">Rechazar pago</button>
                   </form>
@@ -127,12 +130,14 @@
                 <td>
                   <?php if ($user->getIsActive()): ?>
                     <form method="post" action="<?= e(base_url('admin', 'deactivateUser')) ?>">
+                      <?= csrf_field() ?>
                       <input type="hidden" name="id" value="<?= (int) $user->getIdRol() ?>">
                       <input type="hidden" name="type" value="<?= e($typeKey) ?>">
                       <button class="btn btn-sm btn-warning" type="submit">Desactivar</button>
                     </form>
                   <?php else: ?>
                     <form method="post" action="<?= e(base_url('admin', 'activateUser')) ?>">
+                      <?= csrf_field() ?>
                       <input type="hidden" name="id" value="<?= (int) $user->getIdRol() ?>">
                       <button class="btn btn-sm btn-success" type="submit">Activar</button>
                     </form>

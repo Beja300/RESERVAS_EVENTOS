@@ -13,6 +13,7 @@
   <?php endif; ?>
 
   <form method="post" action="<?= e(base_url('paymentMethod', 'create')) ?>">
+    <?= csrf_field() ?>
     <div class="form-group">
       <label for="type">Tipo de método de pago *</label>
       <input class="form-control" type="text" id="type" name="type" required

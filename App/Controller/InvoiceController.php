@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../Service/InvoiceService.php';
 require_once __DIR__ . '/../Service/PaymentMethodService.php';
 require_once __DIR__ . '/../Service/BookingService.php';
+require_once __DIR__ . '/../Service/EarningService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/InvoiceRepository.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
@@ -15,6 +16,7 @@ class InvoiceController
   private InvoiceService $invoiceService;
   private PaymentMethodService $paymentMethodService;
   private BookingService $bookingService;
+  private EarningService $earningService;
   private InvoiceRepository $invoiceRepo;
   private BookingRepository $bookingRepo;
   private PaymentMethodRepository $paymentMethodRepo;
@@ -27,6 +29,7 @@ class InvoiceController
     $this->invoiceService = new InvoiceService();
     $this->paymentMethodService = new PaymentMethodService();
     $this->bookingService = new BookingService();
+    $this->earningService = new EarningService($connection);
     $this->invoiceRepo = new InvoiceRepository($connection);
     $this->bookingRepo = new BookingRepository($connection);
     $this->paymentMethodRepo = new PaymentMethodRepository($connection);
@@ -126,6 +129,10 @@ class InvoiceController
     $details = $this->detailRepo->findByBooking($idBooking);
     $totals = $this->bookingService->calculateTotals($idBooking);
     $total = $totals['total'];
+
+    $earning = ($type === 'admin' || $type === 'owner')
+      ? $this->earningService->findByBooking($idBooking)
+      : null;
 
     require_once __DIR__ . '/../View/Invoice/Detail.php';
   }

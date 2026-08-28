@@ -30,6 +30,16 @@
             <?= $v->getTypeVenue() !== '' ? e($v->getTypeVenue()) : 'General' ?>
             &nbsp;·&nbsp; Capacidad: <?= (int) $v->getCapacityVenue() ?>
           </p>
+          <?php if (isset($ratingsByVenue[$v->getIdVenue()])): ?>
+            <p style="color:var(--amber, #f59e0b);font-size:0.9rem;margin-top:6px;">
+              &#11088; <?= number_format($ratingsByVenue[$v->getIdVenue()], 1) ?> / 5
+            </p>
+          <?php endif; ?>
+          <?php if (isset($promosByVenue[$v->getIdVenue()])): ?>
+            <?php foreach ($promosByVenue[$v->getIdVenue()] as $pn): ?>
+              <span class="badge success" style="margin-top:6px;">&#127881; <?= e($pn) ?></span>
+            <?php endforeach; ?>
+          <?php endif; ?>
         </div>
         <div style="margin-top:14px;">
           <a class="btn btn-primary btn-block" href="<?= e(base_url('venue', 'detail', ['id' => $v->getIdVenue()])) ?>">Ver local</a>

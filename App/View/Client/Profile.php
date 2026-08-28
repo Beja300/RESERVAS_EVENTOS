@@ -21,6 +21,7 @@ if ($client === null) {
   <?php endif; ?>
 
   <form method="post" action="<?= e(base_url('client', 'updateProfile')) ?>" data-validate-form>
+    <?= csrf_field() ?>
     <div class="form-group">
       <label for="name">Nombre</label>
       <input class="form-control" type="text" id="name" name="name" required

@@ -151,13 +151,13 @@ CREATE TABLE tbpromotion (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 13) tblpromotionservice: servicios incluidos en una promocion
+-- 13) tbpromotionservice: servicios incluidos en una promocion
 -- =========================================================
-CREATE TABLE tblpromotionservice (
-    tblpromotionserviceid INT AUTO_INCREMENT PRIMARY KEY,
-    tblpromotionservicepromotionid INT NOT NULL,
-    tblpromotionserviceserviceid INT NOT NULL,
-    tblpromotionserviceactive BOOLEAN NOT NULL DEFAULT TRUE
+CREATE TABLE tbpromotionservice (
+    tbpromotionserviceid INT AUTO_INCREMENT PRIMARY KEY,
+    tbpromotionservicepromotionid INT NOT NULL,
+    tbpromotionserviceserviceid INT NOT NULL,
+    tbpromotionserviceactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
 -- =========================================================

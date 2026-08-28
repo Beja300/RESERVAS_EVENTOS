@@ -2,6 +2,12 @@
 
 require_once __DIR__ . '/../Service/VenueService.php';
 require_once __DIR__ . '/../Service/OwnerService.php';
+require_once __DIR__ . '/../Service/VenueRatingService.php';
+require_once __DIR__ . '/../Service/ServiceRatingService.php';
+require_once __DIR__ . '/../Service/ServiceService.php';
+require_once __DIR__ . '/../Repository/ServiceRepository.php';
+require_once __DIR__ . '/../Repository/ServiceHistoryRepository.php';
+require_once __DIR__ . '/../Service/PromotionService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
@@ -9,6 +15,10 @@ class VenueController
 {
   private VenueService $venueService;
   private OwnerService $ownerService;
+  private VenueRatingService $venueRatingService;
+  private ServiceRatingService $serviceRatingService;
+  private ServiceService $serviceService;
+  private PromotionService $promotionService;
 
   public function __construct()
   {
@@ -16,6 +26,10 @@ class VenueController
 
     $this->venueService = new VenueService($connection);
     $this->ownerService = new OwnerService($connection);
+    $this->venueRatingService = new VenueRatingService($connection);
+    $this->serviceRatingService = new ServiceRatingService($connection);
+    $this->serviceService = new ServiceService(new ServiceRepository($connection), new ServiceHistoryRepository($connection));
+    $this->promotionService = new PromotionService($connection);
   }
 
   // =========================================================
@@ -24,6 +38,22 @@ class VenueController
   public function catalog(): void
   {
     $venues = $this->venueService->findActive();
+
+    $ratingsByVenue = [];
+    $promosByVenue = [];
+
+    foreach ($venues as $v) {
+      $avg = $this->venueRatingService->getAverage($v->getIdVenue());
+      if ($avg !== null) {
+        $ratingsByVenue[$v->getIdVenue()] = round($avg, 1);
+      }
+
+      $promos = $this->promotionService->getActiveByVenue($v->getIdVenue());
+      if (!empty($promos)) {
+        $names = array_map(fn($p) => $p->getLabel(), $promos);
+        $promosByVenue[$v->getIdVenue()] = $names;
+      }
+    }
 
     require_once __DIR__ . '/../View/Venue/Catalog.php';
   }
@@ -41,7 +71,100 @@ class VenueController
       exit;
     }
 
+    $avgRating = $this->venueRatingService->getAverage($idVenue);
+    $promotions = $this->promotionService->getActiveByVenue($idVenue);
+
+    $services = $this->serviceService->findByLocal($idVenue);
+    $ratingByService = [];
+    foreach ($services as $s) {
+      $avg = $this->serviceRatingService->getAverage($s->getIdLocalService());
+      if ($avg !== null) {
+        $ratingByService[$s->getIdLocalService()] = round($avg, 1);
+      }
+    }
+
     require_once __DIR__ . '/../View/Venue/Detail.php';
+  }
+
+  // =========================================================
+  // CALIFICAR UN SERVICIO (cualquier usuario autenticado)
+  // =========================================================
+  public function rateService(): void
+  {
+    session_start();
+
+    if (($_SESSION['type'] ?? null) === null) {
+      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+      exit;
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      header('Location: ../../Public/index.php?controller=venue&action=catalog');
+      exit;
+    }
+
+    $idService = (int) ($_POST['serviceId'] ?? 0);
+    $idVenue = (int) ($_POST['venueId'] ?? 0);
+    $stars = (int) ($_POST['stars'] ?? 0);
+    $comment = trim($_POST['comment'] ?? '') ?: null;
+    $rolePk = (int) ($_SESSION['user']->getIdRol() ?? 0);
+
+    try {
+
+      if ($this->serviceService->findById($idService) === null) {
+        throw new BusinessRuleException('El servicio no existe.');
+      }
+
+      $this->serviceRatingService->rate($idService, $rolePk, $stars, $comment);
+
+      header('Location: ../../Public/index.php?controller=venue&action=detail&id=' . $idVenue);
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      header('Location: ../../Public/index.php?controller=venue&action=detail&id=' . $idVenue);
+      exit;
+    }
+  }
+
+  // =========================================================
+  // CALIFICAR UN LOCAL (cualquier usuario autenticado)
+  // =========================================================
+  public function rate(): void
+  {
+    session_start();
+
+    if (($_SESSION['type'] ?? null) === null) {
+      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+      exit;
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->detail();
+      return;
+    }
+
+    $idVenue = (int) ($_POST['venueId'] ?? 0);
+    $stars = (int) ($_POST['stars'] ?? 0);
+    $comment = trim($_POST['comment'] ?? '') ?: null;
+    $rolePk = (int) ($_SESSION['user']->getIdRol() ?? 0);
+
+    try {
+
+      if ($this->venueService->findById($idVenue) === null) {
+        throw new BusinessRuleException('El local no existe.');
+      }
+
+      $this->venueRatingService->rate($idVenue, $rolePk, $stars, $comment);
+
+      header('Location: ../../Public/index.php?controller=venue&action=detail&id=' . $idVenue);
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+
+      header('Location: ../../Public/index.php?controller=venue&action=detail&id=' . $idVenue);
+      exit;
+    }
   }
 
   // =========================================================

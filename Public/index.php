@@ -54,6 +54,31 @@
 
 require_once __DIR__ . '/../Configuration/DataBase.php';
 
+// Las sesiones pueden contener objetos serializados ($_SESSION['user'] es
+// un objeto Client/Owner/Admin). Para que PHP pueda deserializarlos es
+// OBLIGATORIO que su clase esté definida ANTES de session_start(); por eso
+// se precargan los perfiles aquí, antes de iniciar la sesión.
+require_once __DIR__ . '/../App/Model/Client.php';
+require_once __DIR__ . '/../App/Model/Owner.php';
+require_once __DIR__ . '/../App/Model/Admin.php';
+
+// =========================================================
+// SESIÓN + TOKEN CSRF
+// =========================================================
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $sent = $_POST['csrf_token'] ?? '';
+    $expected = $_SESSION['csrf_token'] ?? '';
+
+    if ($sent === '' || $expected === '' || !hash_equals($expected, $sent)) {
+        http_response_code(403);
+        exit('Sesión inválida (token de seguridad). Por favor vuelve a intentarlo.');
+    }
+}
+
 // =========================================================
 // MAPEO DE CONTROLLERS
 // =========================================================
@@ -69,6 +94,8 @@ $controllers = [
   'paymentMethod' => 'PaymentMethodController',
   'location'      => 'LocationController',
   'notification'  => 'NotificationController',
+  'promotion'     => 'PromotionController',
+  'api'           => 'ApiController',
 ];
 
 // =========================================================
@@ -78,15 +105,17 @@ $controllers = [
 $allowedActions = [
   'auth'          => ['showLogin', 'login', 'showRegister', 'registerClient', 'registerOwner', 'logout'],
   'service'       => ['list', 'showForm', 'create', 'update', 'pending', 'approve', 'reject'],
-  'venue'         => ['catalog', 'detail', 'list', 'showForm', 'create', 'update'],
-  'booking'       => ['create', 'showForm', 'myBookings', 'detail', 'addLine', 'confirm', 'cancel', 'pay', 'venueBookings'],
-  'admin'         => ['dashboard', 'users', 'activateUser', 'deactivateUser', 'bookings', 'approvePayment', 'rejectPayment'],
+  'venue'         => ['catalog', 'detail', 'list', 'showForm', 'create', 'update', 'rate', 'rateService'],
+  'booking'       => ['create', 'showForm', 'myBookings', 'detail', 'addLine', 'confirm', 'cancel', 'pay', 'venueBookings', 'uploadTicket', 'approveTicket', 'rejectTicket'],
+  'admin'         => ['dashboard', 'users', 'activateUser', 'deactivateUser', 'bookings', 'approvePayment', 'rejectPayment', 'cleanTestData'],
   'client'        => ['dashboard', 'profile', 'updateProfile'],
   'owner'         => ['dashboard', 'profile', 'updateProfile'],
   'invoice'       => ['showForm', 'generate', 'detail', 'list'],
   'paymentMethod' => ['list', 'showForm', 'create'],
   'location'      => ['list', 'showForm', 'create'],
   'notification'  => ['list', 'markAsRead', 'markAllAsRead'],
+  'promotion'     => ['list', 'showForm', 'create', 'addService'],
+  'api'           => ['locations'],
 ];
 
 // Ruta por defecto (acceso a /Public/index.php sin parámetros)

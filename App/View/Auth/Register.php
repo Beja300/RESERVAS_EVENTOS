@@ -36,6 +36,7 @@
           data-action-client="<?= e(base_url('auth', 'registerClient')) ?>"
           data-action-owner="<?= e(base_url('auth', 'registerOwner')) ?>"
           action="<?= e(base_url('auth', 'registerClient')) ?>">
+      <?= csrf_field() ?>
 
       <!-- Panel Cliente -->
       <div class="tab-panel active" id="panel-client">

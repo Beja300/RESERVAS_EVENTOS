@@ -2,15 +2,18 @@
 
 require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/ServiceRepository.php';
+require_once __DIR__ . '/../Repository/ServiceHistoryRepository.php';
 require_once __DIR__ . '/../Model/Service.php';
 
 class ServiceService
 {
     private ServiceRepository $serviceRepo;
+    private ?ServiceHistoryRepository $historyRepo;
 
-    public function __construct(ServiceRepository $serviceRepo)
+    public function __construct(ServiceRepository $serviceRepo, ?ServiceHistoryRepository $historyRepo = null)
     {
         $this->serviceRepo = $serviceRepo;
+        $this->historyRepo = $historyRepo;
     }
 
     public function assertCanBeBooked(int $servicePk): void
@@ -59,7 +62,11 @@ class ServiceService
             isActive: true
         );
 
-        return $this->serviceRepo->save($service);
+        $idService = $this->serviceRepo->save($service);
+
+        $this->snapshotPrice($idService, $price);
+
+        return $idService;
     }
 
     public function validateAndUpdate(Service $service, string $name, ?string $type, float $price, bool $active): void
@@ -74,6 +81,25 @@ class ServiceService
         $service->setIsActive($active);
 
         $this->serviceRepo->update($service);
+
+        $this->snapshotPrice($service->getIdService(), $price);
+    }
+
+    // =========================================================
+    // CONGELAR EL PRECIO ACTUAL EN tbservicehistory
+    // =========================================================
+    private function snapshotPrice(int $servicePk, float $price): void
+    {
+        if ($this->historyRepo !== null) {
+            $this->historyRepo->save(
+                new ServiceHistory(
+                    idServiceHistory: 0,
+                    idService: $servicePk,
+                    price: $price,
+                    validFrom: date('Y-m-d')
+                )
+            );
+        }
     }
 
     // =========================================================

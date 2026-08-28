@@ -17,6 +17,7 @@
     <?php endif; ?>
 
     <form method="post" action="<?= e(base_url('auth', 'login')) ?>">
+      <?= csrf_field() ?>
       <div class="form-group">
         <label for="email">Correo electrónico</label>
         <input class="form-control" type="email" id="email" name="email"

@@ -19,6 +19,7 @@ if ($venue === null) {
   <?php endif; ?>
 
   <form method="post" action="<?= e(base_url('booking', 'create')) ?>">
+    <?= csrf_field() ?>
     <input type="hidden" name="venueId" value="<?= (int) $venue->getIdVenue() ?>">
 
     <div class="form-group">

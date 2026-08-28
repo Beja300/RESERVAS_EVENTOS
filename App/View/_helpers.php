@@ -60,6 +60,46 @@ if (!function_exists('e')) {
     }
 }
 
+if (!function_exists('csrf_token')) {
+    /**
+     * Devuelve (y si hace falta genera) el token CSRF de la sesión.
+     */
+    function csrf_token(): string
+    {
+        if (empty($_SESSION['csrf_token'])) {
+            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+        }
+
+        return $_SESSION['csrf_token'];
+    }
+}
+
+if (!function_exists('csrf_field')) {
+    /**
+     * Campo oculto a insertar en los formularios POST.
+     */
+    function csrf_field(): string
+    {
+        return '<input type="hidden" name="csrf_token" value="' . e(csrf_token()) . '">';
+    }
+}
+
+if (!function_exists('csrf_validate')) {
+    /**
+     * Valida el token CSRF recibido por POST. Lanza excepción si falla.
+     */
+    function csrf_validate(): void
+    {
+        $sent = $_POST['csrf_token'] ?? '';
+        $expected = $_SESSION['csrf_token'] ?? '';
+
+        if ($sent === '' || $expected === '' || !hash_equals($expected, $sent)) {
+            http_response_code(403);
+            exit('Sesión inválida (token de seguridad). Por favor vuelve a intentarlo.');
+        }
+    }
+}
+
 if (!function_exists('current_user_type')) {
     /**
      * Devuelve el tipo del usuario logueado ('admin', 'client', 'owner')

@@ -171,6 +171,51 @@ class AdminController
   }
 
   // =========================================================
+  // LIMPIAR DATOS DE PRUEBA (botón cleaner del admin)
+  // =========================================================
+  public function cleanTestData(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      header('Location: ../../Public/index.php?controller=admin&action=dashboard');
+      exit;
+    }
+
+    $connection = DataBase::getConnection();
+
+    // Se vacían solo tablas de datos generados por el uso (prueba/demo).
+    // NO se tocan datos maestros: roles, perfiles, ubicaciones,
+    // métodos de pago ni configuración de comisión.
+    $tables = [
+      'tbeearning',
+      'tbinvoice',
+      'tbbookingticket',
+      'tbbookingdetail',
+      'tbbooking',
+      'tbvenuerating',
+      'tbservicerating',
+      'tbpromotionservice',
+      'tbpromotion',
+      'tbservicehistory',
+      'tbservice',
+      'tbvenue',
+      'tbnotification',
+      'tbuserhistory',
+      'tbownerhistory',
+      'tbownerpayment',
+    ];
+
+    foreach ($tables as $table) {
+      $connection->exec('DELETE FROM ' . $table);
+    }
+
+    header('Location: ../../Public/index.php?controller=admin&action=dashboard&cleaned=1');
+    exit;
+  }
+
+  // =========================================================
   // GUARDIA: SOLO ADMIN AUTENTICADO
   // =========================================================
   private function requireAdmin(): void

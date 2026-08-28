@@ -28,6 +28,7 @@ if ($booking === null) {
   <?php endif; ?>
 
   <form method="post" action="<?= e(base_url('invoice', 'generate')) ?>">
+    <?= csrf_field() ?>
     <input type="hidden" name="bookingId" value="<?= (int) $booking->getIdBooking() ?>">
 
     <div class="form-group">

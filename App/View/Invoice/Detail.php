@@ -73,6 +73,15 @@ if ($invoice === null) {
       </tfoot>
     </table>
   </div>
-</div>
 
-<?php require_once __DIR__ . '/../_footer.php'; ?>
+  <?php if ($earning !== null): ?>
+    <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
+    <h3 style="margin:0 0 10px;">Reparto de ganancias</h3>
+    <div class="detail-grid">
+      <div class="detail-item"><div class="k">Total pagado</div><div class="v">&#8353; <?= number_format($earning->getTotal(), 2) ?></div></div>
+      <div class="detail-item"><div class="k">Comisión plataforma</div><div class="v">&#8353; <?= number_format($earning->getCommission(), 2) ?></div></div>
+      <div class="detail-item"><div class="k">IVA retenido</div><div class="v">&#8353; <?= number_format($earning->getTax(), 2) ?></div></div>
+      <div class="detail-item"><div class="k">Ingreso propietario</div><div class="v"><strong>&#8353; <?= number_format($earning->getOwnerAmount(), 2) ?></strong></div></div>
+    </div>
+  <?php endif; ?>
+</div>

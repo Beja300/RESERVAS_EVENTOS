@@ -6,11 +6,14 @@ require_once __DIR__ . '/../Service/InvoiceService.php';
 require_once __DIR__ . '/../Service/ClientService.php';
 require_once __DIR__ . '/../Service/ServiceService.php';
 require_once __DIR__ . '/../Service/OwnerService.php';
+require_once __DIR__ . '/../Service/BookingTicketService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/DetailRepository.php';
 require_once __DIR__ . '/../Repository/ServiceRepository.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
+require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
+require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class BookingController
@@ -21,10 +24,13 @@ class BookingController
   private ClientService $clientService;
   private ServiceService $serviceService;
   private OwnerService $ownerService;
+  private BookingTicketService $bookingTicketService;
   private BookingRepository $bookingRepo;
   private DetailRepository $detailRepo;
   private ServiceRepository $serviceRepo;
   private VenueRepository $venueRepo;
+  private BookingTicketRepository $ticketRepo;
+  private PaymentMethodRepository $paymentMethodRepo;
 
   public function __construct()
   {
@@ -40,6 +46,9 @@ class BookingController
     $this->detailRepo = new DetailRepository($connection);
     $this->serviceRepo = new ServiceRepository($connection);
     $this->venueRepo = new VenueRepository($connection);
+    $this->ticketRepo = new BookingTicketRepository($connection);
+    $this->paymentMethodRepo = new PaymentMethodRepository($connection);
+    $this->bookingTicketService = new BookingTicketService($connection);
   }
 
   // =========================================================
@@ -152,6 +161,8 @@ class BookingController
     $totals = $this->bookingService->calculateTotals($idBooking);
     $total = $totals['total'];
     $venue = $this->venueRepo->findById($booking->getIdLocal());
+    $ticket = $this->ticketRepo->findByBooking($idBooking);
+    $paymentMethods = $this->paymentMethodRepo->findActive();
 
     require_once __DIR__ . '/../View/Booking/Detail.php';
   }
@@ -304,6 +315,149 @@ class BookingController
       $error = $e->getMessage();
 
       header('Location: ../../Public/index.php?controller=venue&action=list');
+      exit;
+    }
+  }
+
+  // =========================================================
+  // SUBIR COMPROBANTE DE PAGO (cliente)
+  // =========================================================
+  public function uploadTicket(): void
+  {
+    session_start();
+    $this->requireClient();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->detail();
+      return;
+    }
+
+    $client = $_SESSION['user'];
+    $idBooking = (int) ($_POST['bookingId'] ?? 0);
+
+    try {
+
+      $this->clientService->assertOwnsBooking($client->getIdClient(), $idBooking);
+
+      if (empty($_FILES['ticket']['tmp_name'])) {
+        throw new BusinessRuleException('Selecciona un archivo de comprobante.');
+      }
+
+      $tmp = $_FILES['ticket']['tmp_name'];
+      $ext = strtolower(pathinfo($_FILES['ticket']['name'], PATHINFO_EXTENSION));
+
+      $dir = __DIR__ . '/../../Public/resource/tickets';
+      if (!is_dir($dir)) {
+        mkdir($dir, 0775, true);
+      }
+
+      $fileName = 'ticket_' . $idBooking . '_' . time() . '.' . $ext;
+      $target = $dir . '/' . $fileName;
+
+      if (!move_uploaded_file($tmp, $target)) {
+        throw new BusinessRuleException('No se pudo guardar el comprobante.');
+      }
+
+      $this->bookingTicketService->upload($idBooking, 'resource/tickets/' . $fileName, $ext);
+
+      header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+
+      header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
+      exit;
+    }
+  }
+
+  // =========================================================
+  // APROBAR COMPROBANTE (owner) -> genera factura y ganancia
+  // =========================================================
+  public function approveTicket(): void
+  {
+    session_start();
+    $this->requireOwner();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->myBookings();
+      return;
+    }
+
+    $owner = $_SESSION['user'];
+    $idBooking = (int) ($_POST['bookingId'] ?? 0);
+    $idPaymentMethod = (int) ($_POST['paymentMethodId'] ?? 0);
+
+    try {
+
+      $booking = $this->bookingRepo->findById($idBooking);
+
+      if ($booking === null) {
+        throw new BusinessRuleException('La reserva no existe.');
+      }
+
+      $this->ownerService->assertOwnsVenue($owner->getIdOwner(), $booking->getIdLocal());
+
+      $ticket = $this->ticketRepo->findByBooking($idBooking);
+
+      if ($ticket === null) {
+        throw new BusinessRuleException('Esta reserva no tiene comprobante.');
+      }
+
+      $this->bookingTicketService->approve($ticket->getIdTicket(), $idPaymentMethod, $owner->getIdRol());
+
+      header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+
+      header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
+      exit;
+    }
+  }
+
+  // =========================================================
+  // RECHAZAR COMPROBANTE (owner)
+  // =========================================================
+  public function rejectTicket(): void
+  {
+    session_start();
+    $this->requireOwner();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->myBookings();
+      return;
+    }
+
+    $owner = $_SESSION['user'];
+    $idBooking = (int) ($_POST['bookingId'] ?? 0);
+
+    try {
+
+      $booking = $this->bookingRepo->findById($idBooking);
+
+      if ($booking === null) {
+        throw new BusinessRuleException('La reserva no existe.');
+      }
+
+      $this->ownerService->assertOwnsVenue($owner->getIdOwner(), $booking->getIdLocal());
+
+      $ticket = $this->ticketRepo->findByBooking($idBooking);
+
+      if ($ticket === null) {
+        throw new BusinessRuleException('Esta reserva no tiene comprobante.');
+      }
+
+      $this->bookingTicketService->reject($ticket->getIdTicket());
+
+      header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+
+      header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
       exit;
     }
   }

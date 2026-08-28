@@ -17,6 +17,7 @@ $action = $isEdit ? base_url('venue', 'update') : base_url('venue', 'create');
   <?php endif; ?>
 
   <form method="post" action="<?= e($action) ?>">
+    <?= csrf_field() ?>
     <?php if ($isEdit): ?>
       <input type="hidden" name="idVenue" value="<?= (int) $venue->getIdVenue() ?>">
     <?php endif; ?>

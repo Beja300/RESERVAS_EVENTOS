@@ -7,6 +7,23 @@
   </div>
 </div>
 
+<?php if (isset($_GET['cleaned'])): ?>
+  <div class="alert alert-success">Los datos de prueba fueron eliminados correctamente.</div>
+<?php endif; ?>
+
+<div class="card" style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
+  <div>
+    <h3 style="margin-bottom:4px;">Limpiar datos de prueba</h3>
+    <p class="muted">Elimina reservas, servicios, locales, calificaciones, promociones y notificaciones generados en la demo. No afecta usuarios, ubicaciones, métodos de pago ni configuraciones.</p>
+  </div>
+  <form method="post" action="<?= e(base_url('admin', 'cleanTestData')) ?>"
+        data-confirm="¿Eliminar todos los datos de prueba? Esta acción no se puede deshacer."
+        data-confirm-title="Limpiar datos de prueba">
+    <?= csrf_field() ?>
+    <button class="btn btn-danger" type="submit">&#128465; Vaciar datos demo</button>
+  </form>
+</div>
+
 <div class="grid grid-4" style="margin-bottom:20px;">
   <div class="stat"><div class="value"><?= count($bookings) ?></div><div class="label">Reservas este mes</div></div>
   <div class="stat"><div class="value"><?= count($topVenues) ?></div><div class="label">Locales activos</div></div>
