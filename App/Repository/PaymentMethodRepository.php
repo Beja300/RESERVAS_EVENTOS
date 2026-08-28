@@ -19,8 +19,8 @@ class PaymentMethodRepository
   {
     $sql = "
             INSERT INTO tbpaymentmethod (
-                tbpaymentmethodname,
-                tbpaymentmethodisactive
+                tbpaymentmethodtype,
+                tbpaymentmethodactive
             )
             VALUES (
                 :paymentMethod,
@@ -47,14 +47,14 @@ class PaymentMethodRepository
     $sql = "
             SELECT
                 tbpaymentmethodid,
-                tbpaymentmethodname,
-                tbpaymentmethodisactive
+                tbpaymentmethodtype,
+                tbpaymentmethodactive
 
             FROM tbpaymentmethod
 
-            WHERE tbpaymentmethodisactive = true
+            WHERE tbpaymentmethodactive = true
 
-            ORDER BY tbpaymentmethodname ASC
+            ORDER BY tbpaymentmethodtype ASC
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -72,8 +72,8 @@ class PaymentMethodRepository
     $sql = "
             SELECT
                 tbpaymentmethodid,
-                tbpaymentmethodname,
-                tbpaymentmethodisactive
+                tbpaymentmethodtype,
+                tbpaymentmethodactive
 
             FROM tbpaymentmethod
 
@@ -99,8 +99,13 @@ class PaymentMethodRepository
   {
     return new PaymentMethod(
       idPaymentMethod: (int) $row['tbpaymentmethodid'],
-      paymentMethod: $row['tbpaymentmethodname'],
-      isActive: (bool) $row['tbpaymentmethodisactive']
+      paymentMethod: $row['tbpaymentmethodtype'],
+      isActive: $this->toBool($row['tbpaymentmethodactive'])
     );
+  }
+
+  private function toBool(mixed $value): bool
+  {
+    return $value === 1 || $value === '1' || $value === true;
   }
 }

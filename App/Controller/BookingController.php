@@ -149,7 +149,8 @@ class BookingController
     }
 
     $details = $this->detailRepo->findByBooking($idBooking);
-    $total = $this->bookingService->calculateTotal($idBooking);
+    $totals = $this->bookingService->calculateTotals($idBooking);
+    $total = $totals['total'];
     $venue = $this->venueRepo->findById($booking->getIdLocal());
 
     require_once __DIR__ . '/../View/Booking/Detail.php';

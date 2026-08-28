@@ -24,7 +24,7 @@ class OwnerPaymentRepository
                 op.tbownerpaymentholder,
                 op.tbownerpaymentaccount,
                 op.tbownerpaymentinstructions,
-                pm.tbpaymentmethodname
+                pm.tbpaymentmethodtype
 
             FROM tbownerpayment op
 
@@ -33,8 +33,8 @@ class OwnerPaymentRepository
 
             WHERE op.tbownerpaymentownerid = :idOwner
               AND op.tbownerpaymentpaymentmethodid = :idPaymentMethod
-              AND op.tbownerpaymentisactive = true
-              AND pm.tbpaymentmethodisactive = true
+              AND op.tbownerpaymentactive = true
+              AND pm.tbpaymentmethodactive = true
 
             LIMIT 1
         ";

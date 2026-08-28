@@ -24,7 +24,7 @@ class DetailRepository
                 tbdetailquantity,
                 tbdetailunitprice,
                 tbdetaildiscount,
-                tbdetailisactive
+                tbdetailactive
             )
             VALUES (
                 :idClientBooking,
@@ -64,12 +64,12 @@ class DetailRepository
                 tbdetailquantity,
                 tbdetailunitprice,
                 tbdetaildiscount,
-                tbdetailisactive
+                tbdetailactive
 
             FROM tbdetail
 
             WHERE tbdetailbookingid = :idClientBooking
-              AND tbdetailisactive = true
+              AND tbdetailactive = true
 
             ORDER BY tbdetailid ASC
         ";
@@ -126,7 +126,12 @@ class DetailRepository
       quantityDetail: (int) $row['tbdetailquantity'],
       unitPrice: (float) $row['tbdetailunitprice'],
       discount: (float) $row['tbdetaildiscount'],
-      isActiveDetail: (bool) $row['tbdetailisactive']
+      isActiveDetail: $this->toBool($row['tbdetailactive'])
     );
+  }
+
+  private function toBool(mixed $value): bool
+  {
+    return $value === 1 || $value === '1' || $value === true;
   }
 }

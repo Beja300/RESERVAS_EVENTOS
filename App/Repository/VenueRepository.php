@@ -20,16 +20,16 @@ class VenueRepository
     $sql = "
             INSERT INTO tbvenue (
                 tbvenueownerid,
-                tbvenueubicationid,
+                tbvenuelocationid,
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
                 tbvenueimage,
-                tbvenueisactive
+                tbvenueactive
             )
             VALUES (
                 :idOwner,
-                :idUbication,
+                :idLocation,
                 :nameVenue,
                 :typeVenue,
                 :capacityVenue,
@@ -42,7 +42,7 @@ class VenueRepository
 
     $stmt->execute([
       ':idOwner'       => $venue->getIdOwner(),
-      ':idUbication'   => $venue->getIdUbication(),
+      ':idLocation'   => $venue->getIdLocation(),
       ':nameVenue'     => $venue->getNameVenue(),
       ':typeVenue'     => $venue->getTypeVenue(),
       ':capacityVenue' => $venue->getCapacityVenue(),
@@ -63,12 +63,12 @@ class VenueRepository
             SELECT
                 tbvenueid,
                 tbvenueownerid,
-                tbvenueubicationid,
+                tbvenuelocationid,
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
                 tbvenueimage,
-                tbvenueisactive
+                tbvenueactive
 
             FROM tbvenue
 
@@ -96,16 +96,16 @@ class VenueRepository
             SELECT
                 tbvenueid,
                 tbvenueownerid,
-                tbvenueubicationid,
+                tbvenuelocationid,
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
                 tbvenueimage,
-                tbvenueisactive
+                tbvenueactive
 
             FROM tbvenue
 
-            WHERE tbvenueisactive = true
+            WHERE tbvenueactive = true
 
             ORDER BY tbvenuename ASC
         ";
@@ -126,12 +126,12 @@ class VenueRepository
             SELECT
                 tbvenueid,
                 tbvenueownerid,
-                tbvenueubicationid,
+                tbvenuelocationid,
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
                 tbvenueimage,
-                tbvenueisactive
+                tbvenueactive
 
             FROM tbvenue
 
@@ -160,7 +160,7 @@ class VenueRepository
                 tbvenuetype = :typeVenue,
                 tbvenuecapacity = :capacityVenue,
                 tbvenueimage = :imageVenue,
-                tbvenueisactive = :isActive
+                tbvenueactive = :isActive
             WHERE tbvenueid = :idVenue
         ";
 
@@ -185,12 +185,17 @@ class VenueRepository
     return new Venue(
       idVenue: (int) $row['tbvenueid'],
       idOwner: (int) $row['tbvenueownerid'],
-      idUbication: (int) $row['tbvenueubicationid'],
+      idLocation: (int) $row['tbvenuelocationid'],
       nameVenue: $row['tbvenuename'],
       typeVenue: $row['tbvenuetype'],
       capacityVenue: (int) $row['tbvenuecapacity'],
       imageVenue: $row['tbvenueimage'],
-      isActive: (bool) $row['tbvenueisactive']
+      isActive: $this->toBool($row['tbvenueactive'])
     );
+  }
+
+  private function toBool(mixed $value): bool
+  {
+    return $value === 1 || $value === '1' || $value === true;
   }
 }

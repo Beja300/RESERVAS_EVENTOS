@@ -22,8 +22,8 @@ class NotificationRepository
                 tbnotificationroleid,
                 tbnotificationmessage,
                 tbnotificationdate,
-                tbnotificationisread,
-                tbnotificationisactive
+                tbnotificationread,
+                tbnotificationactive
             )
             VALUES (
                 :idRol,
@@ -59,13 +59,13 @@ class NotificationRepository
                 tbnotificationroleid,
                 tbnotificationmessage,
                 tbnotificationdate,
-                tbnotificationisread,
-                tbnotificationisactive
+                tbnotificationread,
+                tbnotificationactive
 
             FROM tbnotification
 
             WHERE tbnotificationroleid = :idRol
-              AND tbnotificationisactive = true
+              AND tbnotificationactive = true
 
             ORDER BY tbnotificationdate DESC
         ";
@@ -91,13 +91,13 @@ class NotificationRepository
                 tbnotificationroleid,
                 tbnotificationmessage,
                 tbnotificationdate,
-                tbnotificationisread,
-                tbnotificationisactive
+                tbnotificationread,
+                tbnotificationactive
 
             FROM tbnotification
 
             WHERE tbnotificationid = :idNotification
-              AND tbnotificationisactive = true
+              AND tbnotificationactive = true
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -119,7 +119,7 @@ class NotificationRepository
   {
     $sql = "
             UPDATE tbnotification
-            SET tbnotificationisread = true
+            SET tbnotificationread = true
             WHERE tbnotificationid = :idNotification
         ";
 
@@ -138,9 +138,9 @@ class NotificationRepository
   {
     $sql = "
             UPDATE tbnotification
-            SET tbnotificationisread = true
+            SET tbnotificationread = true
             WHERE tbnotificationroleid = :idRol
-              AND tbnotificationisactive = true
+              AND tbnotificationactive = true
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -160,8 +160,8 @@ class NotificationRepository
             SELECT COUNT(*)
             FROM tbnotification
             WHERE tbnotificationroleid = :idRol
-              AND tbnotificationisread = false
-              AND tbnotificationisactive = true
+              AND tbnotificationread = false
+              AND tbnotificationactive = true
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -182,7 +182,7 @@ class NotificationRepository
     $sql = "
             SELECT tbroleadminid
             FROM tbroleadmin
-            WHERE tbroleadminisactive = true
+            WHERE tbroleadminactive = true
         ";
 
     $stmt = $this->connection->query($sql);
@@ -201,8 +201,13 @@ class NotificationRepository
       idRol: (int) $row['tbnotificationroleid'],
       messageNotification: $row['tbnotificationmessage'],
       dateNotification: $row['tbnotificationdate'],
-      isActive: (bool) $row['tbnotificationisactive'],
-      isRead: (bool) $row['tbnotificationisread']
+      isActive: $this->toBool($row['tbnotificationactive']),
+      isRead: $this->toBool($row['tbnotificationread'])
     );
+  }
+
+  private function toBool(mixed $value): bool
+  {
+    return $value === 1 || $value === '1' || $value === true;
   }
 }

@@ -49,11 +49,12 @@ class LocationController
     $province = trim($_POST['province'] ?? '');
     $canton = trim($_POST['canton'] ?? '');
     $district = trim($_POST['district'] ?? '');
-    $address = trim($_POST['address'] ?? '') ?: null;
+    $town = trim($_POST['town'] ?? '') ?: null;
+    $description = trim($_POST['description'] ?? '') ?: null;
 
     try {
 
-      $this->locationService->validateAndCreate($province, $canton, $district, $address);
+      $this->locationService->validateAndCreate($province, $canton, $district, $town, $description);
 
       header('Location: ../../Public/index.php?controller=location&action=list');
       exit;

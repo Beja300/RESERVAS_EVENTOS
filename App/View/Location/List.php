@@ -22,7 +22,8 @@
           <th>Provincia</th>
           <th>Cantón</th>
           <th>Distrito</th>
-          <th>Dirección</th>
+          <th>Pueblo</th>
+          <th>Descripción</th>
         </tr>
       </thead>
       <tbody>
@@ -32,7 +33,8 @@
             <td><?= e($loc->getProvinceLocation()) ?></td>
             <td><?= e($loc->getCantonLocation()) ?></td>
             <td><?= e($loc->getDistrictLocation()) ?></td>
-            <td><?= $loc->getAddressLocation() !== '' ? e($loc->getAddressLocation()) : '—' ?></td>
+            <td><?= $loc->getTownLocation() ? e($loc->getTownLocation()) : '—' ?></td>
+            <td><?= $loc->getDescriptionLocation() ? e($loc->getDescriptionLocation()) : '—' ?></td>
           </tr>
         <?php endforeach; ?>
       </tbody>

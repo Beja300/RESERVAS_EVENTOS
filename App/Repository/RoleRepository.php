@@ -32,8 +32,8 @@ class RoleRepository
                 tbrolename,
                 tbroleemail,
                 tbrolepassword,
-                tbrolephonenumber,
-                tbroleisactive
+                tbrolephone,
+                tbroleactive
             )
             VALUES (
                 :name,
@@ -71,8 +71,8 @@ class RoleRepository
                 tbrolename,
                 tbroleemail,
                 tbrolepassword,
-                tbrolephonenumber,
-                tbroleisactive
+                tbrolephone,
+                tbroleactive
 
             FROM tbrole
 
@@ -104,8 +104,8 @@ class RoleRepository
                 tbrolename,
                 tbroleemail,
                 tbrolepassword,
-                tbrolephonenumber,
-                tbroleisactive
+                tbrolephone,
+                tbroleactive
 
             FROM tbrole
 
@@ -139,7 +139,7 @@ class RoleRepository
             SET
                 tbrolename = :name,
                 tbroleemail = :email,
-                tbrolephonenumber = :phoneNumber
+                tbrolephone = :phoneNumber
             WHERE tbroleid = :idRole
         ";
 
@@ -163,7 +163,7 @@ class RoleRepository
   {
     $sql = "
             UPDATE tbrole
-            SET tbroleisactive = :isActive
+            SET tbroleactive = :isActive
             WHERE tbroleid = :idRole
         ";
 
@@ -184,7 +184,7 @@ class RoleRepository
     $sql = "
             SELECT COUNT(*)
             FROM tbrole
-            WHERE tbroleisactive = true
+            WHERE tbroleactive = true
         ";
 
     $stmt = $this->connection->query($sql);
@@ -221,8 +221,14 @@ class RoleRepository
       name: $row['tbrolename'],
       email: $row['tbroleemail'],
       password: $row['tbrolepassword'],
-      phoneNumber: $row['tbrolephonenumber'],
-      isActive: (bool) $row['tbroleisactive']
+      phoneNumber: $row['tbrolephone'],
+      isActive: $this->toBool($row['tbroleactive'])
     );
+  }
+
+  // Convierte un valor de BBDD (0/1/'0'/'1') a boolean correcto.
+  private function toBool(mixed $value): bool
+  {
+    return $value === 1 || $value === '1' || $value === true;
   }
 }

@@ -70,9 +70,14 @@ $action = $isEdit ? base_url('venue', 'update') : base_url('venue', 'create');
       </div>
 
       <div class="form-group">
-        <label for="locationDetail">Detalle de dirección</label>
-        <input class="form-control" type="text" id="locationDetail" name="locationDetail"
-          value="<?= e($_POST['locationDetail'] ?? '') ?>">
+        <label for="town">Pueblo</label>
+        <input class="form-control" type="text" id="town" name="town"
+          value="<?= e($_POST['town'] ?? '') ?>">
+      </div>
+      <div class="form-group">
+        <label for="description">Descripción</label>
+        <input class="form-control" type="text" id="description" name="description"
+          value="<?= e($_POST['description'] ?? '') ?>">
       </div>
     <?php else: ?>
       <div class="checkbox-row">

@@ -23,7 +23,7 @@ class InvoiceRepository
                 tbinvoicepaymentmethodid,
                 tbinvoicedate,
                 tbinvoicestatus,
-                tbinvoiceisactive
+                tbinvoiceactive
             )
             VALUES (
                 :idClientBooking,
@@ -60,7 +60,7 @@ class InvoiceRepository
                 tbinvoicepaymentmethodid,
                 tbinvoicedate,
                 tbinvoicestatus,
-                tbinvoiceisactive
+                tbinvoiceactive
 
             FROM tbinvoice
 
@@ -110,7 +110,12 @@ class InvoiceRepository
       idPaymentMethod: (int) $row['tbinvoicepaymentmethodid'],
       dateInvoice: $row['tbinvoicedate'],
       statusInvoice: $row['tbinvoicestatus'],
-      isActiveInvoice: (bool) $row['tbinvoiceisactive']
+      isActiveInvoice: $this->toBool($row['tbinvoiceactive'])
     );
+  }
+
+  private function toBool(mixed $value): bool
+  {
+    return $value === 1 || $value === '1' || $value === true;
   }
 }

@@ -23,7 +23,7 @@ class BookingRepository
                 tbbookinglocalid,
                 tbbookingdate,
                 tbbookingstate,
-                tbbookingisactive
+                tbbookingactive
             )
             VALUES (
                 :idClient,
@@ -60,7 +60,7 @@ class BookingRepository
                 tbbookinglocalid,
                 tbbookingdate,
                 tbbookingstate,
-                tbbookingisactive
+                tbbookingactive
 
             FROM tbbooking
 
@@ -91,7 +91,7 @@ class BookingRepository
                 tbbookinglocalid,
                 tbbookingdate,
                 tbbookingstate,
-                tbbookingisactive
+                tbbookingactive
 
             FROM tbbooking
 
@@ -122,7 +122,7 @@ class BookingRepository
                 tbbookinglocalid,
                 tbbookingdate,
                 tbbookingstate,
-                tbbookingisactive
+                tbbookingactive
 
             FROM tbbooking
 
@@ -153,7 +153,7 @@ class BookingRepository
                 tbbookinglocalid,
                 tbbookingdate,
                 tbbookingstate,
-                tbbookingisactive
+                tbbookingactive
 
             FROM tbbooking
 
@@ -273,7 +273,12 @@ class BookingRepository
       idLocal: (int) $row['tbbookinglocalid'],
       bookingDate: $row['tbbookingdate'],
       bookingState: $row['tbbookingstate'],
-      isBookingActive: (bool) $row['tbbookingisactive']
+      isBookingActive: $this->toBool($row['tbbookingactive'])
     );
+  }
+
+  private function toBool(mixed $value): bool
+  {
+    return $value === 1 || $value === '1' || $value === true;
   }
 }

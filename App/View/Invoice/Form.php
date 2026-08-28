@@ -17,6 +17,9 @@ if ($booking === null) {
   <div class="detail-grid" style="margin-bottom:20px;">
     <div class="detail-item"><div class="k">Reserva</div><div class="v">#<?= (int) $booking->getIdBooking() ?></div></div>
     <div class="detail-item"><div class="k">Fecha</div><div class="v"><?= e(date('d/m/Y', strtotime($booking->getBookingDate()))) ?></div></div>
+    <div class="detail-item"><div class="k">Subtotal</div><div class="v">&#8353; <?= number_format($totals['subtotal'], 2) ?></div></div>
+    <div class="detail-item"><div class="k">Comisión (5%)</div><div class="v">&#8353; <?= number_format($totals['commission'], 2) ?></div></div>
+    <div class="detail-item"><div class="k">IVA (13%)</div><div class="v">&#8353; <?= number_format($totals['tax'], 2) ?></div></div>
     <div class="detail-item"><div class="k">Total a pagar</div><div class="v"><strong>&#8353; <?= number_format($total, 2) ?></strong></div></div>
   </div>
 

@@ -24,7 +24,7 @@ class ServiceRepository
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceisactive
+                tbserviceactive
             )
             VALUES (
                 :idLocal,
@@ -64,7 +64,7 @@ class ServiceRepository
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceisactive
+                tbserviceactive
 
             FROM tbservice
 
@@ -97,13 +97,13 @@ class ServiceRepository
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceisactive
+                tbserviceactive
 
             FROM tbservice
 
             WHERE tbservicelocalid = :idLocal
               AND tbservicestate = 'aprobado'
-              AND tbserviceisactive = true
+              AND tbserviceactive = true
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -130,7 +130,7 @@ class ServiceRepository
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceisactive
+                tbserviceactive
 
             FROM tbservice
 
@@ -158,7 +158,7 @@ class ServiceRepository
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceisactive
+                tbserviceactive
 
             FROM tbservice
 
@@ -206,7 +206,7 @@ class ServiceRepository
                 tbservicename = :nameService,
                 tbservicetype = :typeService,
                 tbserviceprice = :priceService,
-                tbserviceisactive = :isActive
+                tbserviceactive = :isActive
             WHERE tbserviceid = :idService
         ";
 
@@ -234,7 +234,12 @@ class ServiceRepository
       typeService: $row['tbservicetype'],
       priceService: (float) $row['tbserviceprice'],
       stateService: $row['tbservicestate'],
-      isActive: (bool) $row['tbserviceisactive']
+      isActive: $this->toBool($row['tbserviceactive'])
     );
+  }
+
+  private function toBool(mixed $value): bool
+  {
+    return $value === 1 || $value === '1' || $value === true;
   }
 }

@@ -64,18 +64,43 @@ class BookingService
         return $this->bookingRepo->save($booking);
     }
 
+    // Porcentajes de cobro aplicados al total de la reserva
+    private const COMMISSION_PCT = 0.05; // Comisión de la plataforma: 5%
+    private const TAX_PCT        = 0.13; // Impuesto al valor agregado: 13%
+
     public function calculateTotal(int $bookingPk): float
     {
-        $total = 0.0;
+        return $this->calculateTotals($bookingPk)['total'];
+    }
+
+    /**
+     * Calcula el desglose de una reserva:
+     *   - subtotal   = suma de las líneas (cantidad x precio - descuento)
+     *   - commission = 5% sobre el subtotal
+     *   - tax        = 13% de IVA sobre (subtotal + comisión)
+     *   - total      = subtotal + comisión + IVA
+     */
+    public function calculateTotals(int $bookingPk): array
+    {
+        $subtotal = 0.0;
 
         foreach (
             $this->detailRepo->findByBooking($bookingPk)
             as $line
         ) {
-            $total += $line->getSubtotal();
+            $subtotal += $line->getSubtotal();
         }
 
-        return $total;
+        $commission = round($subtotal * self::COMMISSION_PCT, 2);
+        $tax        = round(($subtotal + $commission) * self::TAX_PCT, 2);
+        $total      = round($subtotal + $commission + $tax, 2);
+
+        return [
+            'subtotal'   => $subtotal,
+            'commission' => $commission,
+            'tax'        => $tax,
+            'total'      => $total,
+        ];
     }
 
     public function confirm(int $bookingPk): void

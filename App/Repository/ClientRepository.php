@@ -5,235 +5,224 @@ require_once __DIR__ . '/../Model/Client.php';
 
 class ClientRepository
 {
-  private PDO $connection;
+    private PDO $connection;
 
-  public function __construct(PDO $connection)
-  {
-    $this->connection = $connection;
-  }
+    public function __construct(PDO $connection)
+    {
+        $this->connection = $connection;
+    }
 
-  // =========================================================
-  // GUARDAR
-  // =========================================================
-  public function save(Client $client): bool
-  {
-    try {
-      $this->connection->beginTransaction();
+    // =========================================================
+    // GUARDAR (tbrole + tbroleclient + tbclient)
+    // =========================================================
+    public function save(Client $client): bool
+    {
+        try {
+            $this->connection->beginTransaction();
 
-      $sqlRole = "
-                INSERT INTO tbrole (
-                    tbrolename,
-                    tbroleemail,
-                    tbrolepassword,
-                    tbrolephonenumber,
-                    tbroleisactive
+            $idRole = $this->insertRole($client);
+
+            $sqlLink = "
+                INSERT INTO tbroleclient (
+                    tbroleclientrolid,
+                    tbroleclientactive
                 )
                 VALUES (
-                    :name,
-                    :email,
-                    :password,
-                    :phoneNumber,
+                    :idRole,
                     :isActive
                 )
             ";
+            $stmtLink = $this->connection->prepare($sqlLink);
+            $stmtLink->execute([
+                ':idRole'   => $idRole,
+                ':isActive' => $this->toDb($client->getIsClientActive()),
+            ]);
 
-      $stmtRole = $this->connection->prepare($sqlRole);
-
-      $stmtRole->execute([
-        ':name'        => $client->getName(),
-        ':email'       => $client->getEmail(),
-        ':password'    => password_hash($client->getPassword(), PASSWORD_DEFAULT),
-        ':phoneNumber' => $client->getPhoneNumber(),
-        ':isActive'    => $client->getIsActive()
-      ]);
-
-      // tbroleclientid comparte el mismo valor que tbroleid (PK compartida, no es FK)
-      $idRole = (int) $this->connection->lastInsertId();
-
-      $sqlClient = "
-                INSERT INTO tbroleclient (
-                    tbroleclientid,
-                    tbroleclientisactive,
-                    tbroleclientrolid,
-                    tbroleclientimage
+            $sqlProfile = "
+                INSERT INTO tbclient (
+                    tbclientroleid,
+                    tbclientname,
+                    tbclientimage,
+                    tbclientactive
                 )
                 VALUES (
-                    :idClient,
-                    :isClientActive,
-                    :idRol,
-                    :imageClient
+                    :idRole,
+                    :name,
+                    :image,
+                    :isActive
                 )
             ";
+            $stmtProfile = $this->connection->prepare($sqlProfile);
+            $stmtProfile->execute([
+                ':idRole'   => $idRole,
+                ':name'     => $client->getName(),
+                ':image'    => $client->getImageClient() ?: null,
+                ':isActive' => $this->toDb($client->getIsClientActive()),
+            ]);
 
-      $stmtClient = $this->connection->prepare($sqlClient);
+            $client->setIdClient($idRole);
+            $client->setIdRol($idRole);
 
-      $stmtClient->execute([
-        ':idClient'       => $idRole,
-        ':isClientActive' => $client->getIsClientActive(),
-        ':idRol'          => $client->getIdRol(),
-        ':imageClient'    => $client->getImageClient()
-      ]);
-
-      $client->setIdClient($idRole);
-
-      $this->connection->commit();
-
-      return true;
-    } catch (PDOException $e) {
-
-      $this->connection->rollBack();
-
-      return false;
+            $this->connection->commit();
+            return true;
+        } catch (PDOException $e) {
+            $this->connection->rollBack();
+            return false;
+        }
     }
-  }
 
-
-  // =========================================================
-  // BUSCAR POR EMAIL
-  // =========================================================
-  public function findByEmail(string $email): ?Client
-  {
-    $sql = "
+    // =========================================================
+    // BUSCAR POR EMAIL
+    // =========================================================
+    public function findByEmail(string $email): ?Client
+    {
+        $sql = "
             SELECT
                 r.tbroleid,
                 r.tbrolename,
                 r.tbroleemail,
                 r.tbrolepassword,
-                r.tbrolephonenumber,
-                r.tbroleisactive,
-
-                c.tbroleclientid,
-                c.tbroleclientisactive,
-                c.tbroleclientrolid,
-                c.tbroleclientimage
-
+                r.tbrolephone,
+                r.tbroleactive,
+                p.tbclientid,
+                p.tbclientimage,
+                p.tbclientactive
             FROM tbrole r
-
-            INNER JOIN tbroleclient c
-                ON c.tbroleclientid = r.tbroleid
-
+            INNER JOIN tbroleclient c ON c.tbroleclientrolid = r.tbroleid
+            LEFT JOIN tbclient p ON p.tbclientroleid = r.tbroleid
             WHERE r.tbroleemail = :email
-
             LIMIT 1
         ";
 
-    $stmt = $this->connection->prepare($sql);
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute([':email' => $email]);
 
-    $stmt->execute([
-      ':email' => $email
-    ]);
-
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$row) {
-      return null;
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->mapRow($row) : null;
     }
 
-    return $this->mapRow($row);
-  }
-
-
-  // =========================================================
-  // BUSCAR POR ID DE CLIENTE
-  // =========================================================
-  public function findByClientPk(int $clientPk): ?Client
-  {
-    $sql = "
+    // =========================================================
+    // BUSCAR POR ID DE CLIENTE
+    // =========================================================
+    public function findByClientPk(int $clientPk): ?Client
+    {
+        $sql = "
             SELECT
                 r.tbroleid,
                 r.tbrolename,
                 r.tbroleemail,
                 r.tbrolepassword,
-                r.tbrolephonenumber,
-                r.tbroleisactive,
-
-                c.tbroleclientid,
-                c.tbroleclientisactive,
-                c.tbroleclientrolid,
-                c.tbroleclientimage
-
-            FROM tbroleclient c
-
-            INNER JOIN tbrole r
-                ON r.tbroleid = c.tbroleclientid
-
+                r.tbrolephone,
+                r.tbroleactive,
+                p.tbclientid,
+                p.tbclientimage,
+                p.tbclientactive
+            FROM tbrole r
+            INNER JOIN tbroleclient c ON c.tbroleclientrolid = r.tbroleid
+            LEFT JOIN tbclient p ON p.tbclientroleid = r.tbroleid
             WHERE c.tbroleclientid = :idClient
-
             LIMIT 1
         ";
 
-    $stmt = $this->connection->prepare($sql);
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute([':idClient' => $clientPk]);
 
-    $stmt->execute([
-      ':idClient' => $clientPk
-    ]);
-
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$row) {
-      return null;
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->mapRow($row) : null;
     }
 
-    return $this->mapRow($row);
-  }
-
-
-  // =========================================================
-  // OBTENER TODOS
-  // =========================================================
-  public function findAll(): array
-  {
-    $sql = "
+    // =========================================================
+    // OBTENER TODOS
+    // =========================================================
+    public function findAll(): array
+    {
+        $sql = "
             SELECT
                 r.tbroleid,
                 r.tbrolename,
                 r.tbroleemail,
                 r.tbrolepassword,
-                r.tbrolephonenumber,
-                r.tbroleisactive,
-
-                c.tbroleclientid,
-                c.tbroleclientisactive,
-                c.tbroleclientrolid,
-                c.tbroleclientimage
-
-            FROM tbroleclient c
-
-            INNER JOIN tbrole r
-                ON r.tbroleid = c.tbroleclientid
-
-            ORDER BY c.tbroleclientid ASC
+                r.tbrolephone,
+                r.tbroleactive,
+                p.tbclientid,
+                p.tbclientimage,
+                p.tbclientactive
+            FROM tbrole r
+            INNER JOIN tbroleclient c ON c.tbroleclientrolid = r.tbroleid
+            LEFT JOIN tbclient p ON p.tbclientroleid = r.tbroleid
+            ORDER BY p.tbclientid ASC
         ";
 
-    $stmt = $this->connection->prepare($sql);
-    $stmt->execute();
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute();
 
-    $clients = [];
-
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $clients[] = $this->mapRow($row);
+        $clients = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $clients[] = $this->mapRow($row);
+        }
+        return $clients;
     }
 
-    return $clients;
-  }
+    // =========================================================
+    // COMPARTIDO CON ADMIN/OWNER: insertar registro base tbrole
+    // =========================================================
+    private function insertRole(Client $client): int
+    {
+        $sqlRole = "
+            INSERT INTO tbrole (
+                tbrolename,
+                tbroleemail,
+                tbrolepassword,
+                tbrolephone,
+                tbroleactive
+            )
+            VALUES (
+                :name,
+                :email,
+                :password,
+                :phoneNumber,
+                :isActive
+            )
+        ";
 
+        $stmtRole = $this->connection->prepare($sqlRole);
+        $stmtRole->execute([
+            ':name'        => $client->getName(),
+            ':email'       => $client->getEmail(),
+            ':password'    => password_hash($client->getPassword(), PASSWORD_DEFAULT),
+            ':phoneNumber' => $client->getPhoneNumber(),
+            ':isActive'    => $this->toDb($client->getIsActive()),
+        ]);
 
-  // =========================================================
-  // MAPEO FILA -> OBJETO
-  // =========================================================
-  private function mapRow(array $row): Client
-  {
-    return new Client(
-      id: (int) $row['tbroleid'],
-      name: $row['tbrolename'],
-      email: $row['tbroleemail'],
-      password: $row['tbrolepassword'],
-      isActive: (bool) $row['tbroleisactive'],
-      idClient: (int) $row['tbroleclientid'],
-      isClientActive: (bool) $row['tbroleclientisactive'],
-      idRol: (int) $row['tbroleclientrolid'],
-      imageClient: $row['tbroleclientimage'],
-      phoneNumber: $row['tbrolephonenumber']
-    );
-  }
+        return (int) $this->connection->lastInsertId();
+    }
+
+    // =========================================================
+    // MAPEO FILA -> OBJETO
+    // =========================================================
+    private function mapRow(array $row): Client
+    {
+        return new Client(
+            id: (int) $row['tbroleid'],
+            name: $row['tbrolename'],
+            email: $row['tbroleemail'],
+            password: $row['tbrolepassword'],
+            isActive: $this->toBool($row['tbroleactive']),
+            idClient: (int) ($row['tbclientid'] ?? 0),
+            isClientActive: $this->toBool($row['tbclientactive'] ?? $row['tbroleactive']),
+            idRol: (int) $row['tbroleid'],
+            imageClient: $row['tbclientimage'] ?? '',
+            phoneNumber: $row['tbrolephone']
+        );
+    }
+
+    private function toBool(mixed $value): bool
+    {
+        return $value === 1 || $value === '1' || $value === true;
+    }
+
+    private function toDb(bool $value): int
+    {
+        return $value ? 1 : 0;
+    }
 }

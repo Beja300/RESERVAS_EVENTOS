@@ -48,6 +48,13 @@ class AuthService
         }
     }
 
+    public function validateIdentificationIsUnique(string $identificationNumber): void
+    {
+        if ($this->ownerRepo->findByIdentificationNumber($identificationNumber) !== null) {
+            throw new BusinessRuleException("Ya existe un propietario registrado con ese número de identificación.");
+        }
+    }
+
 
     // =========================================================
     // REGISTRAR CLIENTE
@@ -93,6 +100,10 @@ class AuthService
         $this->validateEmailIsUnique($email);
         $this->validatePasswordStrength($password);
         $this->validatePhoneFormat($phoneNumber);
+
+        if ($ownerIdentification !== null && trim($ownerIdentification) !== '') {
+            $this->validateIdentificationIsUnique($ownerIdentification);
+        }
 
         $owner = new Owner(
             id: 0,

@@ -67,6 +67,12 @@ class Detail
     return $this->isActiveDetail;
   }
 
+  // Subtotal de la línea: cantidad x precio unitario - descuento
+  public function getSubtotal(): float
+  {
+    return $this->quantityDetail * $this->unitPrice - $this->discount;
+  }
+
   // Setters
   public function setIdDetail(int $idDetail): void
   {

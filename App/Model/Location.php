@@ -6,20 +6,23 @@ class Location
     private string $provinceLocation;
     private string $cantonLocation;
     private string $districtLocation;
-    private string $addressLocation;
+    private ?string $townLocation;
+    private ?string $descriptionLocation;
 
     public function __construct(
         int $idLocation = 0,
         string $provinceLocation = '',
         string $cantonLocation = '',
         string $districtLocation = '',
-        string $addressLocation = ''
+        ?string $townLocation = null,
+        ?string $descriptionLocation = null
     ) {
         $this->idLocation = $idLocation;
         $this->provinceLocation = $provinceLocation;
         $this->cantonLocation = $cantonLocation;
         $this->districtLocation = $districtLocation;
-        $this->addressLocation = $addressLocation;
+        $this->townLocation = $townLocation;
+        $this->descriptionLocation = $descriptionLocation;
     }
 
     // Getters
@@ -43,9 +46,14 @@ class Location
         return $this->districtLocation;
     }
 
-    public function getAddressLocation(): string
+    public function getTownLocation(): ?string
     {
-        return $this->addressLocation;
+        return $this->townLocation;
+    }
+
+    public function getDescriptionLocation(): ?string
+    {
+        return $this->descriptionLocation;
     }
 
     // Setters
@@ -69,8 +77,13 @@ class Location
         $this->districtLocation = $districtLocation;
     }
 
-    public function setAddressLocation(string $addressLocation): void
+    public function setTownLocation(?string $townLocation): void
     {
-        $this->addressLocation = $addressLocation;
+        $this->townLocation = $townLocation;
+    }
+
+    public function setDescriptionLocation(?string $descriptionLocation): void
+    {
+        $this->descriptionLocation = $descriptionLocation;
     }
 }

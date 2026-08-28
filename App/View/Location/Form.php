@@ -31,11 +31,19 @@
       </div>
     </div>
 
-    <div class="form-group">
-      <label for="address">Dirección</label>
-      <input class="form-control" type="text" id="address" name="address"
-             placeholder="Detalle de la dirección"
-             value="<?= e($_POST['address'] ?? '') ?>">
+    <div class="grid grid-2">
+      <div class="form-group">
+        <label for="town">Pueblo</label>
+        <input class="form-control" type="text" id="town" name="town"
+               placeholder="Pueblo o comunidad"
+               value="<?= e($_POST['town'] ?? '') ?>">
+      </div>
+      <div class="form-group">
+        <label for="description">Descripción</label>
+        <input class="form-control" type="text" id="description" name="description"
+               placeholder="Otras señas de la ubicación"
+               value="<?= e($_POST['description'] ?? '') ?>">
+      </div>
     </div>
 
     <button class="btn btn-primary" type="submit">Crear ubicación</button>

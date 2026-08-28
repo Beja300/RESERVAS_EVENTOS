@@ -90,7 +90,8 @@ class VenueController
     $province = trim($_POST['province'] ?? '');
     $canton = trim($_POST['canton'] ?? '');
     $district = trim($_POST['district'] ?? '');
-    $locationDetail = trim($_POST['locationDetail'] ?? '') ?: null;
+    $town = trim($_POST['town'] ?? '') ?: null;
+    $description = trim($_POST['description'] ?? '') ?: null;
     $name = trim($_POST['name'] ?? '');
     $type = trim($_POST['type'] ?? '') ?: null;
     $capacity = isset($_POST['capacity']) && $_POST['capacity'] !== '' ? (int) $_POST['capacity'] : null;
@@ -103,7 +104,8 @@ class VenueController
         $province,
         $canton,
         $district,
-        $locationDetail,
+        $town,
+        $description,
         $name,
         $type,
         $capacity,

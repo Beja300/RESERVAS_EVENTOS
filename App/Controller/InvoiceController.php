@@ -50,7 +50,8 @@ class InvoiceController
     }
 
     $paymentMethods = $this->paymentMethodRepo->findActive();
-    $total = $this->bookingService->calculateTotal($idBooking);
+    $totals = $this->bookingService->calculateTotals($idBooking);
+    $total = $totals['total'];
     $details = $this->detailRepo->findByBooking($idBooking);
 
     require_once __DIR__ . '/../View/Invoice/Form.php';
@@ -90,7 +91,8 @@ class InvoiceController
 
       $error = $e->getMessage();
       $paymentMethods = $this->paymentMethodRepo->findActive();
-      $total = $this->bookingService->calculateTotal($idBooking);
+      $totals = $this->bookingService->calculateTotals($idBooking);
+      $total = $totals['total'];
       $details = $this->detailRepo->findByBooking($idBooking);
 
       require_once __DIR__ . '/../View/Invoice/Form.php';
@@ -122,7 +124,8 @@ class InvoiceController
     }
 
     $details = $this->detailRepo->findByBooking($idBooking);
-    $total = $this->bookingService->calculateTotal($idBooking);
+    $totals = $this->bookingService->calculateTotals($idBooking);
+    $total = $totals['total'];
 
     require_once __DIR__ . '/../View/Invoice/Detail.php';
   }

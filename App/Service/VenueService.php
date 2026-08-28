@@ -22,7 +22,8 @@ class VenueService
         string $province,
         string $canton,
         string $district,
-        ?string $locationDetail,
+        ?string $town,
+        ?string $description,
         string $name,
         ?string $type,
         ?int $capacity,
@@ -40,13 +41,14 @@ class VenueService
             $province,
             $canton,
             $district,
-            $locationDetail
+            $town,
+            $description
         );
 
         $venue = new Venue(
             idVenue: 0,
             idOwner: $ownerPk,
-            idUbication: $locationPk,
+            idLocation: $locationPk,
             nameVenue: $name,
             typeVenue: $type ?? '',
             capacityVenue: $capacity ?? 0,

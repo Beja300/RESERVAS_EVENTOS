@@ -19,23 +19,26 @@ class LocationRepository
                 tblocationprovince,
                 tblocationcanton,
                 tblocationdistrict,
-                tblocationaddress
+                tblocationtown,
+                tblocationdescription
             )
             VALUES (
                 :province,
                 :canton,
                 :district,
-                :address
+                :town,
+                :description
             )
         ";
 
         $stmt = $this->connection->prepare($sql);
 
         $stmt->execute([
-            ':province' => $location->getProvinceLocation(),
-            ':canton'   => $location->getCantonLocation(),
-            ':district' => $location->getDistrictLocation(),
-            ':address'  => $location->getAddressLocation()
+            ':province'     => $location->getProvinceLocation(),
+            ':canton'       => $location->getCantonLocation(),
+            ':district'     => $location->getDistrictLocation(),
+            ':town'         => $location->getTownLocation(),
+            ':description'  => $location->getDescriptionLocation(),
         ]);
 
         return (int) $this->connection->lastInsertId();
@@ -49,7 +52,8 @@ class LocationRepository
                 tblocationprovince,
                 tblocationcanton,
                 tblocationdistrict,
-                tblocationaddress
+                tblocationtown,
+                tblocationdescription
             FROM tblocation
             WHERE tblocationid = :idLocation
         ";
@@ -70,7 +74,8 @@ class LocationRepository
                 tblocationprovince,
                 tblocationcanton,
                 tblocationdistrict,
-                tblocationaddress
+                tblocationtown,
+                tblocationdescription
             FROM tblocation
             ORDER BY tblocationid ASC
         ";
@@ -78,7 +83,7 @@ class LocationRepository
         $stmt = $this->connection->prepare($sql);
         $stmt->execute();
 
-        return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+        return array_map([$this, 'mapRow'], $stmt->fetchAll());
     }
 
     private function mapRow(array $row): Location
@@ -88,7 +93,8 @@ class LocationRepository
             provinceLocation: $row['tblocationprovince'],
             cantonLocation: $row['tblocationcanton'],
             districtLocation: $row['tblocationdistrict'],
-            addressLocation: $row['tblocationaddress']
+            townLocation: $row['tblocationtown'],
+            descriptionLocation: $row['tblocationdescription']
         );
     }
 }
