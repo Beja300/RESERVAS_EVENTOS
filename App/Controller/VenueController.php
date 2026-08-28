@@ -37,7 +37,7 @@ class VenueController
     $venue = $this->venueService->findById($idVenue);
 
     if ($venue === null) {
-      header('Location: ../Controller/VenueController.php?action=catalog');
+      header('Location: ../../Public/index.php?controller=venue&action=catalog');
       exit;
     }
 
@@ -53,7 +53,7 @@ class VenueController
     $this->requireOwner();
 
     $owner = $_SESSION['user'];
-    $venues = $this->venueService->findActive();
+    $venues = $this->venueService->findByOwner($owner->getIdOwner());
 
     require_once __DIR__ . '/../View/Venue/List.php';
   }
@@ -110,7 +110,7 @@ class VenueController
         $image
       );
 
-      header('Location: ../Controller/VenueController.php?action=list');
+      header('Location: ../../Public/index.php?controller=venue&action=list');
       exit;
     } catch (BusinessRuleException $e) {
 
@@ -162,7 +162,7 @@ class VenueController
         $active
       );
 
-      header('Location: ../Controller/VenueController.php?action=list');
+      header('Location: ../../Public/index.php?controller=venue&action=list');
       exit;
     } catch (BusinessRuleException $e) {
 
@@ -178,7 +178,7 @@ class VenueController
   private function requireOwner(): void
   {
     if (($_SESSION['type'] ?? null) !== 'owner') {
-      header('Location: ../View/Auth/Login.php');
+      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
       exit;
     }
   }

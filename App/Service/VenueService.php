@@ -93,4 +93,12 @@ class VenueService
     {
         return $this->venueRepo->findActive();
     }
+
+    // =========================================================
+    // BUSCAR VENUES DE UN OWNER (panel del propietario)
+    // =========================================================
+    public function findByOwner(int $ownerPk): array
+    {
+        return $this->venueRepo->findByOwner($ownerPk);
+    }
 }

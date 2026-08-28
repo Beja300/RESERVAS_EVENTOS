@@ -90,7 +90,7 @@ class ServiceController
         $type
       );
 
-      header('Location: ../Controller/ServiceController.php?action=list&venueId=' . $idVenue);
+      header('Location: ../../Public/index.php?controller=service&action=list&venueId=' . $idVenue);
       exit;
     } catch (BusinessRuleException $e) {
 
@@ -140,7 +140,7 @@ class ServiceController
         $active
       );
 
-      header('Location: ../Controller/ServiceController.php?action=list&venueId=' . $service->getIdLocal());
+      header('Location: ../../Public/index.php?controller=service&action=list&venueId=' . $service->getIdLocal());
       exit;
     } catch (BusinessRuleException $e) {
 
@@ -175,7 +175,7 @@ class ServiceController
 
     $this->serviceService->approve($idService);
 
-    header('Location: ../Controller/ServiceController.php?action=pending');
+    header('Location: ../../Public/index.php?controller=service&action=pending');
     exit;
   }
 
@@ -191,7 +191,7 @@ class ServiceController
 
     $this->serviceService->reject($idService);
 
-    header('Location: ../Controller/ServiceController.php?action=pending');
+    header('Location: ../../Public/index.php?controller=service&action=pending');
     exit;
   }
 
@@ -201,7 +201,7 @@ class ServiceController
   private function requireOwner(): void
   {
     if (($_SESSION['type'] ?? null) !== 'owner') {
-      header('Location: ../View/Auth/Login.php');
+      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
       exit;
     }
   }
@@ -209,7 +209,7 @@ class ServiceController
   private function requireAdmin(): void
   {
     if (($_SESSION['type'] ?? null) !== 'admin') {
-      header('Location: ../View/Auth/Login.php');
+      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
       exit;
     }
   }

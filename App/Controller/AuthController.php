@@ -52,19 +52,19 @@ class AuthController
       switch ($result['type']) {
 
         case 'admin':
-          header('Location: ../View/Admin/Dashboard.php');
+          header('Location: ../../Public/index.php?controller=admin&action=dashboard');
           break;
 
         case 'client':
-          header('Location: ../View/Client/Dashboard.php');
+          header('Location: ../../Public/index.php?controller=client&action=dashboard');
           break;
 
         case 'owner':
-          header('Location: ../View/Owner/Dashboard.php');
+          header('Location: ../../Public/index.php?controller=owner&action=dashboard');
           break;
 
         default:
-          header('Location: ../View/Auth/Login.php');
+          header('Location: ../../Public/index.php?controller=auth&action=showLogin');
           break;
       }
 
@@ -122,7 +122,7 @@ class AuthController
       $_SESSION['type'] = 'client';
       $_SESSION['user'] = $client;
 
-      header('Location: ../View/Client/Dashboard.php');
+      header('Location: ../../Public/index.php?controller=client&action=dashboard');
       exit;
     } catch (BusinessRuleException $e) {
 
@@ -190,7 +190,7 @@ class AuthController
       $_SESSION['type'] = 'owner';
       $_SESSION['user'] = $owner;
 
-      header('Location: ../View/Owner/Dashboard.php');
+      header('Location: ../../Public/index.php?controller=owner&action=dashboard');
       exit;
     } catch (BusinessRuleException $e) {
 
@@ -213,7 +213,7 @@ class AuthController
 
     session_destroy();
 
-    header('Location: ../View/Auth/Login.php');
+    header('Location: ../../Public/index.php?controller=auth&action=showLogin');
     exit;
   }
 }

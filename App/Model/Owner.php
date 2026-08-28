@@ -49,6 +49,11 @@ class Owner extends Role
     return $this->idOwner;
   }
 
+  public function getFirstNameOwner(): string
+  {
+    return $this->getName();
+  }
+
   public function getLastNameOwner(): string
   {
     return $this->lastNameOwner;
@@ -84,7 +89,6 @@ class Owner extends Role
   {
     $this->idOwner = $idOwner;
   }
-
 
   public function setLastNameOwner(string $lastNameOwner): void
   {

@@ -249,12 +249,11 @@ class OwnerRepository
   {
     return new Owner(
       id: (int) $row['tbroleid'],
-      name: $row['tbrolename'],
+      name: $row['tbroleownerfirstname'],
       email: $row['tbroleemail'],
       password: $row['tbrolepassword'],
       isActive: (bool) $row['tbroleisactive'],
       idOwner: (int) $row['tbroleownerid'],
-      firstName: $row['tbroleownerfirstname'],
       lastName: $row['tbroleownerlastname'],
       alias: $row['tbroleowneralias'],
       identificationNumber: $row['tbroleowneridentificationnumber'],
