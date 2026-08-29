@@ -150,14 +150,14 @@ if ($venue === null) {
 <?php endif; ?>
 
 <?php if (current_user_type() !== null): ?>
-<div class="card" style="max-width:520px;margin-top:18px;">
-  <h3 style="margin-bottom:10px;">Calificar este local</h3>
+<div class="card" id="commentCard" style="max-width:520px;margin-top:18px;">
+  <h3 style="margin-bottom:10px;">Tu comentario sobre este local</h3>
   <form method="post" action="<?= e(base_url('venue', 'rate')) ?>">
     <?= csrf_field() ?>
     <input type="hidden" name="venueId" value="<?= (int) $venue->getIdVenue() ?>">
     <div class="form-group">
-      <label>Calificación *</label>
-      <div class="star-widget" data-value="<?= (int) ($myVenueRating !== null ? $myVenueRating->getStars() : 0) ?>">
+      <label>Calificación</label>
+      <div class="star-widget" id="venueStarWidget" data-value="0">
         <input type="hidden" name="stars" value="">
         <?php for ($i = 1; $i <= 5; $i++): ?>
           <button type="button" class="star" data-star="<?= $i ?>" aria-label="<?= $i ?> estrellas">&#9733;</button>
@@ -165,23 +165,31 @@ if ($venue === null) {
       </div>
     </div>
     <div class="form-group">
-      <label for="comment">Comentario (opcional)</label>
-      <textarea class="form-control" id="comment" name="comment" rows="3"><?= e($myVenueRating !== null ? $myVenueRating->getComment() : '') ?></textarea>
+      <label for="comment">Comentario</label>
+      <textarea class="form-control" id="comment" name="comment" rows="3" placeholder="Escribe tu comentario..."></textarea>
     </div>
-    <button class="btn btn-primary" type="submit">
-      <?= $myVenueRating !== null ? 'Actualizar calificación' : 'Publicar calificación' ?>
-    </button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" id="submitComment" type="submit">Añadir comentario</button>
+      <button class="btn btn-outline" id="cancelEdit" type="button" style="display:none;">Cancelar</button>
+    </div>
   </form>
 </div>
 <?php endif; ?>
 
 <?php if (!empty($venueComments)): ?>
+<?php $currentRoleId = isset($_SESSION['user']) ? (int) $_SESSION['user']->getIdRol() : 0; ?>
 <div class="card" style="margin-top:18px;">
   <h3 style="margin-bottom:10px;">Comentarios del local</h3>
   <?php foreach ($venueComments as $c): ?>
     <div class="comment-item">
       <span class="c-author"><?= e($c['tbrolename']) ?></span>
       <span class="rating-stars"><?= str_repeat('&#9733;', (int) $c['tbvenueratingstars']) . str_repeat('&#9734;', 5 - (int) $c['tbvenueratingstars']) ?></span>
+      <?php if (current_user_type() !== null && $currentRoleId === (int) $c['tbvenueratingroleid']): ?>
+        <button type="button" class="btn btn-link btn-sm btn-edit-comment"
+                data-stars="<?= (int) $c['tbvenueratingstars'] ?>"
+                data-text="<?= e($c['tbvenueratingcomment']) ?>"
+                style="padding:0;margin-left:8px;text-decoration:none;">Editar</button>
+      <?php endif; ?>
       <?php if (!empty($c['tbvenueratingcomment'])): ?>
         <div class="c-body"><?= e($c['tbvenueratingcomment']) ?></div>
       <?php endif; ?>
@@ -189,6 +197,57 @@ if ($venue === null) {
   <?php endforeach; ?>
 </div>
 <?php endif; ?>
+
+<script>
+  (function () {
+    var box = document.getElementById('commentCard');
+    var widget = document.getElementById('venueStarWidget');
+    var textarea = document.getElementById('comment');
+    var submitBtn = document.getElementById('submitComment');
+    var cancelBtn = document.getElementById('cancelEdit');
+
+    function setBoxStars(stars) {
+      if (!widget) return;
+      var input = widget.querySelector('input[type="hidden"]');
+      if (input) {
+        input.value = stars > 0 ? String(stars) : '';
+      }
+      widget.querySelectorAll('.star').forEach(function (s) {
+        var idx = parseInt(s.getAttribute('data-star'), 10);
+        s.classList.toggle('is-active', idx <= stars);
+      });
+    }
+
+    function enterEditMode(stars, text) {
+      setBoxStars(stars);
+      if (textarea) textarea.value = text;
+      if (submitBtn) submitBtn.textContent = 'Actualizar mi comentario';
+      if (cancelBtn) cancelBtn.style.display = '';
+      if (box) {
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (textarea) textarea.focus();
+      }
+    }
+
+    function exitEditMode() {
+      setBoxStars(0);
+      if (textarea) textarea.value = '';
+      if (submitBtn) submitBtn.textContent = 'Añadir comentario';
+      if (cancelBtn) cancelBtn.style.display = 'none';
+    }
+
+    document.querySelectorAll('.btn-edit-comment').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        enterEditMode(parseInt(btn.getAttribute('data-stars') || '0', 10) || 0,
+                      btn.getAttribute('data-text') || '');
+      });
+    });
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', exitEditMode);
+    }
+  })();
+</script>
 
 <script src="<?= e(js_url('stars')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>
