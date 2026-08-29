@@ -8,6 +8,7 @@ require_once __DIR__ . '/../Service/ServiceService.php';
 require_once __DIR__ . '/../Service/HistoryService.php';
 require_once __DIR__ . '/../Repository/ServiceRepository.php';
 require_once __DIR__ . '/../Repository/ServiceHistoryRepository.php';
+require_once __DIR__ . '/../Repository/OwnerRepository.php';
 require_once __DIR__ . '/../Service/PromotionService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
@@ -21,6 +22,7 @@ class VenueController
   private ServiceService $serviceService;
   private PromotionService $promotionService;
   private HistoryService $historyService;
+  private OwnerRepository $ownerRepository;
 
   public function __construct()
   {
@@ -33,6 +35,7 @@ class VenueController
     $this->serviceService = new ServiceService(new ServiceRepository($connection), new ServiceHistoryRepository($connection));
     $this->promotionService = new PromotionService($connection);
     $this->historyService = new HistoryService($connection);
+    $this->ownerRepository = new OwnerRepository($connection);
   }
 
   // =========================================================
@@ -94,6 +97,8 @@ class VenueController
       exit;
     }
 
+    $owner = $this->ownerRepository->findByOwnerPk($venue->getIdOwner());
+
     $avgRating = $this->venueRatingService->getAverage($idVenue);
     $promotions = $this->promotionService->getActiveByVenue($idVenue);
 
@@ -130,6 +135,31 @@ class VenueController
     }
 
     require_once __DIR__ . '/../View/Venue/Detail.php';
+  }
+
+  // =========================================================
+  // INFORMACIÓN PÚBLICA DE UN PROPIETARIO
+  // (accesible desde el detalle del local que administra)
+  // =========================================================
+  public function showOwner(): void
+  {
+    $idOwner = (int) ($_GET['ownerId'] ?? 0);
+    $returnVenueId = (int) ($_GET['venueId'] ?? 0);
+    $owner = $this->ownerRepository->findByOwnerPk($idOwner);
+
+    if ($owner === null) {
+      header('Location: ../../Public/index.php?controller=venue&action=catalog');
+      exit;
+    }
+
+    $ownerVenues = [];
+    foreach ($this->venueService->findByOwner($idOwner) as $v) {
+      if ($v->getIsActive()) {
+        $ownerVenues[] = $v;
+      }
+    }
+
+    require_once __DIR__ . '/../View/Owner/PublicProfile.php';
   }
 
   // =========================================================

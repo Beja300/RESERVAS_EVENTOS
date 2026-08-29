@@ -13,7 +13,6 @@ $location = $location ?? null;
 <div class="page-head">
   <div>
     <h1>Mi perfil</h1>
-    <a href="<?= e(base_url('client', 'dashboard')) ?>">&larr; Volver a mi panel</a>
   </div>
 </div>
 

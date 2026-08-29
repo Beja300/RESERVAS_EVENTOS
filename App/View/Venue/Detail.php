@@ -8,7 +8,6 @@ if ($venue === null) {
 
 <div class="page-head">
   <div>
-    <a href="<?= e(base_url('venue', 'catalog')) ?>">&larr; Volver al catálogo</a>
     <h1 style="margin-top:8px;"><?= e($venue->getNameVenue()) ?></h1>
   </div>
 </div>
@@ -48,6 +47,28 @@ if ($venue === null) {
     &#128197; Reservar este local
   </a>
 </div>
+
+<?php if ($owner !== null): ?>
+<div class="card" style="margin-top:18px;">
+  <h3 style="margin-bottom:12px;">Propietario del local</h3>
+  <a href="<?= e(base_url('venue', 'showOwner', ['ownerId' => $owner->getIdOwner(), 'venueId' => $venue->getIdVenue()])) ?>"
+     style="display:inline-flex;align-items:center;gap:14px;text-decoration:none;">
+    <?php if ($owner->getImageOwner() !== ''): ?>
+      <img src="<?= e(image_url($owner->getImageOwner())) ?>" alt="Foto del propietario"
+           style="width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 4px #fff,0 0 0 5px var(--neutral-200),0 4px 12px rgba(0,0,0,.15);">
+    <?php else: ?>
+      <span class="avatar" aria-hidden="true"
+            style="width:72px;height:72px;font-size:2rem;">&#128100;</span>
+    <?php endif; ?>
+    <span>
+      <span style="display:block;font-weight:700;color:var(--neutral-900);">
+        <?= e($owner->getFirstNameOwner()) ?><?= $owner->getLastNameOwner() !== '' ? ' ' . e($owner->getLastNameOwner()) : '' ?>
+      </span>
+      <span class="muted">Ver información del propietario &rarr;</span>
+    </span>
+  </a>
+</div>
+<?php endif; ?>
 
 <?php if (!empty($services)): ?>
 <div class="card" style="margin-top:18px;">
