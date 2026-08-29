@@ -90,11 +90,20 @@ class ServiceController
         $type
       );
 
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Servicio creado correctamente.']);
+      }
+
       header('Location: ../../Public/index.php?controller=service&action=list&venueId=' . $idVenue);
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
+
       $service = null;
 
       require_once __DIR__ . '/../View/Service/Form.php';
@@ -140,11 +149,19 @@ class ServiceController
         $active
       );
 
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Servicio actualizado correctamente.']);
+      }
+
       header('Location: ../../Public/index.php?controller=service&action=list&venueId=' . $service->getIdLocal());
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
 
       require_once __DIR__ . '/../View/Service/Form.php';
     }
@@ -173,7 +190,19 @@ class ServiceController
 
     $idService = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
 
-    $this->serviceService->approve($idService);
+    try {
+
+      $this->serviceService->approve($idService);
+
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Servicio aprobado.']);
+      }
+    } catch (BusinessRuleException $e) {
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $e->getMessage()], 422);
+      }
+    }
 
     header('Location: ../../Public/index.php?controller=service&action=pending');
     exit;
@@ -189,7 +218,19 @@ class ServiceController
 
     $idService = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
 
-    $this->serviceService->reject($idService);
+    try {
+
+      $this->serviceService->reject($idService);
+
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Servicio rechazado.']);
+      }
+    } catch (BusinessRuleException $e) {
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $e->getMessage()], 422);
+      }
+    }
 
     header('Location: ../../Public/index.php?controller=service&action=pending');
     exit;
