@@ -264,6 +264,7 @@ class VenueController
     $name = trim($_POST['name'] ?? '');
     $type = trim($_POST['type'] ?? '') ?: null;
     $capacity = isset($_POST['capacity']) && $_POST['capacity'] !== '' ? (int) $_POST['capacity'] : null;
+    $price = isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : 0.0;
     $image = trim($_POST['image'] ?? '') ?: null;
 
     try {
@@ -278,6 +279,7 @@ class VenueController
         $name,
         $type,
         $capacity,
+        $price,
         $image
       );
 
@@ -311,6 +313,7 @@ class VenueController
     $name = trim($_POST['name'] ?? '');
     $type = trim($_POST['type'] ?? '') ?: null;
     $capacity = isset($_POST['capacity']) && $_POST['capacity'] !== '' ? (int) $_POST['capacity'] : null;
+    $price = isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : 0.0;
     $image = trim($_POST['image'] ?? '') ?: null;
     $active = isset($_POST['active']);
 
@@ -329,6 +332,7 @@ class VenueController
         $name,
         $type,
         $capacity,
+        $price,
         $image,
         $active
       );

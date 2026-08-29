@@ -15,6 +15,7 @@ class Venue
   private string $nameVenue;
   private string $typeVenue;
   private int $capacityVenue;
+  private float $priceVenue;
   private string $imageVenue;
   private bool $isActive;
 
@@ -25,6 +26,7 @@ class Venue
     string $nameVenue,
     string $typeVenue,
     int $capacityVenue,
+    float $priceVenue,
     string $imageVenue,
     bool $isActive
   ) {
@@ -34,6 +36,7 @@ class Venue
     $this->nameVenue = $nameVenue;
     $this->typeVenue = $typeVenue;
     $this->capacityVenue = $capacityVenue;
+    $this->priceVenue = $priceVenue;
     $this->imageVenue = $imageVenue;
     $this->isActive = $isActive;
   }
@@ -68,6 +71,11 @@ class Venue
   public function getCapacityVenue(): int
   {
     return $this->capacityVenue;
+  }
+
+  public function getPriceVenue(): float
+  {
+    return $this->priceVenue;
   }
 
   public function getImageVenue(): string
@@ -110,6 +118,11 @@ class Venue
   public function setCapacityVenue(int $capacityVenue): void
   {
     $this->capacityVenue = $capacityVenue;
+  }
+
+  public function setPriceVenue(float $priceVenue): void
+  {
+    $this->priceVenue = $priceVenue;
   }
 
   public function setImageVenue(string $imageVenue): void

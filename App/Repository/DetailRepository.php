@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../Model/Detail.php';
+require_once __DIR__ . '/../Model/Venue.php';
 
 class DetailRepository
 {
@@ -22,9 +23,49 @@ class DetailRepository
 
     try {
 
-      $sqlDetail = "
+      $idDetail = $this->insertRow($detail);
+
+      $this->connection->commit();
+
+      return $idDetail;
+    } catch (\Throwable $e) {
+
+      $this->connection->rollBack();
+
+      throw $e;
+    }
+  }
+
+  // =========================================================
+  // INSERTAR LA RENTA DEL LOCAL como línea base de la reserva.
+  // Sin transacción propia: el llamador (BookingService) la envuelve.
+  // =========================================================
+  public function addVenueLine(int $bookingPk, Venue $venue): int
+  {
+    $detail = new Detail(
+      idDetail: 0,
+      idClientBooking: $bookingPk,
+      idLocalService: 0,
+      idVenue: $venue->getIdVenue(),
+      quantityDetail: 1,
+      unitPrice: $venue->getPriceVenue(),
+      discount: 0.0,
+      isActiveDetail: true
+    );
+
+    return $this->insertRow($detail);
+  }
+
+  // =========================================================
+  // NÚCLEO DE INSERCIÓN (tbdetail + junction). Sin transacción:
+  // save() la gestiona; BookingService la usa dentro de la suya.
+  // =========================================================
+  private function insertRow(Detail $detail): int
+  {
+    $sqlDetail = "
                 INSERT INTO tbdetail (
                     tbdetailserviceid,
+                    tbdetailvenueid,
                     tbdetailquantity,
                     tbdetailunitprice,
                     tbdetaildiscount,
@@ -32,6 +73,7 @@ class DetailRepository
                 )
                 VALUES (
                     :idLocalService,
+                    :idVenue,
                     :quantityDetail,
                     :unitPrice,
                     :discount,
@@ -39,19 +81,20 @@ class DetailRepository
                 )
             ";
 
-      $stmtDetail = $this->connection->prepare($sqlDetail);
+    $stmtDetail = $this->connection->prepare($sqlDetail);
 
-      $stmtDetail->execute([
-        ':idLocalService' => $detail->getIdLocalService(),
-        ':quantityDetail' => $detail->getQuantityDetail(),
-        ':unitPrice'      => $detail->getUnitPrice(),
-        ':discount'       => $detail->getDiscount(),
-        ':isActiveDetail' => $this->toDb($detail->getIsActiveDetail())
-      ]);
+    $stmtDetail->execute([
+      ':idLocalService' => $detail->getIdLocalService() > 0 ? $detail->getIdLocalService() : null,
+      ':idVenue'        => $detail->getIdVenue() > 0 ? $detail->getIdVenue() : null,
+      ':quantityDetail' => $detail->getQuantityDetail(),
+      ':unitPrice'      => $detail->getUnitPrice(),
+      ':discount'       => $detail->getDiscount(),
+      ':isActiveDetail' => $this->toDb($detail->getIsActiveDetail())
+    ]);
 
-      $idDetail = (int) $this->connection->lastInsertId();
+    $idDetail = (int) $this->connection->lastInsertId();
 
-      $sqlJunction = "
+    $sqlJunction = "
                 INSERT INTO tbbookingdetail (
                     tbbookingdetailbookingid,
                     tbbookingdetaildetailid,
@@ -64,23 +107,15 @@ class DetailRepository
                 )
             ";
 
-      $stmtJunction = $this->connection->prepare($sqlJunction);
+    $stmtJunction = $this->connection->prepare($sqlJunction);
 
-      $stmtJunction->execute([
-        ':idClientBooking' => $detail->getIdClientBooking(),
-        ':idDetail'        => $idDetail,
-        ':isActiveDetail'  => $this->toDb($detail->getIsActiveDetail())
-      ]);
+    $stmtJunction->execute([
+      ':idClientBooking' => $detail->getIdClientBooking(),
+      ':idDetail'        => $idDetail,
+      ':isActiveDetail'  => $this->toDb($detail->getIsActiveDetail())
+    ]);
 
-      $this->connection->commit();
-
-      return $idDetail;
-    } catch (\Throwable $e) {
-
-      $this->connection->rollBack();
-
-      throw $e;
-    }
+    return $idDetail;
   }
 
 
@@ -94,6 +129,7 @@ class DetailRepository
                 d.tbdetailid AS tbbookingdetailid,
                 b.tbbookingdetailbookingid AS tbbookingdetailbookingid,
                 d.tbdetailserviceid AS tbbookingdetaildetailid,
+                d.tbdetailvenueid AS tbbookingdetailvenueid,
                 d.tbdetailquantity AS tbbookingdetailquantity,
                 d.tbdetailunitprice AS tbbookingdetailunitprice,
                 d.tbdetaildiscount AS tbbookingdetaildiscount,
@@ -166,6 +202,7 @@ private function mapRow(array $row): Detail
           idDetail: (int) $row['tbbookingdetailid'],
           idClientBooking: (int) $row['tbbookingdetailbookingid'],
           idLocalService: (int) $row['tbbookingdetaildetailid'],
+          idVenue: (int) ($row['tbbookingdetailvenueid'] ?? 0),
           quantityDetail: (int) $row['tbbookingdetailquantity'],
           unitPrice: (float) $row['tbbookingdetailunitprice'],
           discount: (float) $row['tbbookingdetaildiscount'],

@@ -65,8 +65,8 @@ INSERT INTO tbroleclient (tbroleclientrolid, tbroleclientclientid, tbroleclienta
 -- =========================================================
 -- 4) LOCAL (VENUE) DEL OWNER
 -- =========================================================
-INSERT INTO tbvenue (tbvenueownerid, tbvenuelocationid, tbvenuename, tbvenuetype, tbvenuecapacity, tbvenueimage, tbvenueactive) VALUES
-(@ownerId, @locAlajuela, 'Salón La Quinta', 'Salón de eventos', 120, NULL, TRUE);
+INSERT INTO tbvenue (tbvenueownerid, tbvenuelocationid, tbvenuename, tbvenuetype, tbvenuecapacity, tbvenueprice, tbvenueimage, tbvenueactive) VALUES
+(@ownerId, @locAlajuela, 'Salón La Quinta', 'Salón de eventos', 120, 120000.00, NULL, TRUE);
 SET @venueId = LAST_INSERT_ID();
 
 -- =========================================================
@@ -113,17 +113,25 @@ INSERT INTO tbbooking (tbbookingclientid, tbbookinglocalid, tbbookingdate, tbboo
 (@clientId, @venueId, '2026-10-10', 'Boda', 'pendiente', TRUE);
 SET @bookingId = LAST_INSERT_ID();
 
--- Línea 1: detalle (tbdetail) + junction (tbbookingdetail)
-INSERT INTO tbdetail (tbdetailserviceid, tbdetailquantity, tbdetailunitprice, tbdetaildiscount, tbdetailactive) VALUES
-(@service1, 1, 150000.00, 0.00, TRUE);
+-- Línea base: renta del local (la factura NUNCA puede ser 0) + junction
+INSERT INTO tbdetail (tbdetailserviceid, tbdetailvenueid, tbdetailquantity, tbdetailunitprice, tbdetaildiscount, tbdetailactive) VALUES
+(NULL, @venueId, 1, 120000.00, 0.00, TRUE);
+SET @detailBase = LAST_INSERT_ID();
+
+INSERT INTO tbbookingdetail (tbbookingdetailbookingid, tbbookingdetaildetailid, tbbookingdetailactive) VALUES
+(@bookingId, @detailBase, TRUE);
+
+-- Línea 1: detalle (tbdetail) + junction (tbbookingdetail); servicio
+INSERT INTO tbdetail (tbdetailserviceid, tbdetailvenueid, tbdetailquantity, tbdetailunitprice, tbdetaildiscount, tbdetailactive) VALUES
+(@service1, NULL, 1, 150000.00, 0.00, TRUE);
 SET @detail1 = LAST_INSERT_ID();
 
 INSERT INTO tbbookingdetail (tbbookingdetailbookingid, tbbookingdetaildetailid, tbbookingdetailactive) VALUES
 (@bookingId, @detail1, TRUE);
 
--- Línea 2
-INSERT INTO tbdetail (tbdetailserviceid, tbdetailquantity, tbdetailunitprice, tbdetaildiscount, tbdetailactive) VALUES
-(@service2, 2, 250000.00, 0.00, TRUE);
+-- Línea 2 (servicio)
+INSERT INTO tbdetail (tbdetailserviceid, tbdetailvenueid, tbdetailquantity, tbdetailunitprice, tbdetaildiscount, tbdetailactive) VALUES
+(@service2, NULL, 2, 250000.00, 0.00, TRUE);
 SET @detail2 = LAST_INSERT_ID();
 
 INSERT INTO tbbookingdetail (tbbookingdetailbookingid, tbbookingdetaildetailid, tbbookingdetailactive) VALUES

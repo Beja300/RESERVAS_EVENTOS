@@ -111,6 +111,7 @@ CREATE TABLE tbvenue (
     tbvenuename VARCHAR(150) NOT NULL,
     tbvenuetype VARCHAR(50),
     tbvenuecapacity INT,
+    tbvenueprice DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     tbvenueimage VARCHAR(255),
     tbvenueactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
@@ -177,11 +178,14 @@ CREATE TABLE tbbooking (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 15) tbdetail: linea del detalle (servicio, cantidades, precios)
+-- 15) tbdetail: linea del detalle (local/servicio, cants, precios)
+--     tbdetailserviceid -> servicio (nullable si es renta del local)
+--     tbdetailvenueid    -> local (nullable si es un servicio)
 -- =========================================================
 CREATE TABLE tbdetail (
     tbdetailid INT AUTO_INCREMENT PRIMARY KEY,
-    tbdetailserviceid INT NOT NULL,
+    tbdetailserviceid INT,
+    tbdetailvenueid INT,
     tbdetailquantity INT NOT NULL DEFAULT 1,
     tbdetailunitprice DECIMAL(10,2) NOT NULL,
     tbdetaildiscount DECIMAL(10,2) NOT NULL DEFAULT 0,

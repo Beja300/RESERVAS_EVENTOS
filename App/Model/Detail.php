@@ -8,6 +8,7 @@ class Detail
   private int $idDetail;
   private int $idClientBooking;
   private int $idLocalService;
+  private int $idVenue;
   private int $quantityDetail;
   private float $unitPrice;
   private float $discount;
@@ -20,11 +21,13 @@ class Detail
     int $quantityDetail,
     float $unitPrice,
     float $discount,
-    bool $isActiveDetail
+    bool $isActiveDetail,
+    int $idVenue = 0
   ) {
     $this->idDetail = $idDetail;
     $this->idClientBooking = $idClientBooking;
     $this->idLocalService = $idLocalService;
+    $this->idVenue = $idVenue;
     $this->quantityDetail = $quantityDetail;
     $this->unitPrice = $unitPrice;
     $this->discount = $discount;
@@ -45,6 +48,11 @@ class Detail
   public function getIdLocalService(): int
   {
     return $this->idLocalService;
+  }
+
+  public function getIdVenue(): int
+  {
+    return $this->idVenue;
   }
 
   public function getQuantityDetail(): int
@@ -87,6 +95,11 @@ class Detail
   public function setIdLocalService(int $idLocalService): void
   {
     $this->idLocalService = $idLocalService;
+  }
+
+  public function setIdVenue(int $idVenue): void
+  {
+    $this->idVenue = $idVenue;
   }
 
   public function setQuantityDetail(int $quantityDetail): void

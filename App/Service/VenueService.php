@@ -27,10 +27,15 @@ class VenueService
         string $name,
         ?string $type,
         ?int $capacity,
+        float $price,
         ?string $image
     ): int {
         if ($capacity !== null && $capacity <= 0) {
             throw new BusinessRuleException("La capacidad del local debe ser mayor a 0.");
+        }
+
+        if ($price <= 0) {
+            throw new BusinessRuleException("El precio de renta del local debe ser mayor a 0.");
         }
 
         if (trim($name) === '') {
@@ -52,6 +57,7 @@ class VenueService
             nameVenue: $name,
             typeVenue: $type ?? '',
             capacityVenue: $capacity ?? 0,
+            priceVenue: $price,
             imageVenue: $image ?? '',
             isActive: true
         );
@@ -64,6 +70,7 @@ class VenueService
         string $name,
         ?string $type,
         ?int $capacity,
+        float $price,
         ?string $image,
         bool $active
     ): void {
@@ -71,9 +78,14 @@ class VenueService
             throw new BusinessRuleException("La capacidad del local debe ser mayor a 0.");
         }
 
+        if ($price <= 0) {
+            throw new BusinessRuleException("El precio de renta del local debe ser mayor a 0.");
+        }
+
         $venue->setNameVenue($name);
         $venue->setTypeVenue($type ?? $venue->getTypeVenue());
         $venue->setCapacityVenue($capacity ?? $venue->getCapacityVenue());
+        $venue->setPriceVenue($price);
         $venue->setImageVenue($image ?? $venue->getImageVenue());
         $venue->setIsActive($active);
 

@@ -42,6 +42,13 @@ $action = $isEdit ? base_url('venue', 'update') : base_url('venue', 'create');
     </div>
 
     <div class="form-group">
+      <label for="price">Precio de renta por evento *</label>
+      <input class="form-control" type="number" id="price" name="price" min="0.01" step="0.01" required
+        value="<?= e($isEdit ? number_format($venue->getPriceVenue(), 2, '.', '') : ($_POST['price'] ?? '')) ?>">
+      <p class="form-hint">Este precio se incluye siempre en la factura de cada reserva de este local.</p>
+    </div>
+
+    <div class="form-group">
       <label for="image">Imagen (URL)</label>
       <input class="form-control" type="text" id="image" name="image"
         placeholder="https://..."
