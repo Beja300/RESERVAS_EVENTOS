@@ -16,6 +16,14 @@
     .tabs button.active { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
+    .password-wrapper { position: relative; }
+    .password-wrapper .form-control { padding-right: 44px; }
+    .password-toggle {
+      position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+      border: none; background: none; cursor: pointer; color: var(--neutral-500);
+      font-size: 0.85rem; font-weight: 600; padding: 4px 8px; font-family: inherit;
+    }
+    .password-toggle:hover { color: var(--primary); }
   </style>
 </head>
 <body class="auth-page">
@@ -54,8 +62,11 @@
         </div>
         <div class="form-group">
           <label for="password">Contraseña</label>
-          <input class="form-control" type="password" id="password" name="password"
-                 minlength="8" required>
+          <div class="password-wrapper">
+            <input class="form-control" type="password" id="password" name="password"
+                   minlength="8" required>
+            <button class="password-toggle" type="button" id="passwordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+          </div>
           <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
         </div>
         <div class="form-group">
@@ -106,8 +117,11 @@
         </div>
         <div class="form-group">
           <label for="ownerPassword">Contraseña</label>
-          <input class="form-control" type="password" id="ownerPassword" name="password"
-                 minlength="8" required>
+          <div class="password-wrapper">
+            <input class="form-control" type="password" id="ownerPassword" name="password"
+                   minlength="8" required>
+            <button class="password-toggle" type="button" id="ownerPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+          </div>
           <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
         </div>
         <div class="form-group">
@@ -128,6 +142,22 @@
 
   <script src="<?= e(js_url()) ?>"></script>
   <script src="<?= e(js_url('auth-register')) ?>"></script>
+  <script>
+    (function () {
+      [['password', 'passwordToggle'], ['ownerPassword', 'ownerPasswordToggle']].forEach(function (pair) {
+        var input = document.getElementById(pair[0]);
+        var toggle = document.getElementById(pair[1]);
+
+        toggle.addEventListener('click', function () {
+          var show = input.type === 'password';
+          input.type = show ? 'text' : 'password';
+          toggle.textContent = show ? 'Ocultar' : 'Mostrar';
+          toggle.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+          input.focus();
+        });
+      });
+    })();
+  </script>
   <script>document.addEventListener('DOMContentLoaded', App.init);</script>
 </body>
 </html>
