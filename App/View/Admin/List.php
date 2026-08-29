@@ -9,7 +9,6 @@
   <div class="page-head">
     <div>
       <h1>Reservas del mes</h1>
-      <a href="<?= e(base_url('admin', 'dashboard')) ?>">&larr; Volver al panel</a>
     </div>
   </div>
 
@@ -76,12 +75,26 @@
 
 <?php else: ?>
   <!-- Vista de usuarios del admin -->
-  <div class="page-head">
-    <div>
-      <h1>Gestión de usuarios</h1>
-      <a href="<?= e(base_url('admin', 'dashboard')) ?>">&larr; Volver al panel</a>
-    </div>
-  </div>
+
+  <?php if (isset($_GET['created']) || isset($_GET['updated'])): ?>
+    <?php
+      $flashType = isset($_GET['updated']) ? 'updated' : 'created';
+      $flashKey = $_GET[$flashType];
+      $createdMsg = [
+        '1' => 'Administrador creado correctamente.',
+        'client' => 'Cliente creado correctamente.',
+        'owner' => 'Propietario creado correctamente.',
+      ];
+      $updatedMsg = [
+        'admin' => 'Administrador actualizado correctamente.',
+        'client' => 'Cliente actualizado correctamente.',
+        'owner' => 'Propietario actualizado correctamente.',
+      ];
+      $flashMsg = ($flashType === 'updated' ? $updatedMsg : $createdMsg)[$flashKey]
+        ?? 'Cambios guardados correctamente.';
+    ?>
+    <div class="alert alert-success"><?= e($flashMsg) ?></div>
+  <?php endif; ?>
 
   <div class="form-group" style="max-width:360px;margin-bottom:18px;">
     <input class="form-control" type="search" data-table-filter=".users-table"
@@ -90,9 +103,18 @@
 
   <?php
     $sections = [
-      ['title' => 'Administradores', 'typeKey' => 'admin', 'items' => $admins ?? []],
-      ['title' => 'Clientes', 'typeKey' => 'client', 'items' => $clients ?? []],
-      ['title' => 'Propietarios', 'typeKey' => 'owner', 'items' => $owners ?? []],
+      [
+        'title' => 'Administradores', 'typeKey' => 'admin', 'items' => $admins ?? [],
+        'addUrl' => base_url('admin', 'showAdminForm'), 'addLabel' => '+ Agregar administrador',
+      ],
+      [
+        'title' => 'Clientes', 'typeKey' => 'client', 'items' => $clients ?? [],
+        'addUrl' => base_url('admin', 'showClientForm'), 'addLabel' => '+ Agregar cliente',
+      ],
+      [
+        'title' => 'Propietarios', 'typeKey' => 'owner', 'items' => $owners ?? [],
+        'addUrl' => base_url('admin', 'showOwnerForm'), 'addLabel' => '+ Agregar propietario',
+      ],
     ];
   ?>
 
@@ -101,7 +123,12 @@
     $typeKey = $section['typeKey'];
     $items = $section['items'];
   ?>
-    <h2 style="font-size:1.1rem;color:var(--neutral-700);margin:20px 0 12px;"><?= $title ?></h2>
+    <h2 style="font-size:1.1rem;color:var(--neutral-700);margin:20px 0 12px;display:flex;justify-content:space-between;align-items:center;">
+      <?= $title ?>
+      <?php if (!empty($section['addUrl'])): ?>
+        <a class="btn btn-sm btn-primary" href="<?= e($section['addUrl']) ?>"><?= e($section['addLabel']) ?></a>
+      <?php endif; ?>
+    </h2>
     <?php if (empty($items)): ?>
       <p class="muted">No hay registros.</p>
     <?php else: ?>
@@ -128,20 +155,24 @@
                   <?= $user->getIsActive() ? '<span class="badge success">Activo</span>' : '<span class="badge neutral">Inactivo</span>' ?>
                 </td>
                 <td>
-                  <?php if ($user->getIsActive()): ?>
-                    <form method="post" action="<?= e(base_url('admin', 'deactivateUser')) ?>">
-                      <?= csrf_field() ?>
-                      <input type="hidden" name="id" value="<?= (int) $user->getIdRol() ?>">
-                      <input type="hidden" name="type" value="<?= e($typeKey) ?>">
-                      <button class="btn btn-sm btn-warning" type="submit">Desactivar</button>
-                    </form>
-                  <?php else: ?>
-                    <form method="post" action="<?= e(base_url('admin', 'activateUser')) ?>">
-                      <?= csrf_field() ?>
-                      <input type="hidden" name="id" value="<?= (int) $user->getIdRol() ?>">
-                      <button class="btn btn-sm btn-success" type="submit">Activar</button>
-                    </form>
-                  <?php endif; ?>
+                  <div class="actions">
+                    <a class="btn btn-sm btn-secondary"
+                       href="<?= e(base_url('admin', 'showEditForm', ['type' => $typeKey, 'id' => $user->getIdRol()])) ?>">Editar</a>
+                    <?php if ($user->getIsActive()): ?>
+                      <form method="post" action="<?= e(base_url('admin', 'deactivateUser')) ?>">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="id" value="<?= (int) $user->getIdRol() ?>">
+                        <input type="hidden" name="type" value="<?= e($typeKey) ?>">
+                        <button class="btn btn-sm btn-warning" type="submit">Desactivar</button>
+                      </form>
+                    <?php else: ?>
+                      <form method="post" action="<?= e(base_url('admin', 'activateUser')) ?>">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="id" value="<?= (int) $user->getIdRol() ?>">
+                        <button class="btn btn-sm btn-success" type="submit">Activar</button>
+                      </form>
+                    <?php endif; ?>
+                  </div>
                 </td>
               </tr>
             <?php endforeach; ?>

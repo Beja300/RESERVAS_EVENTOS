@@ -132,6 +132,36 @@ class ClientRepository
     }
 
     // =========================================================
+    // BUSCAR POR ID DE ROL
+    // =========================================================
+    public function findByRoleId(int $roleId): ?Client
+    {
+        $sql = "
+            SELECT
+                r.tbroleid,
+                r.tbrolename,
+                r.tbroleemail,
+                r.tbrolepassword,
+                r.tbrolephone,
+                r.tbroleactive,
+                p.tbclientid,
+                p.tbclientimage,
+                p.tbclientactive
+            FROM tbrole r
+            INNER JOIN tbroleclient c ON c.tbroleclientrolid = r.tbroleid
+            LEFT JOIN tbclient p ON p.tbclientroleid = r.tbroleid
+            WHERE r.tbroleid = :idRole
+            LIMIT 1
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute([':idRole' => $roleId]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->mapRow($row) : null;
+    }
+
+    // =========================================================
     // OBTENER TODOS
     // =========================================================
     public function findAll(): array

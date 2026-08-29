@@ -316,3 +316,45 @@ CREATE TABLE tbownerhistory (
     tbownerhistorydate DATETIME DEFAULT CURRENT_TIMESTAMP,
     tbownerhistoryactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
+
+
+
+-- 1. Crear identidad/base de acceso
+INSERT INTO tbrole (
+    tbrolename,
+    tbroleemail,
+    tbrolepassword,
+    tbrolephone,
+    tbroleactive
+) VALUES (
+    'Administrador',
+    'admin@eventhall.com',
+    '$2y$12$oevk5mTL2Wv1FjLmu5MST.PZO0uAAaJKs0WABinfa2HeVF/u4k6iy',
+    '88888888',
+    TRUE
+);
+
+-- 2. Obtener el ID generado
+SET @roleId = LAST_INSERT_ID();
+
+-- 3. Relacionar el rol con administrador
+INSERT INTO tbroleadmin (
+    tbroleadminrolid,
+    tbroleadminactive
+) VALUES (
+    @roleId,
+    TRUE
+);
+
+-- 4. Crear el perfil del administrador
+INSERT INTO tbadmin (
+    tbadminroleid,
+    tbadminname,
+    tbadminimage,
+    tbadminactive
+) VALUES (
+    @roleId,
+    'Administrador de Prueba',
+    NULL,
+    TRUE
+);

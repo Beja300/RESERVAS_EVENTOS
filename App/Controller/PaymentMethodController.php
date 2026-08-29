@@ -23,7 +23,9 @@ class PaymentMethodController
   // =========================================================
   public function list(): void
   {
-    $paymentMethods = $this->paymentMethodRepo->findActive();
+    $paymentMethods = ($_SESSION['type'] ?? null) === 'admin'
+      ? $this->paymentMethodRepo->findAll()
+      : $this->paymentMethodRepo->findActive();
 
     require_once __DIR__ . '/../View/PaymentMethod/List.php';
   }
@@ -58,7 +60,7 @@ class PaymentMethodController
 
       $this->paymentMethodService->validateAndCreate($type);
 
-      header('Location: ../../Public/index.php?controller=paymentMethod&action=list');
+      header('Location: ../../Public/index.php?controller=paymentmethod&action=list');
       exit;
     } catch (BusinessRuleException $e) {
 
@@ -66,6 +68,88 @@ class PaymentMethodController
 
       require_once __DIR__ . '/../View/PaymentMethod/Form.php';
     }
+  }
+
+  // =========================================================
+  // MOSTRAR FORM DE EDICIÓN (solo admin)
+  // =========================================================
+  public function edit(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    $idPaymentMethod = (int) ($_GET['id'] ?? 0);
+    $paymentMethod = $this->paymentMethodRepo->findById($idPaymentMethod);
+
+    if ($paymentMethod === null) {
+      header('Location: ../../Public/index.php?controller=paymentmethod&action=list');
+      exit;
+    }
+
+    require_once __DIR__ . '/../View/PaymentMethod/Edit.php';
+  }
+
+  // =========================================================
+  // ACTUALIZAR (solo admin)
+  // =========================================================
+  public function update(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      header('Location: ../../Public/index.php?controller=paymentmethod&action=list');
+      exit;
+    }
+
+    $idPaymentMethod = (int) ($_POST['id'] ?? 0);
+    $type = trim($_POST['type'] ?? '');
+    $isActive = isset($_POST['isActive']);
+
+    try {
+
+      $this->paymentMethodService->updateMethod($idPaymentMethod, $type, $isActive);
+
+      header('Location: ../../Public/index.php?controller=paymentmethod&action=list&updated=1');
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+      $paymentMethod = $this->paymentMethodRepo->findById($idPaymentMethod);
+
+      if ($paymentMethod === null) {
+        header('Location: ../../Public/index.php?controller=paymentmethod&action=list');
+        exit;
+      }
+
+      require_once __DIR__ . '/../View/PaymentMethod/Edit.php';
+    }
+  }
+
+  // =========================================================
+  // ELIMINAR (soft delete, solo admin)
+  // =========================================================
+  public function delete(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      header('Location: ../../Public/index.php?controller=paymentmethod&action=list');
+      exit;
+    }
+
+    $idPaymentMethod = (int) ($_POST['id'] ?? 0);
+
+    try {
+
+      $this->paymentMethodService->deleteMethod($idPaymentMethod);
+    } catch (BusinessRuleException $e) {
+      // Sin cambios; se redirige igual a la lista.
+    }
+
+    header('Location: ../../Public/index.php?controller=paymentmethod&action=list');
+    exit;
   }
 
   // =========================================================

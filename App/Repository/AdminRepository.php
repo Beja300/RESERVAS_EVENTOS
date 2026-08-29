@@ -134,6 +134,36 @@ class AdminRepository
     }
 
     // =========================================================
+    // BUSCAR POR ID DE ROL
+    // =========================================================
+    public function findByRoleId(int $roleId): ?Admin
+    {
+        $sql = "
+            SELECT
+                r.tbroleid,
+                r.tbrolename,
+                r.tbroleemail,
+                r.tbrolepassword,
+                r.tbrolephone,
+                r.tbroleactive,
+                p.tbadminid,
+                p.tbadminimage,
+                p.tbadminactive
+            FROM tbrole r
+            INNER JOIN tbroleadmin a ON a.tbroleadminrolid = r.tbroleid
+            LEFT JOIN tbadmin p ON p.tbadminroleid = r.tbroleid
+            WHERE r.tbroleid = :idRole
+            LIMIT 1
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute([':idRole' => $roleId]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->mapRow($row) : null;
+    }
+
+    // =========================================================
     // OBTENER TODOS
     // =========================================================
     public function findAll(): array
