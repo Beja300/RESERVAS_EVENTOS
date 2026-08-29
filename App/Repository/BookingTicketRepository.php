@@ -22,12 +22,14 @@ class BookingTicketRepository
         tbbookingticketbookingid,
         tbbookingticketfile,
         tbbookingtickettype,
+        tbbookingticketpaymentmethodid,
         tbbookingticketstate
       )
       VALUES (
         :idBooking,
         :file,
         :type,
+        :paymentMethodId,
         :state
       )
     ";
@@ -35,10 +37,11 @@ class BookingTicketRepository
     $stmt = $this->connection->prepare($sql);
 
     $stmt->execute([
-      ':idBooking' => $ticket->getIdBooking(),
-      ':file'      => $ticket->getFile(),
-      ':type'      => $ticket->getType(),
-      ':state'     => $ticket->getState(),
+      ':idBooking'       => $ticket->getIdBooking(),
+      ':file'            => $ticket->getFile(),
+      ':type'            => $ticket->getType(),
+      ':paymentMethodId' => $ticket->getPaymentMethodId() > 0 ? $ticket->getPaymentMethodId() : null,
+      ':state'           => $ticket->getState(),
     ]);
 
     return (int) $this->connection->lastInsertId();
@@ -55,6 +58,7 @@ class BookingTicketRepository
         tbbookingticketbookingid,
         tbbookingticketfile,
         tbbookingtickettype,
+        tbbookingticketpaymentmethodid,
         tbbookingticketstate
       FROM tbbookingticket
       WHERE tbbookingticketid = :idTicket
@@ -81,6 +85,7 @@ class BookingTicketRepository
         tbbookingticketbookingid,
         tbbookingticketfile,
         tbbookingtickettype,
+        tbbookingticketpaymentmethodid,
         tbbookingticketstate
       FROM tbbookingticket
       WHERE tbbookingticketbookingid = :idBooking
@@ -125,6 +130,7 @@ class BookingTicketRepository
       idBooking: (int) $row['tbbookingticketbookingid'],
       file: $row['tbbookingticketfile'],
       type: $row['tbbookingtickettype'],
+      paymentMethodId: (int) ($row['tbbookingticketpaymentmethodid'] ?? 0),
       state: $row['tbbookingticketstate']
     );
   }

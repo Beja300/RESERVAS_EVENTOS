@@ -6,6 +6,7 @@ require_once __DIR__ . '/../Service/InvoiceService.php';
 require_once __DIR__ . '/../Service/ClientService.php';
 require_once __DIR__ . '/../Service/ServiceService.php';
 require_once __DIR__ . '/../Service/OwnerService.php';
+require_once __DIR__ . '/../Service/OwnerPaymentService.php';
 require_once __DIR__ . '/../Service/BookingTicketService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
@@ -31,6 +32,8 @@ class BookingController
   private VenueRepository $venueRepo;
   private BookingTicketRepository $ticketRepo;
   private PaymentMethodRepository $paymentMethodRepo;
+  private OwnerPaymentRepository $ownerPaymentRepo;
+  private OwnerPaymentService $ownerPaymentService;
 
   public function __construct()
   {
@@ -48,6 +51,8 @@ class BookingController
     $this->venueRepo = new VenueRepository($connection);
     $this->ticketRepo = new BookingTicketRepository($connection);
     $this->paymentMethodRepo = new PaymentMethodRepository($connection);
+    $this->ownerPaymentRepo = new OwnerPaymentRepository($connection);
+    $this->ownerPaymentService = new OwnerPaymentService($connection);
     $this->bookingTicketService = new BookingTicketService($connection);
   }
 
@@ -164,6 +169,44 @@ class BookingController
     $ticket = $this->ticketRepo->findByBooking($idBooking);
     $paymentMethods = $this->paymentMethodRepo->findActive();
 
+    // Métodos de pago configurados por el dueño de ESTE local.
+    $ownerPaymentMethods = [];
+    if ($venue !== null) {
+      foreach ($this->ownerPaymentService->findByOwner($venue->getIdOwner()) as $op) {
+        if (!$op->getIsActive()) {
+          continue;
+        }
+        $ownerPaymentMethods[] = [
+          'idPaymentMethod' => $op->getIdPaymentMethod(),
+          'paymentMethod'   => $op->getPaymentMethod(),
+          'holder'          => $op->getHolder(),
+          'account'         => $op->getAccount(),
+          'instructions'    => $op->getInstructions(),
+        ];
+      }
+    }
+
+    // Servicios disponibles del local, excluyendo los ya agregados.
+    $bookedServiceIds = [];
+    foreach ($details as $d) {
+      if ($d->getIdLocalService() > 0) {
+        $bookedServiceIds[] = $d->getIdLocalService();
+      }
+    }
+    $availableServices = [];
+    foreach ($this->serviceService->findAvailableByLocal($booking->getIdLocal()) as $s) {
+      if (!in_array($s->getIdService(), $bookedServiceIds, true)) {
+        $availableServices[] = $s;
+      }
+    }
+
+    // El cliente solo puede modificar (agregar servicios / pagar)
+    // mientras la reserva esté pendiente y no haya subido comprobante.
+    $isPending = $booking->getBookingState() === 'pendiente';
+    $isModifiable = $isPending && $ticket === null;
+    $isClient = ($_SESSION['type'] ?? null) === 'client';
+    $hasTicket = $ticket !== null;
+
     require_once __DIR__ . '/../View/Booking/Detail.php';
   }
 
@@ -191,11 +234,19 @@ class BookingController
 
       $this->detailService->addLine($idBooking, $idService, $quantity);
 
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Servicio agregado correctamente.']);
+      }
+
       header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
 
       header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
       exit;
@@ -247,11 +298,19 @@ class BookingController
 
       $this->bookingService->cancel($idBooking);
 
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Reserva cancelada correctamente.']);
+      }
+
       header('Location: ../../Public/index.php?controller=booking&action=myBookings');
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
 
       header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
       exit;
@@ -334,6 +393,7 @@ class BookingController
 
     $client = $_SESSION['user'];
     $idBooking = (int) ($_POST['bookingId'] ?? 0);
+    $idPaymentMethod = (int) ($_POST['paymentMethodId'] ?? 0);
 
     try {
 
@@ -358,13 +418,21 @@ class BookingController
         throw new BusinessRuleException('No se pudo guardar el comprobante.');
       }
 
-      $this->bookingTicketService->upload($idBooking, 'resource/tickets/' . $fileName, $ext);
+      $this->bookingTicketService->upload($idBooking, 'resource/tickets/' . $fileName, $ext, $idPaymentMethod);
+
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Comprobante subido. El propietario lo revisará para aprobar la reserva.']);
+      }
 
       header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
 
       header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
       exit;
@@ -386,7 +454,6 @@ class BookingController
 
     $owner = $_SESSION['user'];
     $idBooking = (int) ($_POST['bookingId'] ?? 0);
-    $idPaymentMethod = (int) ($_POST['paymentMethodId'] ?? 0);
 
     try {
 
@@ -404,13 +471,21 @@ class BookingController
         throw new BusinessRuleException('Esta reserva no tiene comprobante.');
       }
 
-      $this->bookingTicketService->approve($ticket->getIdTicket(), $idPaymentMethod, $owner->getIdRol());
+      $this->bookingTicketService->approve($ticket->getIdTicket(), $owner->getIdRol());
+
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Comprobante aprobado y reserva confirmada.']);
+      }
 
       header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
 
       header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
       exit;
@@ -451,11 +526,19 @@ class BookingController
 
       $this->bookingTicketService->reject($ticket->getIdTicket());
 
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Comprobante rechazado.']);
+      }
+
       header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
 
       header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
       exit;

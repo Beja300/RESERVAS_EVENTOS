@@ -22,18 +22,18 @@ $location = $location ?? null;
   <?php endif; ?>
 
   <form method="post" action="<?= e(base_url('client', 'updateProfile')) ?>"
-        enctype="multipart/form-data" data-validate-form>
+        enctype="multipart/form-data" data-validate-form data-ajax-client-profile>
     <?= csrf_field() ?>
 
     <div class="form-group" style="margin-bottom:16px;">
       <label>Foto de perfil</label>
-      <?php if ($client->getImageClient() !== ''): ?>
-        <div style="text-align:center;margin-bottom:12px;">
-          <img src="<?= e(image_url($client->getImageClient())) ?>" alt="Foto de perfil"
-               style="display:inline-block;width:128px;height:128px;border-radius:50%;object-fit:cover;vertical-align:middle;box-shadow:0 0 0 6px #fff,0 0 0 7px var(--neutral-200),0 6px 16px rgba(0,0,0,.18);">
-        </div>
-      <?php endif; ?>
-      <input class="form-control" type="file" id="image" name="image" accept="image/*">
+      <div style="text-align:center;margin-bottom:12px;">
+        <img id="clientPhotoPreview"
+             src="<?= $client->getImageClient() !== '' ? e(image_url($client->getImageClient())) : '' ?>"
+             alt="Foto de perfil"
+             style="display:<?= $client->getImageClient() !== '' ? 'inline-block' : 'none' ?>;width:128px;height:128px;border-radius:50%;object-fit:cover;vertical-align:middle;box-shadow:0 0 0 6px #fff,0 0 0 7px var(--neutral-200),0 6px 16px rgba(0,0,0,.18);">
+      </div>
+      <input class="form-control" type="file" id="image" name="image" accept="image/*" data-photo-input="clientPhotoPreview">
       <small class="muted">Sube una foto (jpg, png, webp, gif; máx. 2 MB).</small>
     </div>
 
@@ -113,11 +113,73 @@ $location = $location ?? null;
     se conservan. Puedes volver a activarla más adelante.
   </p>
   <form method="post" action="<?= e(base_url('client', 'deactivateAccount')) ?>"
-        onsubmit="return confirm('¿Seguro que deseas desactivar tu cuenta? No podrás acceder hasta que un administrador la reactive.');">
+        data-ajax-client-deactivate>
     <?= csrf_field() ?>
     <button class="btn btn-danger" type="submit">Desactivar mi cuenta</button>
   </form>
 </div>
+
+<script>
+  (function () {
+    function base() { var p=(window.location.pathname||'').split('/'); p.pop(); return p.join('/'); }
+
+    // Vista previa de la foto antes de subirla.
+    var photoInput = document.querySelector('[data-photo-input]');
+    if (photoInput) {
+      var prevImg = document.getElementById(photoInput.getAttribute('data-photo-input'));
+      photoInput.addEventListener('change', function () {
+        if (photoInput.files && photoInput.files[0] && prevImg) {
+          prevImg.src = URL.createObjectURL(photoInput.files[0]);
+          prevImg.style.display = 'inline-block';
+        }
+      });
+    }
+
+    // Actualizar perfil (AJAX).
+    var pForm = document.querySelector('form[data-ajax-client-profile]');
+    if (pForm) {
+      pForm.addEventListener('submit', function (e) {
+        var fields = pForm.querySelectorAll('[data-validate]');
+        for (var i = 0; i < fields.length; i++) {
+          if (fields[i].classList.contains('is-invalid')) { return; }
+        }
+        e.preventDefault();
+        fetch(pForm.getAttribute('action'), {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+          body: new FormData(pForm)
+        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
+          .then(function (r) {
+            window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
+            if (r.ok) setTimeout(function () { window.location.reload(); }, 700);
+          });
+      });
+    }
+
+    // Desactivar cuenta (AJAX), sin condiciones (el cliente siempre puede).
+    var deact = document.querySelector('form[data-ajax-client-deactivate]');
+    if (deact) {
+      deact.addEventListener('submit', function (e) {
+        e.preventDefault();
+        window.App && App.confirmModal(
+          '¿Seguro que deseas desactivar tu cuenta? No podrás acceder hasta que un administrador la reactive.',
+          'Desactivar cuenta'
+        ).then(function (ok) {
+          if (!ok) return;
+          fetch(deact.getAttribute('action'), {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            body: new FormData(deact)
+          }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
+            .then(function (r) {
+              window.App && App.toast(r.data.message || 'Cuenta desactivada.', r.ok ? 'success' : 'error');
+              if (r.ok) setTimeout(function () { window.location.href = base() + '/index.php?controller=auth&action=showLogin'; }, 800);
+            });
+        });
+      });
+    }
+  })();
+</script>
 
 <script src="<?= e(js_url('location')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

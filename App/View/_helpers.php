@@ -128,3 +128,46 @@ if (!function_exists('current_user_type')) {
         return $_SESSION['type'] ?? null;
     }
 }
+
+if (!function_exists('is_ajax')) {
+    /**
+     * Detecta si la petición espera JSON (objetivo: interacciones AJAX).
+     */
+    function is_ajax(): bool
+    {
+        return (isset($_SERVER['HTTP_X_REQUESTED_WITH'])
+                && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+            || (isset($_SERVER['HTTP_ACCEPT'])
+                && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+    }
+}
+
+if (!function_exists('respond_json')) {
+    /**
+     * Responde en JSON, finalizando el script. Espera un array.
+     */
+    function respond_json(array $payload, int $status = 200): void
+    {
+        http_response_code($status);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($payload);
+        exit;
+    }
+}
+
+if (!function_exists('render_partial')) {
+    /**
+     * Renderiza una vista parcial y devuelve su HTML (sin imprimir).
+     * $vars se extrae en el ámbito local de la vista.
+     */
+    function render_partial(string $path, array $vars = []): string
+    {
+        if (!is_file($path)) {
+            return '';
+        }
+        extract($vars, EXTR_SKIP);
+        ob_start();
+        include $path;
+        return (string) ob_get_clean();
+    }
+}

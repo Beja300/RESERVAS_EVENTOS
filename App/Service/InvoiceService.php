@@ -177,10 +177,10 @@ class InvoiceService
         );
     }
 
-    public function updatePaymentStatus(
-        int $bookingPk,
-        string $status
-    ): void {
+  public function updatePaymentStatus(
+    int $bookingPk,
+    string $status
+  ): void {
         if (
             !in_array(
                 $status,
@@ -231,5 +231,13 @@ class InvoiceService
                 'pendiente'
             );
         }
+    }
+
+    // =========================================================
+    // FACTURA DE UNA RESERVA (o null)
+    // =========================================================
+    public function findByBooking(int $bookingPk): ?Invoice
+    {
+        return $this->invoiceRepo->findByBooking($bookingPk);
     }
 }

@@ -120,14 +120,27 @@ class ClientController
       $description = trim($_POST['description'] ?? '') ?: null;
 
       $locationId = $client->getLocationId();
+
       if ($province !== '' || $canton !== '' || $district !== '') {
-        $locationId = $this->locationService->validateAndCreate(
-          $province,
-          $canton,
-          $district,
-          $town,
-          $description
-        );
+        // Solo crea una ubicación nueva si realmente cambió respecto a la actual.
+        // Así no se rompe al guardar de nuevo la misma dirección (idempotente).
+        $currentLocation = $locationId !== null ? $this->locationRepo->findById($locationId) : null;
+        $changed = $currentLocation === null
+          || $currentLocation->getProvinceLocation() !== $province
+          || $currentLocation->getCantonLocation() !== $canton
+          || $currentLocation->getDistrictLocation() !== $district
+          || $currentLocation->getTownLocation() !== $town
+          || $currentLocation->getDescriptionLocation() !== $description;
+
+        if ($changed) {
+          $locationId = $this->locationService->validateAndCreate(
+            $province,
+            $canton,
+            $district,
+            $town,
+            $description
+          );
+        }
       }
 
       $this->clientRepo->updateProfile($client->getIdClient(), $image, $locationId);
@@ -136,11 +149,20 @@ class ClientController
 
       $_SESSION['user'] = $client;
 
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Perfil actualizado correctamente.']);
+      }
+
       header('Location: ../../Public/index.php?controller=client&action=profile');
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
+
       $location = null;
       if ($client->getLocationId() !== null) {
         $location = $this->locationRepo->findById($client->getLocationId());
@@ -221,6 +243,10 @@ class ClientController
 
     session_unset();
     session_destroy();
+
+    if (is_ajax()) {
+      respond_json(['ok' => true, 'message' => 'Tu cuenta fue desactivada.']);
+    }
 
     header('Location: ../../Public/index.php?controller=auth&action=showLogin');
     exit;

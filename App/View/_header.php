@@ -31,6 +31,7 @@ $userType = current_user_type();
       <?php elseif ($userType === 'owner'): ?>
         <a href="<?= e(base_url('owner', 'dashboard')) ?>">Mi panel</a>
         <a href="<?= e(base_url('venue', 'list')) ?>">Mis locales</a>
+        <a href="<?= e(base_url('owner', 'paymentData')) ?>">Mis cobros</a>
         <a href="<?= e(base_url('notification', 'list')) ?>">Notificaciones</a>
         <a href="<?= e(base_url('owner', 'profile')) ?>">Perfil</a>
       <?php elseif ($userType === 'admin'): ?>

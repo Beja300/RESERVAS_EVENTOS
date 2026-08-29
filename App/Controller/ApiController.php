@@ -107,4 +107,44 @@ class ApiController
 
     echo json_encode(array_keys(self::LOCATIONS), JSON_UNESCAPED_UNICODE);
   }
+
+  /**
+   * HTML de los comentarios de un local (para refresco AJAX sin recargar).
+   * ?id= (idVenue)
+   */
+  public function venueComments(): void
+  {
+    require_once __DIR__ . '/../../Configuration/DataBase.php';
+    require_once __DIR__ . '/../Service/VenueRatingService.php';
+
+    $idVenue = (int) ($_GET['id'] ?? 0);
+    $service = new VenueRatingService(DataBase::getConnection());
+
+    respond_json([
+      'html' => render_partial(
+        __DIR__ . '/../View/Venue/_venueComments.php',
+        ['venueComments' => $service->getPublicComments($idVenue)]
+      ),
+    ]);
+  }
+
+  /**
+   * HTML de los comentarios de un servicio (para refresco AJAX sin recargar).
+   * ?id= (idService)
+   */
+  public function serviceComments(): void
+  {
+    require_once __DIR__ . '/../../Configuration/DataBase.php';
+    require_once __DIR__ . '/../Service/ServiceRatingService.php';
+
+    $idService = (int) ($_GET['id'] ?? 0);
+    $service = new ServiceRatingService(DataBase::getConnection());
+
+    respond_json([
+      'html' => render_partial(
+        __DIR__ . '/../View/Venue/_serviceComments.php',
+        ['comments' => $service->getPublicComments($idService)]
+      ),
+    ]);
+  }
 }

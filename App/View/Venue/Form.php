@@ -16,7 +16,7 @@ $action = $isEdit ? base_url('venue', 'update') : base_url('venue', 'create');
     <div class="alert alert-error"><?= e($error) ?></div>
   <?php endif; ?>
 
-  <form method="post" action="<?= e($action) ?>">
+  <form method="post" action="<?= e($action) ?>" data-ajax-venue-form>
     <?= csrf_field() ?>
     <?php if ($isEdit): ?>
       <input type="hidden" name="idVenue" value="<?= (int) $venue->getIdVenue() ?>">
@@ -62,18 +62,24 @@ $action = $isEdit ? base_url('venue', 'update') : base_url('venue', 'create');
       <div class="grid grid-3">
         <div class="form-group">
           <label for="province">Provincia *</label>
-          <input class="form-control" type="text" id="province" name="province" required
-            value="<?= e($_POST['province'] ?? '') ?>">
+          <select class="form-control" id="province" name="province" data-level="province" required
+                  data-value="<?= e($_POST['province'] ?? '') ?>">
+            <option value="">— Selecciona —</option>
+          </select>
         </div>
         <div class="form-group">
           <label for="canton">Cantón *</label>
-          <input class="form-control" type="text" id="canton" name="canton" required
-            value="<?= e($_POST['canton'] ?? '') ?>">
+          <select class="form-control" id="canton" name="canton" data-level="canton" disabled required
+                  data-value="<?= e($_POST['canton'] ?? '') ?>">
+            <option value="">— Selecciona —</option>
+          </select>
         </div>
         <div class="form-group">
           <label for="district">Distrito *</label>
-          <input class="form-control" type="text" id="district" name="district" required
-            value="<?= e($_POST['district'] ?? '') ?>">
+          <select class="form-control" id="district" name="district" data-level="district" disabled required
+                  data-value="<?= e($_POST['district'] ?? '') ?>">
+            <option value="">— Selecciona —</option>
+          </select>
         </div>
       </div>
 
@@ -97,5 +103,30 @@ $action = $isEdit ? base_url('venue', 'update') : base_url('venue', 'create');
     <button class="btn btn-primary" type="submit"><?= $isEdit ? 'Guardar cambios' : 'Crear local' ?></button>
   </form>
 </div>
+
+<?php if (!$isEdit): ?>
+  <script src="<?= e(js_url('location')) ?>"></script>
+<?php endif; ?>
+
+<script>
+  (function () {
+    function base() { var p=(window.location.pathname||'').split('/'); p.pop(); return p.join('/'); }
+    var form = document.querySelector('form[data-ajax-venue-form]');
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        fetch(form.getAttribute('action'), {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+          body: new FormData(form)
+        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
+          .then(function (r) {
+            window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
+            if (r.ok) setTimeout(function () { window.location.href = base() + '/index.php?controller=venue&action=list'; }, 700);
+          });
+      });
+    }
+  })();
+</script>
 
 <?php require_once __DIR__ . '/../_footer.php'; ?>

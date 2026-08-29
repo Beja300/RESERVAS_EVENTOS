@@ -33,19 +33,18 @@ if ($owner === null) {
 
 <div class="card form-card" style="max-width:560px;margin-bottom:16px;">
   <h3 class="card-title">Foto de perfil</h3>
-  <?php if ($owner->getImageOwner() !== ''): ?>
-    <div style="text-align:center;">
-      <img src="<?= e(image_url($owner->getImageOwner())) ?>" alt="Foto de perfil"
-           style="display:inline-block;width:128px;height:128px;border-radius:50%;object-fit:cover;vertical-align:middle;box-shadow:0 0 0 6px #fff,0 0 0 7px var(--neutral-200),0 6px 16px rgba(0,0,0,.18);margin-bottom:14px;">
-      <form method="post" action="<?= e(base_url('owner', 'removePhoto')) ?>">
+  <div style="text-align:center;">
+    <img id="ownerPhotoPreview" src="<?= $owner->getImageOwner() !== '' ? e(image_url($owner->getImageOwner())) : '' ?>" alt="Foto de perfil"
+         style="display:<?= $owner->getImageOwner() !== '' ? 'inline-block' : 'none' ?>;width:128px;height:128px;border-radius:50%;object-fit:cover;vertical-align:middle;box-shadow:0 0 0 6px #fff,0 0 0 7px var(--neutral-200),0 6px 16px rgba(0,0,0,.18);margin-bottom:14px;">
+    <?php if ($owner->getImageOwner() !== ''): ?>
+      <form method="post" action="<?= e(base_url('owner', 'removePhoto')) ?>" data-ajax-owner-photo>
         <?= csrf_field() ?>
-        <button class="btn btn-sm btn-warning" type="submit"
-                onclick="return confirm('¿Eliminar tu foto de perfil?');">Eliminar foto</button>
+        <button class="btn btn-sm btn-warning" type="submit">Eliminar foto</button>
       </form>
-    </div>
-  <?php else: ?>
-    <p class="muted" style="margin:0;">Aún no tienes foto de perfil.</p>
-  <?php endif; ?>
+    <?php else: ?>
+      <p class="muted" style="margin:0;">Aún no tienes foto de perfil.</p>
+    <?php endif; ?>
+  </div>
 </div>
 
 <div class="card form-card" style="max-width:560px;">
@@ -54,12 +53,13 @@ if ($owner === null) {
   <?php endif; ?>
 
   <form method="post" action="<?= e(base_url('owner', 'updateProfile')) ?>"
-        enctype="multipart/form-data" data-validate-form>
+        enctype="multipart/form-data" data-validate-form data-ajax-owner-profile>
     <?= csrf_field() ?>
 
     <div class="form-group" style="margin-bottom:16px;">
       <label>Cambiar foto de perfil</label>
-      <input class="form-control" type="file" id="image" name="image" accept="image/*">
+      <input class="form-control" type="file" id="image" name="image" accept="image/*"
+             data-photo-input="ownerPhotoPreview">
       <small class="muted">Sube una foto (jpg, png, webp, gif; máx. 2 MB).</small>
     </div>
 
@@ -145,8 +145,33 @@ if ($owner === null) {
   </form>
 </div>
 
+<div class="card form-card" style="max-width:560px;margin-bottom:16px;">
+  <h3 class="card-title">Datos de cobro</h3>
+  <p class="muted" style="margin:0 0 12px;">
+    Configura los métodos de pago que aceptarás para que tus clientes te paguen.
+  </p>
+  <a class="btn btn-primary" href="<?= e(base_url('owner', 'paymentData')) ?>">Configurar métodos de cobro</a>
+</div>
+
+<div class="card form-card" style="max-width:560px;border-color:var(--danger-light);">
+  <h3 style="margin-bottom:6px;color:var(--danger);">Desactivar cuenta</h3>
+  <p class="muted" style="margin-bottom:12px;">
+    Al desactivar tu cuenta ya no podrás iniciar sesión, pero tus locales y reservas se
+    conservan. Solo puedes desactivarla si no tienes reservas confirmadas o pendientes con
+    fecha de hoy o futura. Puedes reactivarla más adelante con un administrador.
+  </p>
+  <form method="post" action="<?= e(base_url('owner', 'deactivateAccount')) ?>"
+        data-ajax-owner-deactivate>
+    <?= csrf_field() ?>
+    <button class="btn btn-danger" type="submit">Desactivar mi cuenta</button>
+  </form>
+</div>
+
 <script>
   (function () {
+    function base() { var p=(window.location.pathname||'').split('/'); p.pop(); return p.join('/'); }
+
+    // Cambio de contraseña (mostrar/ocultar)
     var pwCheck = document.getElementById('changePasswordCheck');
     var pwFields = document.getElementById('passwordFields');
     if (pwCheck && pwFields) {
@@ -158,20 +183,98 @@ if ($owner === null) {
         }
       });
     }
-
     [['currentPassword', 'currentPasswordToggle'], ['newPassword', 'newPasswordToggle']].forEach(function (pair) {
       var input = document.getElementById(pair[0]);
       var toggle = document.getElementById(pair[1]);
-
-      toggle.addEventListener('click', function () {
-        var show = input.type === 'password';
-        input.type = show ? 'text' : 'password';
-        toggle.textContent = show ? 'Ocultar' : 'Mostrar';
-        toggle.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
-        input.focus();
-      });
+      if (input && toggle) {
+        toggle.addEventListener('click', function () {
+          var show = input.type === 'password';
+          input.type = show ? 'text' : 'password';
+          toggle.textContent = show ? 'Ocultar' : 'Mostrar';
+          toggle.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+          input.focus();
+        });
+      }
     });
+
+    // Vista previa de la foto antes de subirla.
+    var photoInput = document.querySelector('[data-photo-input]');
+    if (photoInput) {
+      var prevImg = document.getElementById(photoInput.getAttribute('data-photo-input'));
+      photoInput.addEventListener('change', function () {
+        if (photoInput.files && photoInput.files[0] && prevImg) {
+          prevImg.src = URL.createObjectURL(photoInput.files[0]);
+          prevImg.style.display = 'inline-block';
+        }
+      });
+    }
+
+    // Actualizar perfil (AJAX).
+    var pForm = document.querySelector('form[data-ajax-owner-profile]');
+    if (pForm) {
+      pForm.addEventListener('submit', function (e) {
+        var fields = pForm.querySelectorAll('[data-validate]');
+        for (var i = 0; i < fields.length; i++) {
+          if (fields[i].classList.contains('is-invalid')) { return; }
+        }
+        e.preventDefault();
+        fetch(pForm.getAttribute('action'), {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+          body: new FormData(pForm)
+        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
+          .then(function (r) {
+            window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
+            if (r.ok) setTimeout(function () { window.location.reload(); }, 700);
+          });
+      });
+    }
+
+    // Eliminar foto de perfil (AJAX).
+    var phForm = document.querySelector('form[data-ajax-owner-photo]');
+    if (phForm) {
+      phForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        window.App && App.confirmModal('¿Eliminar tu foto de perfil?', 'Eliminar foto')
+          .then(function (ok) {
+            if (!ok) return;
+            fetch(phForm.getAttribute('action'), {
+              method: 'POST',
+              headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+              body: new FormData(phForm)
+            }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
+              .then(function (r) {
+                window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
+                if (r.ok) setTimeout(function () { window.location.reload(); }, 700);
+              });
+          });
+      });
+    }
+
+    // Desactivar cuenta (AJAX)
+    var deact = document.querySelector('form[data-ajax-owner-deactivate]');
+    if (deact) {
+      deact.addEventListener('submit', function (e) {
+        e.preventDefault();
+        window.App && App.confirmModal(
+          '¿Seguro que deseas desactivar tu perfil? No podrás acceder hasta que un administrador te reactive.',
+          'Desactivar cuenta'
+        ).then(function (ok) {
+          if (!ok) return;
+          fetch(deact.getAttribute('action'), {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+            body: new FormData(deact)
+          }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
+            .then(function (r) {
+              window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
+              if (r.ok) setTimeout(function () { window.location.href = base() + '/index.php?controller=auth&action=showLogin'; }, 800);
+            });
+        });
+      });
+    }
   })();
 </script>
+
 
 <?php require_once __DIR__ . '/../_footer.php'; ?>

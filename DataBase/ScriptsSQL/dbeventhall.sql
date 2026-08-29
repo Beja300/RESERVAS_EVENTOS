@@ -210,6 +210,7 @@ CREATE TABLE tbbookingticket (
     tbbookingticketbookingid INT NOT NULL,
     tbbookingticketfile VARCHAR(255) NOT NULL,
     tbbookingtickettype VARCHAR(10) NOT NULL,
+    tbbookingticketpaymentmethodid INT,
     tbbookingticketstate VARCHAR(30) DEFAULT 'pendiente',
     tbbookingticketactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;

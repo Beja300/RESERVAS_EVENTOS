@@ -2,11 +2,13 @@
 
 require_once __DIR__ . '/../Service/AuthService.php';
 require_once __DIR__ . '/../Service/HistoryService.php';
+require_once __DIR__ . '/../Service/OwnerPaymentService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/RoleRepository.php';
 require_once __DIR__ . '/../Repository/OwnerRepository.php';
+require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class OwnerController
@@ -17,6 +19,8 @@ class OwnerController
   private BookingRepository $bookingRepo;
   private RoleRepository $roleRepo;
   private OwnerRepository $ownerRepo;
+  private OwnerPaymentService $ownerPaymentService;
+  private PaymentMethodRepository $paymentMethodRepo;
 
   public function __construct()
   {
@@ -28,6 +32,8 @@ class OwnerController
     $this->bookingRepo = new BookingRepository($connection);
     $this->roleRepo = new RoleRepository($connection);
     $this->ownerRepo = new OwnerRepository($connection);
+    $this->ownerPaymentService = new OwnerPaymentService($connection);
+    $this->paymentMethodRepo = new PaymentMethodRepository($connection);
   }
 
   // =========================================================
@@ -143,11 +149,19 @@ class OwnerController
 
       $_SESSION['user'] = $owner;
 
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Perfil actualizado correctamente.']);
+      }
+
       header('Location: ../../Public/index.php?controller=owner&action=profile&updated=1');
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
 
       require_once __DIR__ . '/../View/Owner/Form.php';
     }
@@ -174,6 +188,10 @@ class OwnerController
     $this->ownerRepo->updateProfile($owner);
 
     $_SESSION['user'] = $owner;
+
+    if (is_ajax()) {
+      respond_json(['ok' => true, 'message' => 'Foto de perfil eliminada.']);
+    }
 
     header('Location: ../../Public/index.php?controller=owner&action=profile&removed=1');
     exit;
@@ -248,10 +266,165 @@ class OwnerController
   }
 
   // =========================================================
+  // DESACTIVAR CUENTA (borrado lógico de tbrole).
+  // Solo se permite si el propietario NO tiene reservas futuras
+  // (hoy o después) pendientes o confirmadas en sus locales.
+  // =========================================================
+  public function deactivateAccount(): void
+  {
+    session_start();
+    $this->requireOwner();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->profile();
+      return;
+    }
+
+    $owner = $_SESSION['user'];
+
+    try {
+
+      if ($this->bookingRepo->hasUpcomingActiveByOwner($owner->getIdOwner())) {
+        throw new BusinessRuleException(
+          'No puedes desactivar tu perfil mientras tengas reservas confirmadas o pendientes con fecha de hoy o futura.'
+        );
+      }
+
+      $this->roleRepo->setActive($owner->getIdRol(), false);
+
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Tu perfil fue desactivado.']);
+      }
+
+    } catch (BusinessRuleException $e) {
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $e->getMessage()], 422);
+      }
+
+      $error = $e->getMessage();
+      require_once __DIR__ . '/../View/Owner/Form.php';
+      return;
+    }
+
+    session_unset();
+    session_destroy();
+
+    header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+    exit;
+  }
+
+  // =========================================================
+  // CONFIGURAR DATOS DE COBRO (métodos que acepta el owner).
+  // Estos datos los ve el cliente al elegir cómo pagar.
+  // =========================================================
+  public function paymentData(): void
+  {
+    session_start();
+    $this->requireOwner();
+
+    $owner = $_SESSION['user'];
+
+    $ownerPayments = $this->ownerPaymentService->findByOwner($owner->getIdOwner());
+    $paymentMethods = $this->paymentMethodRepo->findActive();
+
+    require_once __DIR__ . '/../View/Owner/PaymentData.php';
+  }
+
+  // =========================================================
+  // GUARDAR / ACTUALIZAR UN MÉTODO DE COBRO (AJAX)
+  // =========================================================
+  public function savePayment(): void
+  {
+    session_start();
+    $this->requireOwner();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->paymentData();
+      return;
+    }
+
+    $owner = $_SESSION['user'];
+
+    $idPaymentMethod = (int) ($_POST['paymentMethodId'] ?? 0);
+    $holder = trim($_POST['holder'] ?? '');
+    $account = trim($_POST['account'] ?? '');
+    $instructions = trim($_POST['instructions'] ?? '');
+    $active = isset($_POST['active']);
+
+    try {
+
+      $this->ownerPaymentService->save(
+        $owner->getIdOwner(),
+        $idPaymentMethod,
+        $holder,
+        $account,
+        $instructions,
+        $active
+      );
+
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Método de cobro guardado.']);
+      }
+
+    } catch (BusinessRuleException $e) {
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $e->getMessage()], 422);
+      }
+
+      $error = $e->getMessage();
+      require_once __DIR__ . '/../View/Owner/PaymentData.php';
+      return;
+    }
+
+    header('Location: ../../Public/index.php?controller=owner&action=paymentData&saved=1');
+    exit;
+  }
+
+  // =========================================================
+  // ELIMINAR UN MÉTODO DE COBRO (AJAX)
+  // =========================================================
+  public function removePayment(): void
+  {
+    session_start();
+    $this->requireOwner();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->paymentData();
+      return;
+    }
+
+    $owner = $_SESSION['user'];
+    $idOwnerPayment = (int) ($_POST['idOwnerPayment'] ?? 0);
+
+    try {
+
+      $this->ownerPaymentService->remove($owner->getIdOwner(), $idOwnerPayment);
+
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Método de cobro eliminado.']);
+      }
+
+    } catch (BusinessRuleException $e) {
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $e->getMessage()], 422);
+      }
+
+      $error = $e->getMessage();
+      require_once __DIR__ . '/../View/Owner/PaymentData.php';
+      return;
+    }
+
+    header('Location: ../../Public/index.php?controller=owner&action=paymentData&removed=1');
+    exit;
+  }
+
+  // =========================================================
   // GUARDIA: SOLO OWNER AUTENTICADO
   // =========================================================
-  private function requireOwner(): void
-  {
+  private function requireOwner(): void  {
     if (($_SESSION['type'] ?? null) !== 'owner') {
       header('Location: ../../Public/index.php?controller=auth&action=showLogin');
       exit;

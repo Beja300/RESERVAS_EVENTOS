@@ -62,6 +62,10 @@ require_once __DIR__ . '/../App/Model/Client.php';
 require_once __DIR__ . '/../App/Model/Owner.php';
 require_once __DIR__ . '/../App/Model/Admin.php';
 
+// Helpers globales (incluyen is_ajax()/respond_json()/csrf_*), disponibles
+// para todos los controladores y vistas.
+require_once __DIR__ . '/../App/View/_helpers.php';
+
 // =========================================================
 // SESIÓN + TOKEN CSRF
 // =========================================================
@@ -106,16 +110,16 @@ $allowedActions = [
   'auth'          => ['showLogin', 'login', 'showRegister', 'registerClient', 'registerOwner', 'logout'],
   'service'       => ['list', 'showForm', 'create', 'update', 'pending', 'approve', 'reject'],
   'venue'         => ['catalog', 'detail', 'showOwner', 'list', 'showForm', 'create', 'update', 'rate', 'rateService'],
-  'booking'       => ['create', 'showForm', 'myBookings', 'detail', 'addLine', 'confirm', 'cancel', 'pay', 'venueBookings', 'uploadTicket', 'approveTicket', 'rejectTicket'],
+  'booking'       => ['create', 'showForm', 'myBookings', 'detail', 'addLine', 'cancel', 'pay', 'venueBookings', 'uploadTicket', 'approveTicket', 'rejectTicket'],
   'admin'         => ['dashboard', 'users', 'activateUser', 'deactivateUser', 'bookings', 'approvePayment', 'rejectPayment', 'cleanTestData', 'showAdminForm', 'createAdmin', 'showClientForm', 'createClient', 'showOwnerForm', 'createOwner', 'showEditForm', 'updateUser'],
   'client'        => ['dashboard', 'profile', 'updateProfile', 'deactivateAccount'],
-  'owner'         => ['dashboard', 'profile', 'updateProfile', 'removePhoto'],
+  'owner'         => ['dashboard', 'profile', 'updateProfile', 'removePhoto', 'deactivateAccount', 'paymentData', 'savePayment', 'removePayment'],
   'invoice'       => ['showForm', 'generate', 'detail', 'list'],
   'paymentmethod' => ['list', 'showForm', 'create', 'edit', 'update', 'delete'],
   'location'      => ['list', 'showForm', 'create'],
   'notification'  => ['list', 'markAsRead', 'markAllAsRead'],
   'promotion'     => ['list', 'showForm', 'create', 'addService'],
-  'api'           => ['locations'],
+  'api'           => ['locations', 'venueComments', 'serviceComments'],
 ];
 
 // Ruta por defecto (acceso a /Public/index.php sin parámetros)

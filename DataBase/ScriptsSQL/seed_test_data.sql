@@ -99,6 +99,18 @@ INSERT INTO tbpaymentmethod (tbpaymentmethodtype, tbpaymentmethodactive) VALUES
 ('Efectivo', TRUE),
 ('Tarjeta',  TRUE),
 ('Transferencia', TRUE);
+SET @pmEfectivo       = 1;
+SET @pmTarjeta       = 2;
+SET @pmTransferencia = 3;
+
+-- =========================================================
+-- 7b) DATOS DE COBRO DEL PROPIETARIO (tbownerpayment)
+-- El cliente elige el método y ve estos datos para pagar al owner.
+-- =========================================================
+INSERT INTO tbownerpayment (tbownerpaymentownerid, tbownerpaymentpaymentmethodid, tbownerpaymentholder, tbownerpaymentaccount, tbownerpaymentinstructions, tbownerpaymentactive) VALUES
+(@ownerId, @pmEfectivo,       'María Fernanda Rodríguez',       NULL,      'Realizar el pago en efectivo el día del evento.', TRUE),
+(@ownerId, @pmTarjeta,        'María Fernanda Rodríguez',       NULL,      'Aceptamos tarjetas Visa y Mastercard.', TRUE),
+(@ownerId, @pmTransferencia,  'Salón La Quinta S.A.',           'CR12 1234 5678 9012 3456 7', 'Transferencia SINPE a la cuenta indicada.', TRUE);
 
 -- =========================================================
 -- 8) CONFIGURACIÓN DE COMISIÓN (5% + IVA 13%)

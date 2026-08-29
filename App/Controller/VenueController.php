@@ -193,9 +193,23 @@ class VenueController
 
       $this->serviceRatingService->rate($idService, $rolePk, $stars, $comment);
 
+      if (is_ajax()) {
+        $avg = $this->serviceRatingService->getAverage($idService);
+        respond_json([
+          'ok' => true,
+          'message' => 'Calificación publicada.',
+          'serviceId' => $idService,
+          'avg' => $avg !== null ? round($avg, 1) : 0,
+        ]);
+      }
+
       header('Location: ../../Public/index.php?controller=venue&action=detail&id=' . $idVenue);
       exit;
     } catch (BusinessRuleException $e) {
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $e->getMessage()], 422);
+      }
 
       header('Location: ../../Public/index.php?controller=venue&action=detail&id=' . $idVenue);
       exit;
@@ -232,11 +246,24 @@ class VenueController
 
       $this->venueRatingService->rate($idVenue, $rolePk, $stars, $comment);
 
+      if (is_ajax()) {
+        $avg = $this->venueRatingService->getAverage($idVenue);
+        respond_json([
+          'ok' => true,
+          'message' => 'Calificación publicada.',
+          'avg' => $avg !== null ? round($avg, 1) : 0,
+        ]);
+      }
+
       header('Location: ../../Public/index.php?controller=venue&action=detail&id=' . $idVenue);
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
 
       header('Location: ../../Public/index.php?controller=venue&action=detail&id=' . $idVenue);
       exit;
@@ -313,11 +340,20 @@ class VenueController
         $image
       );
 
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Local creado correctamente.']);
+      }
+
       header('Location: ../../Public/index.php?controller=venue&action=list');
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
+
       $venue = null;
 
       require_once __DIR__ . '/../View/Venue/Form.php';
@@ -367,11 +403,19 @@ class VenueController
         $active
       );
 
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Local actualizado correctamente.']);
+      }
+
       header('Location: ../../Public/index.php?controller=venue&action=list');
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
 
       require_once __DIR__ . '/../View/Venue/Form.php';
     }

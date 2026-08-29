@@ -261,6 +261,33 @@ class BookingRepository
     return ((int) $stmt->fetchColumn()) > 0;
   }
 
+  // =========================================================
+  // ¿EL DUEÑO TIENE RESERVAS FUTURAS (hoy o después) EN SUS LOCALES?
+  // Se usa para saber si puede desactivar su perfil: solo si NO hay
+  // reservas pendientes/confirmadas cuya fecha sea hoy o futura.
+  // =========================================================
+  public function hasUpcomingActiveByOwner(int $idOwner): bool
+  {
+    $sql = "
+            SELECT COUNT(*)
+            FROM tbbooking b
+            INNER JOIN tbvenue v
+                ON v.tbvenueid = b.tbbookinglocalid
+            WHERE v.tbvenueownerid = :idOwner
+              AND b.tbbookingdate >= :today
+              AND b.tbbookingstate IN ('pendiente', 'confirmado')
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':idOwner' => $idOwner,
+      ':today'   => date('Y-m-d')
+    ]);
+
+    return ((int) $stmt->fetchColumn()) > 0;
+  }
+
 
   // =========================================================
   // MAPEO FILA -> OBJETO
