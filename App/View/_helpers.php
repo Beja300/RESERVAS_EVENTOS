@@ -60,6 +60,24 @@ if (!function_exists('e')) {
     }
 }
 
+if (!function_exists('image_url')) {
+    /**
+     * Convierte una ruta de imagen (relativa a Public/ o URL completa)
+     * en una URL absoluta servible desde el navegador.
+     */
+    function image_url(?string $path): string
+    {
+        if ($path === null || $path === '') {
+            return '';
+        }
+        if (preg_match('~^https?://~i', $path)) {
+            return $path;
+        }
+        $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'), '/');
+        return $base . '/' . ltrim($path, '/');
+    }
+}
+
 if (!function_exists('csrf_token')) {
     /**
      * Devuelve (y si hace falta genera) el token CSRF de la sesión.

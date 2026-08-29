@@ -29,9 +29,9 @@ $location = $location ?? null;
     <div class="form-group" style="margin-bottom:16px;">
       <label>Foto de perfil</label>
       <?php if ($client->getImageClient() !== ''): ?>
-        <div style="margin-bottom:8px;">
-          <img src="<?= e($client->getImageClient()) ?>" alt="Foto actual"
-               style="width:84px;height:84px;border-radius:50%;object-fit:cover;border:2px solid var(--neutral-200);">
+        <div style="text-align:center;margin-bottom:12px;">
+          <img src="<?= e(image_url($client->getImageClient())) ?>" alt="Foto de perfil"
+               style="display:inline-block;width:128px;height:128px;border-radius:50%;object-fit:cover;vertical-align:middle;box-shadow:0 0 0 6px #fff,0 0 0 7px var(--neutral-200),0 6px 16px rgba(0,0,0,.18);">
         </div>
       <?php endif; ?>
       <input class="form-control" type="file" id="image" name="image" accept="image/*">

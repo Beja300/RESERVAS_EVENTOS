@@ -95,17 +95,21 @@ class OwnerRepository
                 tbownerfirstname = :firstName,
                 tbownerlastname = :lastName,
                 tbowneralias = :alias,
-                tbowneridentificationnumber = :identificationNumber
+                tbowneridentificationnumber = :identificationNumber,
+                tbownerimage = :image
             WHERE tbownerid = :idOwner
         ";
 
         $stmt = $this->connection->prepare($sql);
+
+        $ownerImage = $owner->getImageOwner();
 
         return $stmt->execute([
             ':firstName'            => $owner->getFirstNameOwner(),
             ':lastName'             => $owner->getLastNameOwner() !== '' ? $owner->getLastNameOwner() : null,
             ':alias'                => $owner->getAliasOwner() !== '' ? $owner->getAliasOwner() : null,
             ':identificationNumber' => $owner->getIdentificationNumberOwner() !== '' ? $owner->getIdentificationNumberOwner() : null,
+            ':image'                => $ownerImage !== '' ? $ownerImage : null,
             ':idOwner'              => $owner->getIdOwner(),
         ]);
     }
