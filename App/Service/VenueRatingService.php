@@ -17,7 +17,9 @@ class VenueRatingService
   }
 
   // =========================================================
-  // CALIFICAR UN LOCAL (cualquier usuario autenticado)
+  // COMENTARIO NUEVO (cualquier usuario autenticado)
+  // Permite varios comentarios por usuario sobre el mismo local:
+  // siempre inserta un registro nuevo.
   // =========================================================
   public function rate(int $venuePk, int $rolePk, int $stars, ?string $comment = null): int
   {
@@ -29,16 +31,6 @@ class VenueRatingService
       throw new BusinessRuleException('El local a calificar no existe.');
     }
 
-    $existing = $this->ratingRepo->findByVenueAndRole($venuePk, $rolePk);
-
-    if ($existing !== null) {
-      $existing->setStars($stars);
-      $existing->setComment($comment ?? '');
-      if ($this->ratingRepo->update($existing)) {
-        return $existing->getIdVenueRating();
-      }
-    }
-
     return $this->ratingRepo->save(
       new VenueRating(
         idVenueRating: 0,
@@ -48,6 +40,31 @@ class VenueRatingService
         comment: $comment ?? ''
       )
     );
+  }
+
+  // =========================================================
+  // EDITAR UN COMENTARIO PROPIO (solo el autor puede modificarlo)
+  // =========================================================
+  public function updateComment(int $idVenueRating, int $rolePk, int $stars, ?string $comment = null): void
+  {
+    if ($stars < 1 || $stars > 5) {
+      throw new BusinessRuleException('La calificación debe ser de 1 a 5 estrellas.');
+    }
+
+    $rating = $this->ratingRepo->findById($idVenueRating);
+
+    if ($rating === null) {
+      throw new BusinessRuleException('El comentario que intentas editar no existe.');
+    }
+
+    if ($rating->getIdRole() !== $rolePk) {
+      throw new BusinessRuleException('No puedes editar el comentario de otro usuario.');
+    }
+
+    $rating->setStars($stars);
+    $rating->setComment($comment ?? '');
+
+    $this->ratingRepo->update($rating);
   }
 
   // =========================================================

@@ -67,8 +67,31 @@ return (int) $this->connection->lastInsertId();
   }
 
   // =========================================================
-  // CALIFICACIÓN EXISTENTE DE UN ROL SOBRE UN LOCAL
+  // COMENTARIO POR ID (para editar un comentario específico)
   // =========================================================
+  public function findById(int $idVenueRating): ?VenueRating
+  {
+    $sql = "
+      SELECT
+        tbvenueratingid,
+        tbvenueratingvenueid,
+        tbvenueratingroleid,
+        tbvenueratingstars,
+        tbvenueratingcomment
+      FROM tbvenuerating
+      WHERE tbvenueratingid = :idVenueRating
+        AND tbvenueratingactive = true
+      LIMIT 1
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([':idVenueRating' => $idVenueRating]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $row ? $this->mapRow($row) : null;
+  }
+
   public function findByVenueAndRole(int $idVenue, int $idRole): ?VenueRating
   {
     $sql = "
@@ -127,6 +150,7 @@ return (int) $this->connection->lastInsertId();
   {
     $sql = "
       SELECT
+        vr.tbvenueratingid,
         vr.tbvenueratingroleid,
         vr.tbvenueratingstars,
         vr.tbvenueratingcomment,

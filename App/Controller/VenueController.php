@@ -114,10 +114,6 @@ class VenueController
     session_start();
     $loggedRolePk = isset($_SESSION['user']) ? (int) $_SESSION['user']->getIdRol() : 0;
 
-    $myVenueRating = null;
-    if ($loggedRolePk > 0) {
-      $myVenueRating = $this->venueRatingService->getByVenueAndRole($idVenue, $loggedRolePk);
-    }
     $myRatingByService = [];
     if ($loggedRolePk > 0) {
       foreach ($services as $s) {
@@ -247,11 +243,11 @@ class VenueController
       $this->venueRatingService->rate($idVenue, $rolePk, $stars, $comment);
 
       if (is_ajax()) {
-        $avg = $this->venueRatingService->getAverage($idVenue);
         respond_json([
           'ok' => true,
-          'message' => 'Calificación publicada.',
-          'avg' => $avg !== null ? round($avg, 1) : 0,
+          'message' => 'Comentario publicado.',
+          'avg' => round((float) ($this->venueRatingService->getAverage($idVenue) ?? 0), 1),
+          'html' => $this->venueCommentsHtml($idVenue),
         ]);
       }
 
@@ -268,6 +264,68 @@ class VenueController
       header('Location: ../../Public/index.php?controller=venue&action=detail&id=' . $idVenue);
       exit;
     }
+  }
+
+  // =========================================================
+  // EDITAR UN COMENTARIO ESPECÍFICO (solo su autor)
+  // =========================================================
+  public function updateComment(): void
+  {
+    session_start();
+
+    if (($_SESSION['type'] ?? null) === null) {
+      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+      exit;
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->detail();
+      return;
+    }
+
+    $idVenueRating = (int) ($_POST['commentId'] ?? 0);
+    $idVenue = (int) ($_POST['venueId'] ?? 0);
+    $stars = (int) ($_POST['stars'] ?? 0);
+    $comment = trim($_POST['comment'] ?? '') ?: null;
+    $rolePk = (int) ($_SESSION['user']->getIdRol() ?? 0);
+
+    try {
+
+      $this->venueRatingService->updateComment($idVenueRating, $rolePk, $stars, $comment);
+
+      if (is_ajax()) {
+        respond_json([
+          'ok' => true,
+          'message' => 'Comentario actualizado.',
+          'avg' => round((float) ($this->venueRatingService->getAverage($idVenue) ?? 0), 1),
+          'html' => $this->venueCommentsHtml($idVenue),
+        ]);
+      }
+
+      header('Location: ../../Public/index.php?controller=venue&action=detail&id=' . $idVenue);
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
+
+      header('Location: ../../Public/index.php?controller=venue&action=detail&id=' . $idVenue);
+      exit;
+    }
+  }
+
+  // =========================================================
+  // HTML DEL CONTENEDOR DE COMENTARIOS (refresco AJAX)
+  // =========================================================
+  private function venueCommentsHtml(int $idVenue): string
+  {
+    return render_partial(
+      __DIR__ . '/../View/Venue/_venueComments.php',
+      ['venueComments' => $this->venueRatingService->getPublicComments($idVenue)]
+    );
   }
 
   // =========================================================

@@ -20,7 +20,7 @@ if ($venue === null) {
     <div class="detail-item"><div class="k">Ubicación</div><div class="v">Local #<?= (int) $venue->getIdLocation() ?></div></div>
     <div class="detail-item"><div class="k">Estado</div><div class="v"><span class="badge success">Disponible</span></div></div>
     <div class="detail-item"><div class="k">Calificación</div>
-      <div class="v">
+      <div class="v" id="venueAvgRating">
         <?php if ($avgRating !== null): ?>
           <span class="rating-stars"><?= str_repeat('&#9733;', (int) round($avgRating)) . str_repeat('&#9734;', 5 - (int) round($avgRating)) ?></span>
           <span class="muted"><?= number_format($avgRating, 1) ?> / 5</span>
@@ -151,10 +151,17 @@ if ($venue === null) {
 
 <?php if (current_user_type() !== null): ?>
 <div class="card" id="commentCard" style="max-width:520px;margin-top:18px;">
-  <h3 style="margin-bottom:10px;">Tu comentario sobre este local</h3>
-  <form method="post" action="<?= e(base_url('venue', 'rate')) ?>">
+  <div class="page-head" style="margin:0 0 10px;">
+    <h3 style="margin:0;">Tu comentario sobre este local</h3>
+    <button class="btn btn-outline btn-sm" id="newComment" type="button" style="display:none;">&#10133; Nuevo comentario</button>
+  </div>
+  <form id="commentForm" method="post"
+        action="<?= e(base_url('venue', 'rate')) ?>"
+        data-update-url="<?= e(base_url('venue', 'updateComment')) ?>"
+        data-refresh-url="<?= e(base_url('api', 'venueComments', ['id' => $venue->getIdVenue()])) ?>">
     <?= csrf_field() ?>
     <input type="hidden" name="venueId" value="<?= (int) $venue->getIdVenue() ?>">
+    <input type="hidden" name="commentId" value="">
     <div class="form-group">
       <label>Calificación</label>
       <div class="star-widget" id="venueStarWidget" data-value="0">
@@ -169,85 +176,20 @@ if ($venue === null) {
       <textarea class="form-control" id="comment" name="comment" rows="3" placeholder="Escribe tu comentario..."></textarea>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <button class="btn btn-primary" id="submitComment" type="submit">Añadir comentario</button>
-      <button class="btn btn-outline" id="cancelEdit" type="button" style="display:none;">Cancelar</button>
+      <button class="btn btn-primary" id="submitComment" type="submit">Publicar comentario</button>
+      <button class="btn btn-outline" id="cancelEdit" type="button" style="display:none;">Cancelar edición</button>
     </div>
   </form>
 </div>
 <?php endif; ?>
 
-<?php if (!empty($venueComments)): ?>
-<?php $currentRoleId = isset($_SESSION['user']) ? (int) $_SESSION['user']->getIdRol() : 0; ?>
-<div class="card" style="margin-top:18px;">
+<div class="card" id="venueCommentsCard" style="margin-top:18px;">
   <h3 style="margin-bottom:10px;">Comentarios del local</h3>
-  <?php foreach ($venueComments as $c): ?>
-    <div class="comment-item">
-      <span class="c-author"><?= e($c['tbrolename']) ?></span>
-      <span class="rating-stars"><?= str_repeat('&#9733;', (int) $c['tbvenueratingstars']) . str_repeat('&#9734;', 5 - (int) $c['tbvenueratingstars']) ?></span>
-      <?php if (current_user_type() !== null && $currentRoleId === (int) $c['tbvenueratingroleid']): ?>
-        <button type="button" class="btn btn-link btn-sm btn-edit-comment"
-                data-stars="<?= (int) $c['tbvenueratingstars'] ?>"
-                data-text="<?= e($c['tbvenueratingcomment']) ?>"
-                style="padding:0;margin-left:8px;text-decoration:none;">Editar</button>
-      <?php endif; ?>
-      <?php if (!empty($c['tbvenueratingcomment'])): ?>
-        <div class="c-body"><?= e($c['tbvenueratingcomment']) ?></div>
-      <?php endif; ?>
-    </div>
-  <?php endforeach; ?>
+  <div id="venueCommentsList">
+    <?= render_partial(__DIR__ . '/_venueComments.php', ['venueComments' => $venueComments]) ?>
+  </div>
 </div>
-<?php endif; ?>
-
-<script>
-  (function () {
-    var box = document.getElementById('commentCard');
-    var widget = document.getElementById('venueStarWidget');
-    var textarea = document.getElementById('comment');
-    var submitBtn = document.getElementById('submitComment');
-    var cancelBtn = document.getElementById('cancelEdit');
-
-    function setBoxStars(stars) {
-      if (!widget) return;
-      var input = widget.querySelector('input[type="hidden"]');
-      if (input) {
-        input.value = stars > 0 ? String(stars) : '';
-      }
-      widget.querySelectorAll('.star').forEach(function (s) {
-        var idx = parseInt(s.getAttribute('data-star'), 10);
-        s.classList.toggle('is-active', idx <= stars);
-      });
-    }
-
-    function enterEditMode(stars, text) {
-      setBoxStars(stars);
-      if (textarea) textarea.value = text;
-      if (submitBtn) submitBtn.textContent = 'Actualizar mi comentario';
-      if (cancelBtn) cancelBtn.style.display = '';
-      if (box) {
-        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        if (textarea) textarea.focus();
-      }
-    }
-
-    function exitEditMode() {
-      setBoxStars(0);
-      if (textarea) textarea.value = '';
-      if (submitBtn) submitBtn.textContent = 'Añadir comentario';
-      if (cancelBtn) cancelBtn.style.display = 'none';
-    }
-
-    document.querySelectorAll('.btn-edit-comment').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        enterEditMode(parseInt(btn.getAttribute('data-stars') || '0', 10) || 0,
-                      btn.getAttribute('data-text') || '');
-      });
-    });
-
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', exitEditMode);
-    }
-  })();
-</script>
 
 <script src="<?= e(js_url('stars')) ?>"></script>
+<script src="<?= e(js_url('venue-comments')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>
