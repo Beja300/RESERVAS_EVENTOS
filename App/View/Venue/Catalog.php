@@ -74,6 +74,10 @@ $filters = $filters ?? [
             <?= $v->getTypeVenue() !== '' ? e($v->getTypeVenue()) : 'General' ?>
             &nbsp;·&nbsp; Capacidad: <?= (int) $v->getCapacityVenue() ?>
           </p>
+          <p style="color:var(--neutral-900);font-weight:700;margin-top:6px;">
+            &#8353; <?= number_format($v->getPriceVenue(), 2) ?>
+            <span class="muted" style="font-weight:400;">por evento</span>
+          </p>
           <?php if (isset($ratingsByVenue[$v->getIdVenue()])): ?>
             <p style="color:var(--amber, #f59e0b);font-size:0.9rem;margin-top:6px;">
               &#11088; <?= number_format($ratingsByVenue[$v->getIdVenue()], 1) ?> / 5

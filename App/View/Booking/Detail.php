@@ -35,15 +35,15 @@ $isPending = $booking->getBookingState() === 'pendiente';
     </div>
   </div>
 
-  <h3 style="margin:18px 0 12px;">Servicios incluidos</h3>
+  <h3 style="margin:18px 0 12px;">Detalle de la reserva</h3>
   <?php if (empty($details)): ?>
-    <p class="muted">Aún no se han agregado servicios a esta reserva.</p>
+    <p class="muted">Esta reserva no tiene líneas de detalle.</p>
   <?php else: ?>
     <div class="table-wrap">
       <table class="table">
         <thead>
           <tr>
-            <th>Servicio</th>
+            <th>Concepto</th>
             <th>Cantidad</th>
             <th>Precio unitario</th>
             <th>Subtotal</th>
@@ -52,7 +52,13 @@ $isPending = $booking->getBookingState() === 'pendiente';
         <tbody>
           <?php foreach ($details as $d): ?>
             <tr>
-              <td>Servicio #<?= (int) $d->getIdLocalService() ?></td>
+              <td>
+                <?php if ($d->getIdVenue() > 0): ?>
+                  Renta del local — <?= e($venue !== null ? $venue->getNameVenue() : ('Local #' . $d->getIdVenue())) ?>
+                <?php else: ?>
+                  Servicio #<?= (int) $d->getIdLocalService() ?>
+                <?php endif; ?>
+              </td>
               <td><?= (int) $d->getQuantityDetail() ?></td>
               <td>&#8353; <?= number_format($d->getUnitPrice(), 2) ?></td>
               <td>&#8353; <?= number_format($d->getQuantityDetail() * $d->getUnitPrice() - $d->getDiscount(), 2) ?></td>

@@ -9,6 +9,7 @@ require_once __DIR__ . '/../Repository/InvoiceRepository.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
 require_once __DIR__ . '/../Repository/DetailRepository.php';
+require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class InvoiceController
@@ -21,6 +22,7 @@ class InvoiceController
   private BookingRepository $bookingRepo;
   private PaymentMethodRepository $paymentMethodRepo;
   private DetailRepository $detailRepo;
+  private VenueRepository $venueRepo;
 
   public function __construct()
   {
@@ -34,6 +36,7 @@ class InvoiceController
     $this->bookingRepo = new BookingRepository($connection);
     $this->paymentMethodRepo = new PaymentMethodRepository($connection);
     $this->detailRepo = new DetailRepository($connection);
+    $this->venueRepo = new VenueRepository($connection);
   }
 
   // =========================================================
@@ -129,6 +132,8 @@ class InvoiceController
     $details = $this->detailRepo->findByBooking($idBooking);
     $totals = $this->bookingService->calculateTotals($idBooking);
     $total = $totals['total'];
+
+    $venue = $booking !== null ? $this->venueRepo->findById($booking->getIdLocal()) : null;
 
     $earning = ($type === 'admin' || $type === 'owner')
       ? $this->earningService->findByBooking($idBooking)

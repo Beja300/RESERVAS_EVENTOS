@@ -17,6 +17,7 @@ if ($venue === null) {
   <div class="detail-grid">
     <div class="detail-item"><div class="k">Tipo</div><div class="v"><?= $venue->getTypeVenue() !== '' ? e($venue->getTypeVenue()) : 'General' ?></div></div>
     <div class="detail-item"><div class="k">Capacidad</div><div class="v"><?= (int) $venue->getCapacityVenue() ?> personas</div></div>
+    <div class="detail-item"><div class="k">Precio de renta</div><div class="v">&#8353; <?= number_format($venue->getPriceVenue(), 2) ?> <span class="muted">por evento</span></div></div>
     <div class="detail-item"><div class="k">Ubicación</div><div class="v">Local #<?= (int) $venue->getIdLocation() ?></div></div>
     <div class="detail-item"><div class="k">Estado</div><div class="v"><span class="badge success">Disponible</span></div></div>
     <div class="detail-item"><div class="k">Calificación</div>

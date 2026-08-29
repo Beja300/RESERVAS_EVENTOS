@@ -44,6 +44,11 @@ if ($venue === null) {
       <p class="form-hint" style="margin-bottom:14px;">Podrás añadir servicios después de crear la reserva.</p>
     <?php endif; ?>
 
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--neutral-200);">
+      <p style="font-weight:700;color:var(--neutral-900);">Precio del local: &#8353; <?= number_format($venue->getPriceVenue(), 2) ?></p>
+      <p class="form-hint">Se incluye en la reserva; el total mostrará este precio más los servicios que agregues.</p>
+    </div>
+
     <button class="btn btn-primary btn-block" type="submit">Crear reserva</button>
   </form>
 </div>

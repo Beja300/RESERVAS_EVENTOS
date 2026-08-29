@@ -5,20 +5,22 @@ require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/DetailRepository.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Model/Booking.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class BookingService
 {
+    private PDO $connection;
     private BookingRepository $bookingRepo;
     private DetailRepository $detailRepo;
     private VenueRepository $venueRepo;
 
     public function __construct()
     {
-        $connection = DataBase::getConnection();
+        $this->connection = DataBase::getConnection();
 
-        $this->bookingRepo = new BookingRepository($connection);
-        $this->detailRepo = new DetailRepository($connection);
-        $this->venueRepo = new VenueRepository($connection);
+        $this->bookingRepo = new BookingRepository($this->connection);
+        $this->detailRepo = new DetailRepository($this->connection);
+        $this->venueRepo = new VenueRepository($this->connection);
     }
 
     public function createBooking(
@@ -38,6 +40,12 @@ class BookingService
         if ($venue === null || !$venue->getIsActive()) {
             throw new BusinessRuleException(
                 'Este local no está disponible para reservas.'
+            );
+        }
+
+        if ($venue->getPriceVenue() <= 0) {
+            throw new BusinessRuleException(
+                'Este local no tiene un precio de renta configurado. Contacta al propietario.'
             );
         }
 
@@ -61,7 +69,24 @@ class BookingService
             false
         );
 
-        return $this->bookingRepo->save($booking);
+        $this->connection->beginTransaction();
+
+        try {
+
+            $idBooking = $this->bookingRepo->save($booking);
+
+            // Línea base: renta del local (garantiza factura nunca en 0)
+            $this->detailRepo->addVenueLine($idBooking, $venue);
+
+            $this->connection->commit();
+
+            return $idBooking;
+        } catch (\Throwable $e) {
+
+            $this->connection->rollBack();
+
+            throw $e;
+        }
     }
 
     // Porcentajes de cobro aplicados al total de la reserva
@@ -111,7 +136,7 @@ class BookingService
             ) === 0
         ) {
             throw new BusinessRuleException(
-                'No puedes confirmar una reserva sin servicios agregados.'
+                'No puedes confirmar una reserva sin detalle.'
             );
         }
 

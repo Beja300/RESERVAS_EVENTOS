@@ -24,6 +24,7 @@ class VenueRepository
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
+                tbvenueprice,
                 tbvenueimage,
                 tbvenueactive
             )
@@ -33,6 +34,7 @@ class VenueRepository
                 :nameVenue,
                 :typeVenue,
                 :capacityVenue,
+                :priceVenue,
                 :imageVenue,
                 :isActive
             )
@@ -46,6 +48,7 @@ class VenueRepository
       ':nameVenue'     => $venue->getNameVenue(),
       ':typeVenue'     => $venue->getTypeVenue(),
       ':capacityVenue' => $venue->getCapacityVenue(),
+      ':priceVenue'    => $venue->getPriceVenue(),
       ':imageVenue'    => $venue->getImageVenue(),
       ':isActive'      => $this->toDb($venue->getIsActive())
     ]);
@@ -67,6 +70,7 @@ class VenueRepository
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
+                tbvenueprice,
                 tbvenueimage,
                 tbvenueactive
 
@@ -100,6 +104,7 @@ class VenueRepository
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
+                tbvenueprice,
                 tbvenueimage,
                 tbvenueactive
 
@@ -130,6 +135,7 @@ class VenueRepository
                 v.tbvenuename,
                 v.tbvenuetype,
                 v.tbvenuecapacity,
+                v.tbvenueprice,
                 v.tbvenueimage,
                 v.tbvenueactive,
                 l.tblocationprovince
@@ -192,6 +198,7 @@ class VenueRepository
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
+                tbvenueprice,
                 tbvenueimage,
                 tbvenueactive
 
@@ -221,6 +228,7 @@ class VenueRepository
                 tbvenuename = :nameVenue,
                 tbvenuetype = :typeVenue,
                 tbvenuecapacity = :capacityVenue,
+                tbvenueprice = :priceVenue,
                 tbvenueimage = :imageVenue,
                 tbvenueactive = :isActive
             WHERE tbvenueid = :idVenue
@@ -232,6 +240,7 @@ class VenueRepository
       ':nameVenue'     => $venue->getNameVenue(),
       ':typeVenue'     => $venue->getTypeVenue(),
       ':capacityVenue' => $venue->getCapacityVenue(),
+      ':priceVenue'    => $venue->getPriceVenue(),
       ':imageVenue'    => $venue->getImageVenue(),
       ':isActive'      => $this->toDb($venue->getIsActive()),
       ':idVenue'       => $venue->getIdVenue()
@@ -251,6 +260,7 @@ class VenueRepository
       nameVenue: $row['tbvenuename'],
       typeVenue: $row['tbvenuetype'] ?? '',
       capacityVenue: (int) $row['tbvenuecapacity'],
+      priceVenue: (float) $row['tbvenueprice'],
       imageVenue: $row['tbvenueimage'] ?? '',
       isActive: $this->toBool($row['tbvenueactive'])
     );
