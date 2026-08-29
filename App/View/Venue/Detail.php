@@ -90,21 +90,19 @@ if ($venue === null) {
             <td><?= e($s->getNameService()) ?></td>
             <td><?= $s->getTypeService() !== null ? e($s->getTypeService()) : '—' ?></td>
             <td>&#8353; <?= number_format($s->getPriceService(), 2) ?></td>
-            <td data-service-avg>
-              <span data-stars>
-                <?php if (isset($ratingByService[$s->getIdService()])): ?>
-                  <span class="rating-stars"><?= str_repeat('&#9733;', (int) round($ratingByService[$s->getIdService()])) . str_repeat('&#9734;', 5 - (int) round($ratingByService[$s->getIdService()])) ?></span>
-                  <span class="muted"><?= number_format($ratingByService[$s->getIdService()], 1) ?> / 5</span>
-                <?php else: ?>
-                  <span class="muted">Sin calificaciones</span>
-                <?php endif; ?>
-              </span>
+            <td>
+              <?php if (isset($ratingByService[$s->getIdService()])): ?>
+                <span class="rating-stars"><?= str_repeat('&#9733;', (int) round($ratingByService[$s->getIdService()])) . str_repeat('&#9734;', 5 - (int) round($ratingByService[$s->getIdService()])) ?></span>
+                <span class="muted"><?= number_format($ratingByService[$s->getIdService()], 1) ?> / 5</span>
+              <?php else: ?>
+                Sin calificaciones
+              <?php endif; ?>
             </td>
             <td>
               <?php if (current_user_type() !== null): ?>
                 <details>
                   <summary class="btn btn-outline btn-sm">Calificar servicio</summary>
-                  <form method="post" action="<?= e(base_url('venue', 'rateService')) ?>" data-ajax-rate="service" style="margin-top:8px;">
+                  <form method="post" action="<?= e(base_url('venue', 'rateService')) ?>" style="margin-top:8px;">
                     <?= csrf_field() ?>
                     <input type="hidden" name="serviceId" value="<?= (int) $s->getIdService() ?>">
                     <input type="hidden" name="venueId" value="<?= (int) $venue->getIdVenue() ?>">
@@ -129,11 +127,21 @@ if ($venue === null) {
               <?php endif; ?>
             </td>
           </tr>
-            <tr data-service-comments-row>
-              <td colspan="5" class="comment-list" data-service-comments>
-                <?= render_partial(__DIR__ . '/_serviceComments.php', ['comments' => $serviceComments[$s->getIdService()] ?? []]) ?>
+          <?php if (!empty($serviceComments[$s->getIdService()])): ?>
+            <tr>
+              <td colspan="5" class="comment-list">
+                <?php foreach ($serviceComments[$s->getIdService()] as $c): ?>
+                  <div class="comment-item">
+                    <span class="c-author"><?= e($c['tbrolename']) ?></span>
+                    <span class="rating-stars"><?= str_repeat('&#9733;', (int) $c['tbserviceratingstars']) . str_repeat('&#9734;', 5 - (int) $c['tbserviceratingstars']) ?></span>
+                    <?php if (!empty($c['tbserviceratingcomment'])): ?>
+                      <div class="c-body"><?= e($c['tbserviceratingcomment']) ?></div>
+                    <?php endif; ?>
+                  </div>
+                <?php endforeach; ?>
               </td>
             </tr>
+          <?php endif; ?>
         <?php endforeach; ?>
       </tbody>
     </table>
@@ -142,14 +150,14 @@ if ($venue === null) {
 <?php endif; ?>
 
 <?php if (current_user_type() !== null): ?>
-<div class="card" style="max-width:520px;margin-top:18px;">
-  <h3 style="margin-bottom:10px;">Calificar este local</h3>
-  <form method="post" action="<?= e(base_url('venue', 'rate')) ?>" data-ajax-rate="venue">
+<div class="card" id="commentCard" style="max-width:520px;margin-top:18px;">
+  <h3 style="margin-bottom:10px;">Tu comentario sobre este local</h3>
+  <form method="post" action="<?= e(base_url('venue', 'rate')) ?>">
     <?= csrf_field() ?>
     <input type="hidden" name="venueId" value="<?= (int) $venue->getIdVenue() ?>">
     <div class="form-group">
-      <label>Calificación *</label>
-      <div class="star-widget" data-value="<?= (int) ($myVenueRating !== null ? $myVenueRating->getStars() : 0) ?>">
+      <label>Calificación</label>
+      <div class="star-widget" id="venueStarWidget" data-value="0">
         <input type="hidden" name="stars" value="">
         <?php for ($i = 1; $i <= 5; $i++): ?>
           <button type="button" class="star" data-star="<?= $i ?>" aria-label="<?= $i ?> estrellas">&#9733;</button>
@@ -157,99 +165,89 @@ if ($venue === null) {
       </div>
     </div>
     <div class="form-group">
-      <label for="comment">Comentario (opcional)</label>
-      <textarea class="form-control" id="comment" name="comment" rows="3"><?= e($myVenueRating !== null ? $myVenueRating->getComment() : '') ?></textarea>
+      <label for="comment">Comentario</label>
+      <textarea class="form-control" id="comment" name="comment" rows="3" placeholder="Escribe tu comentario..."></textarea>
     </div>
-    <button class="btn btn-primary" type="submit">
-      <?= $myVenueRating !== null ? 'Actualizar calificación' : 'Publicar calificación' ?>
-    </button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" id="submitComment" type="submit">Añadir comentario</button>
+      <button class="btn btn-outline" id="cancelEdit" type="button" style="display:none;">Cancelar</button>
+    </div>
   </form>
 </div>
 <?php endif; ?>
 
+<?php if (!empty($venueComments)): ?>
+<?php $currentRoleId = isset($_SESSION['user']) ? (int) $_SESSION['user']->getIdRol() : 0; ?>
 <div class="card" style="margin-top:18px;">
   <h3 style="margin-bottom:10px;">Comentarios del local</h3>
-  <div data-venue-comments>
-    <?= render_partial(__DIR__ . '/_venueComments.php', ['venueComments' => $venueComments ?? []]) ?>
-  </div>
+  <?php foreach ($venueComments as $c): ?>
+    <div class="comment-item">
+      <span class="c-author"><?= e($c['tbrolename']) ?></span>
+      <span class="rating-stars"><?= str_repeat('&#9733;', (int) $c['tbvenueratingstars']) . str_repeat('&#9734;', 5 - (int) $c['tbvenueratingstars']) ?></span>
+      <?php if (current_user_type() !== null && $currentRoleId === (int) $c['tbvenueratingroleid']): ?>
+        <button type="button" class="btn btn-link btn-sm btn-edit-comment"
+                data-stars="<?= (int) $c['tbvenueratingstars'] ?>"
+                data-text="<?= e($c['tbvenueratingcomment']) ?>"
+                style="padding:0;margin-left:8px;text-decoration:none;">Editar</button>
+      <?php endif; ?>
+      <?php if (!empty($c['tbvenueratingcomment'])): ?>
+        <div class="c-body"><?= e($c['tbvenueratingcomment']) ?></div>
+      <?php endif; ?>
+    </div>
+  <?php endforeach; ?>
 </div>
+<?php endif; ?>
 
-<script src="<?= e(js_url('stars')) ?>"></script>
 <script>
   (function () {
-    function base() { var p = (window.location.pathname || '').split('/'); p.pop(); return p.join('/'); }
+    var box = document.getElementById('commentCard');
+    var widget = document.getElementById('venueStarWidget');
+    var textarea = document.getElementById('comment');
+    var submitBtn = document.getElementById('submitComment');
+    var cancelBtn = document.getElementById('cancelEdit');
 
-    function apiUrl(action, extra) {
-      var q = '?controller=api&action=' + encodeURIComponent(action);
-      if (extra) {
-        Object.keys(extra).forEach(function (k) { q += '&' + k + '=' + encodeURIComponent(extra[k]); });
+    function setBoxStars(stars) {
+      if (!widget) return;
+      var input = widget.querySelector('input[type="hidden"]');
+      if (input) {
+        input.value = stars > 0 ? String(stars) : '';
       }
-      return base() + '/index.php' + q;
-    }
-
-    function updateAvg(el, value) {
-      var s = '';
-      for (var i = 1; i <= 5; i++) s += i <= Math.round(value) ? '\u2605' : '\u2606';
-      if (el) {
-        el.innerHTML = s + ' <span class="muted">' + Number(value).toFixed(1) + ' / 5</span>';
-      }
-    }
-
-    function submitForm(form, onOk) {
-      fetch(form.getAttribute('action'), {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-        body: new FormData(form)
-      }).then(function (r) {
-        return r.json().then(function (j) { return { ok: r.ok, data: j }; });
-      }).then(function (r) {
-        window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
-        if (r.ok) onOk(r.data);
+      widget.querySelectorAll('.star').forEach(function (s) {
+        var idx = parseInt(s.getAttribute('data-star'), 10);
+        s.classList.toggle('is-active', idx <= stars);
       });
     }
 
-    // Calificación del local
-    document.querySelectorAll('form[data-ajax-rate="venue"]').forEach(function (form) {
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        submitForm(form, function (data) {
-          var idInput = form.querySelector('[name="venueId"]');
-          fetch(apiUrl('venueComments', { id: idInput ? idInput.value : '' }))
-            .then(function (r) { return r.json(); })
-            .then(function (j) {
-              var box = document.querySelector('[data-venue-comments]');
-              if (box) box.innerHTML = j.html;
-            });
-        });
+    function enterEditMode(stars, text) {
+      setBoxStars(stars);
+      if (textarea) textarea.value = text;
+      if (submitBtn) submitBtn.textContent = 'Actualizar mi comentario';
+      if (cancelBtn) cancelBtn.style.display = '';
+      if (box) {
+        box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (textarea) textarea.focus();
+      }
+    }
+
+    function exitEditMode() {
+      setBoxStars(0);
+      if (textarea) textarea.value = '';
+      if (submitBtn) submitBtn.textContent = 'Añadir comentario';
+      if (cancelBtn) cancelBtn.style.display = 'none';
+    }
+
+    document.querySelectorAll('.btn-edit-comment').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        enterEditMode(parseInt(btn.getAttribute('data-stars') || '0', 10) || 0,
+                      btn.getAttribute('data-text') || '');
       });
     });
 
-    // Calificación de servicios
-    document.querySelectorAll('form[data-ajax-rate="service"]').forEach(function (form) {
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        submitForm(form, function (data) {
-          var row = form.closest('tr');
-          var svcIdInput = form.querySelector('[name="serviceId"]');
-          var svcId = svcIdInput ? svcIdInput.value : null;
-          // Actualiza el promedio mostrado en la misma fila.
-          if (row) {
-            var avgCell = row.querySelector('td[data-service-avg]');
-            if (avgCell) updateAvg(avgCell.querySelector('[data-stars]') || avgCell, data.avg);
-          }
-          if (svcId) {
-            fetch(apiUrl('serviceComments', { id: svcId }))
-              .then(function (r) { return r.json(); })
-              .then(function (j) {
-                var commentsTd = row && row.nextElementSibling
-                  ? row.nextElementSibling.querySelector('[data-service-comments]')
-                  : null;
-                if (commentsTd) commentsTd.innerHTML = j.html;
-              });
-          }
-        });
-      });
-    });
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', exitEditMode);
+    }
   })();
 </script>
+
+<script src="<?= e(js_url('stars')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>
