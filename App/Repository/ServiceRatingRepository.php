@@ -45,6 +45,28 @@ class ServiceRatingRepository
   }
 
   // =========================================================
+  // ACTUALIZAR (re-calificar: cambia estrellas y comentario)
+  // =========================================================
+  public function update(ServiceRating $rating): bool
+  {
+    $sql = "
+      UPDATE tbservicerating
+      SET
+        tbserviceratingstars = :stars,
+        tbserviceratingcomment = :comment
+      WHERE tbserviceratingid = :idServiceRating
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    return $stmt->execute([
+      ':idServiceRating' => $rating->getIdServiceRating(),
+      ':stars'           => $rating->getStars(),
+      ':comment'         => $rating->getComment() !== '' ? $rating->getComment() : null,
+    ]);
+  }
+
+  // =========================================================
   // CALIFICACIÓN EXISTENTE DE UN ROL SOBRE UN SERVICIO
   // =========================================================
   public function findByServiceAndRole(int $idService, int $idRole): ?ServiceRating
@@ -96,6 +118,30 @@ class ServiceRatingRepository
     $stmt->execute([':idService' => $idService]);
 
     return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+  }
+
+  // =========================================================
+  // COMENTARIOS PÚBLICOS DE UN SERVICIO (con el nombre de quien calificó)
+  // =========================================================
+  public function findByServiceWithUser(int $idService): array
+  {
+    $sql = "
+      SELECT
+        sr.tbserviceratingroleid,
+        sr.tbserviceratingstars,
+        sr.tbserviceratingcomment,
+        r.tbrolename
+      FROM tbservicerating sr
+      INNER JOIN tbrole r ON r.tbroleid = sr.tbserviceratingroleid
+      WHERE sr.tbserviceratingserviceid = :idService
+        AND sr.tbserviceratingactive = true
+      ORDER BY sr.tbserviceratingid DESC
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([':idService' => $idService]);
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
   // =========================================================

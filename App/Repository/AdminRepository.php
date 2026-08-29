@@ -13,7 +13,7 @@ class AdminRepository
     }
 
     // =========================================================
-    // GUARDAR (tbrole + tbroleadmin + tbadmin)
+    // GUARDAR (tbrole + tbadmin + tbroleadmin)
     // =========================================================
     public function save(Admin $admin): bool
     {
@@ -22,33 +22,14 @@ class AdminRepository
 
             $idRole = $this->insertRole($admin);
 
-            // Tabla intermedia rol <-> admin
-            $sqlLink = "
-                INSERT INTO tbroleadmin (
-                    tbroleadminrolid,
-                    tbroleadminactive
-                )
-                VALUES (
-                    :idRole,
-                    :isActive
-                )
-            ";
-            $stmtLink = $this->connection->prepare($sqlLink);
-            $stmtLink->execute([
-                ':idRole'   => $idRole,
-                ':isActive' => $this->toDb($admin->getIsAdminActive()),
-            ]);
-
             // Perfil propio del administrador
             $sqlProfile = "
                 INSERT INTO tbadmin (
-                    tbadminroleid,
                     tbadminname,
                     tbadminimage,
                     tbadminactive
                 )
                 VALUES (
-                    :idRole,
                     :name,
                     :image,
                     :isActive
@@ -56,13 +37,34 @@ class AdminRepository
             ";
             $stmtProfile = $this->connection->prepare($sqlProfile);
             $stmtProfile->execute([
-                ':idRole'   => $idRole,
                 ':name'     => $admin->getName(),
                 ':image'    => $admin->getImageAdmin() ?: null,
                 ':isActive' => $this->toDb($admin->getIsAdminActive()),
             ]);
 
-            $admin->setIdAdmin($idRole);
+            $idAdmin = (int) $this->connection->lastInsertId();
+
+            // Tabla intermedia rol <-> admin
+            $sqlLink = "
+                INSERT INTO tbroleadmin (
+                    tbroleadminrolid,
+                    tbroleadminadminid,
+                    tbroleadminactive
+                )
+                VALUES (
+                    :idRole,
+                    :idAdmin,
+                    :isActive
+                )
+            ";
+            $stmtLink = $this->connection->prepare($sqlLink);
+            $stmtLink->execute([
+                ':idRole'   => $idRole,
+                ':idAdmin'  => $idAdmin,
+                ':isActive' => $this->toDb($admin->getIsAdminActive()),
+            ]);
+
+            $admin->setIdAdmin($idAdmin);
             $admin->setIdRol($idRole);
 
             $this->connection->commit();
@@ -91,7 +93,7 @@ class AdminRepository
                 p.tbadminactive
             FROM tbrole r
             INNER JOIN tbroleadmin a ON a.tbroleadminrolid = r.tbroleid
-            LEFT JOIN tbadmin p ON p.tbadminroleid = r.tbroleid
+            INNER JOIN tbadmin p ON p.tbadminid = a.tbroleadminadminid
             WHERE r.tbroleemail = :email
             LIMIT 1
         ";
@@ -103,8 +105,8 @@ class AdminRepository
         return $row ? $this->mapRow($row) : null;
     }
 
-    // =========================================================
-    // BUSCAR POR ID DE ADMIN
+// =========================================================
+    // BUSCAR POR ID DE ADMIN (id real del perfil tbadmin)
     // =========================================================
     public function findByAdminPk(int $adminPk): ?Admin
     {
@@ -121,8 +123,8 @@ class AdminRepository
                 p.tbadminactive
             FROM tbrole r
             INNER JOIN tbroleadmin a ON a.tbroleadminrolid = r.tbroleid
-            LEFT JOIN tbadmin p ON p.tbadminroleid = r.tbroleid
-            WHERE a.tbroleadminid = :idAdmin
+            INNER JOIN tbadmin p ON p.tbadminid = a.tbroleadminadminid
+            WHERE p.tbadminid = :idAdmin
             LIMIT 1
         ";
 
@@ -151,7 +153,7 @@ class AdminRepository
                 p.tbadminactive
             FROM tbrole r
             INNER JOIN tbroleadmin a ON a.tbroleadminrolid = r.tbroleid
-            LEFT JOIN tbadmin p ON p.tbadminroleid = r.tbroleid
+            INNER JOIN tbadmin p ON p.tbadminid = a.tbroleadminadminid
             WHERE r.tbroleid = :idRole
             LIMIT 1
         ";
@@ -181,7 +183,7 @@ class AdminRepository
                 p.tbadminactive
             FROM tbrole r
             INNER JOIN tbroleadmin a ON a.tbroleadminrolid = r.tbroleid
-            LEFT JOIN tbadmin p ON p.tbadminroleid = r.tbroleid
+            INNER JOIN tbadmin p ON p.tbadminid = a.tbroleadminadminid
             ORDER BY p.tbadminid ASC
         ";
 

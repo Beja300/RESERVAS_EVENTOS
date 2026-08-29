@@ -41,7 +41,7 @@ class BookingRepository
       ':idLocal'          => $booking->getIdLocal(),
       ':bookingDate'      => $booking->getBookingDate(),
       ':bookingState'     => $booking->getBookingState(),
-      ':isBookingActive'  => $booking->getIsBookingActive()
+      ':isBookingActive'  => $this->toDb($booking->getIsBookingActive())
     ]);
 
     return (int) $this->connection->lastInsertId();
@@ -280,5 +280,10 @@ class BookingRepository
   private function toBool(mixed $value): bool
   {
     return $value === 1 || $value === '1' || $value === true;
+  }
+
+  private function toDb(bool $value): int
+  {
+    return $value ? 1 : 0;
   }
 }

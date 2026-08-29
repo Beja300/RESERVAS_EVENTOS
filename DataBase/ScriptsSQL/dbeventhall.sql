@@ -2,8 +2,8 @@
 -- EventHall Database Schema
 -- Relaciones manejadas desde PHP (sin FOREIGN KEY)
 -- Todas las tablas usan el sufijo ...active como BOOLEAN.
--- Solo se definen las TABLAS; los datos de prueba se insertan
--- desde la aplicacion mediante el boton "Clean" del login.
+-- Solo se definen las TABLAS; los datos de prueba se cargan
+-- desde seed_test_data.sql (ejecutarlo después de este script).
 -- =========================================================
 
 CREATE DATABASE IF NOT EXISTS dbeventhall;
@@ -24,28 +24,34 @@ CREATE TABLE tbrole (
 
 -- =========================================================
 -- 2) tbroleadmin: relacion rol <-> administrador
+--    (junction: id propio + idRol + idAdmin + active)
 -- =========================================================
 CREATE TABLE tbroleadmin (
     tbroleadminid INT AUTO_INCREMENT PRIMARY KEY,
     tbroleadminrolid INT NOT NULL UNIQUE,
+    tbroleadminadminid INT NOT NULL,
     tbroleadminactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
 -- =========================================================
 -- 3) tbroleclient: relacion rol <-> cliente
+--    (junction: id propio + idRol + idClient + active)
 -- =========================================================
 CREATE TABLE tbroleclient (
     tbroleclientid INT AUTO_INCREMENT PRIMARY KEY,
     tbroleclientrolid INT NOT NULL UNIQUE,
+    tbroleclientclientid INT NOT NULL,
     tbroleclientactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
 -- =========================================================
 -- 4) tbroleowner: relacion rol <-> propietario
+--    (junction: id propio + idRol + idOwner + active)
 -- =========================================================
 CREATE TABLE tbroleowner (
     tbroleownerid INT AUTO_INCREMENT PRIMARY KEY,
     tbroleownerrolid INT NOT NULL UNIQUE,
+    tbroleownerownerid INT NOT NULL,
     tbroleowneractive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
@@ -54,7 +60,6 @@ CREATE TABLE tbroleowner (
 -- =========================================================
 CREATE TABLE tbadmin (
     tbadminid INT AUTO_INCREMENT PRIMARY KEY,
-    tbadminroleid INT NOT NULL,
     tbadminname VARCHAR(300) NOT NULL,
     tbadminimage VARCHAR(255),
     tbadminactive BOOLEAN NOT NULL DEFAULT TRUE
@@ -65,7 +70,6 @@ CREATE TABLE tbadmin (
 -- =========================================================
 CREATE TABLE tbclient (
     tbclientid INT AUTO_INCREMENT PRIMARY KEY,
-    tbclientroleid INT NOT NULL,
     tbclientname VARCHAR(300) NOT NULL,
     tbclientimage VARCHAR(255),
     tbclientlocationid INT,
@@ -77,7 +81,6 @@ CREATE TABLE tbclient (
 -- =========================================================
 CREATE TABLE tbowner (
     tbownerid INT AUTO_INCREMENT PRIMARY KEY,
-    tbownerroleid INT NOT NULL,
     tbownerfirstname VARCHAR(300) NOT NULL,
     tbownerlastname VARCHAR(250),
     tbowneralias VARCHAR(100),
@@ -174,20 +177,29 @@ CREATE TABLE tbbooking (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 15) tbbookingdetail: lineas de la reserva (carrito)
+-- 15) tbdetail: linea del detalle (servicio, cantidades, precios)
+-- =========================================================
+CREATE TABLE tbdetail (
+    tbdetailid INT AUTO_INCREMENT PRIMARY KEY,
+    tbdetailserviceid INT NOT NULL,
+    tbdetailquantity INT NOT NULL DEFAULT 1,
+    tbdetailunitprice DECIMAL(10,2) NOT NULL,
+    tbdetaildiscount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    tbdetailactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 16) tbbookingdetail: relacion reserva <-> detalle (junction pura)
 -- =========================================================
 CREATE TABLE tbbookingdetail (
     tbbookingdetailid INT AUTO_INCREMENT PRIMARY KEY,
     tbbookingdetailbookingid INT NOT NULL,
     tbbookingdetaildetailid INT NOT NULL,
-    tbbookingdetailquantity INT NOT NULL DEFAULT 1,
-    tbbookingdetailunitprice DECIMAL(10,2) NOT NULL,
-    tbbookingdetaildiscount DECIMAL(10,2) NOT NULL DEFAULT 0,
     tbbookingdetailactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 16) tbbookingticket: comprobante de pago de una reserva
+-- 17) tbbookingticket: comprobante de pago de una reserva
 -- =========================================================
 CREATE TABLE tbbookingticket (
     tbbookingticketid INT AUTO_INCREMENT PRIMARY KEY,
@@ -199,7 +211,7 @@ CREATE TABLE tbbookingticket (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 17) tbpaymentmethod: metodos de pago
+-- 18) tbpaymentmethod: metodos de pago
 -- =========================================================
 CREATE TABLE tbpaymentmethod (
     tbpaymentmethodid INT AUTO_INCREMENT PRIMARY KEY,
@@ -208,7 +220,7 @@ CREATE TABLE tbpaymentmethod (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 18) tbownerpayment: datos de cobro del propietario
+-- 19) tbownerpayment: datos de cobro del propietario
 -- =========================================================
 CREATE TABLE tbownerpayment (
     tbownerpaymentid INT AUTO_INCREMENT PRIMARY KEY,
@@ -221,7 +233,7 @@ CREATE TABLE tbownerpayment (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 19) tbinvoice: facturas (relacion 1:1 con reserva)
+-- 20) tbinvoice: facturas (relacion 1:1 con reserva)
 -- =========================================================
 CREATE TABLE tbinvoice (
     tbinvoiceid INT AUTO_INCREMENT PRIMARY KEY,
@@ -233,7 +245,7 @@ CREATE TABLE tbinvoice (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 20) tbcommissionconfig: configuracion de comision e IVA
+-- 21) tbcommissionconfig: configuracion de comision e IVA
 -- =========================================================
 CREATE TABLE tbcommissionconfig (
     tbcommissionconfigid INT AUTO_INCREMENT PRIMARY KEY,
@@ -243,7 +255,7 @@ CREATE TABLE tbcommissionconfig (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 21) tbeearning: reparticion de ganancias por reserva pagada
+-- 22) tbeearning: reparticion de ganancias por reserva pagada
 -- =========================================================
 CREATE TABLE tbeearning (
     tbeearningid INT AUTO_INCREMENT PRIMARY KEY,
@@ -258,7 +270,7 @@ CREATE TABLE tbeearning (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 22) tbvenuerating: calificaciones de locales
+-- 23) tbvenuerating: calificaciones de locales
 -- =========================================================
 CREATE TABLE tbvenuerating (
     tbvenueratingid INT AUTO_INCREMENT PRIMARY KEY,
@@ -270,7 +282,7 @@ CREATE TABLE tbvenuerating (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 23) tbservicerating: calificaciones de servicios
+-- 24) tbservicerating: calificaciones de servicios
 -- =========================================================
 CREATE TABLE tbservicerating (
     tbserviceratingid INT AUTO_INCREMENT PRIMARY KEY,
@@ -282,7 +294,7 @@ CREATE TABLE tbservicerating (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 24) tbnotification: notificaciones
+-- 25) tbnotification: notificaciones
 -- =========================================================
 CREATE TABLE tbnotification (
     tbnotificationid INT AUTO_INCREMENT PRIMARY KEY,
@@ -294,7 +306,7 @@ CREATE TABLE tbnotification (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 25) tbuserhistory: historial de acciones de usuarios
+-- 26) tbuserhistory: historial de acciones de usuarios
 -- =========================================================
 CREATE TABLE tbuserhistory (
     tbuserhistoryid INT AUTO_INCREMENT PRIMARY KEY,
@@ -306,7 +318,7 @@ CREATE TABLE tbuserhistory (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 26) tbownerhistory: historial de acciones del propietario
+-- 27) tbownerhistory: historial de acciones del propietario
 -- =========================================================
 CREATE TABLE tbownerhistory (
     tbownerhistoryid INT AUTO_INCREMENT PRIMARY KEY,
@@ -316,45 +328,3 @@ CREATE TABLE tbownerhistory (
     tbownerhistorydate DATETIME DEFAULT CURRENT_TIMESTAMP,
     tbownerhistoryactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
-
-
-
--- 1. Crear identidad/base de acceso
-INSERT INTO tbrole (
-    tbrolename,
-    tbroleemail,
-    tbrolepassword,
-    tbrolephone,
-    tbroleactive
-) VALUES (
-    'Administrador',
-    'admin@eventhall.com',
-    '$2y$12$oevk5mTL2Wv1FjLmu5MST.PZO0uAAaJKs0WABinfa2HeVF/u4k6iy',
-    '88888888',
-    TRUE
-);
-
--- 2. Obtener el ID generado
-SET @roleId = LAST_INSERT_ID();
-
--- 3. Relacionar el rol con administrador
-INSERT INTO tbroleadmin (
-    tbroleadminrolid,
-    tbroleadminactive
-) VALUES (
-    @roleId,
-    TRUE
-);
-
--- 4. Crear el perfil del administrador
-INSERT INTO tbadmin (
-    tbadminroleid,
-    tbadminname,
-    tbadminimage,
-    tbadminactive
-) VALUES (
-    @roleId,
-    'Administrador de Prueba',
-    NULL,
-    TRUE
-);

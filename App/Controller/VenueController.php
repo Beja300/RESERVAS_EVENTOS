@@ -5,6 +5,7 @@ require_once __DIR__ . '/../Service/OwnerService.php';
 require_once __DIR__ . '/../Service/VenueRatingService.php';
 require_once __DIR__ . '/../Service/ServiceRatingService.php';
 require_once __DIR__ . '/../Service/ServiceService.php';
+require_once __DIR__ . '/../Service/HistoryService.php';
 require_once __DIR__ . '/../Repository/ServiceRepository.php';
 require_once __DIR__ . '/../Repository/ServiceHistoryRepository.php';
 require_once __DIR__ . '/../Service/PromotionService.php';
@@ -19,6 +20,7 @@ class VenueController
   private ServiceRatingService $serviceRatingService;
   private ServiceService $serviceService;
   private PromotionService $promotionService;
+  private HistoryService $historyService;
 
   public function __construct()
   {
@@ -30,14 +32,35 @@ class VenueController
     $this->serviceRatingService = new ServiceRatingService($connection);
     $this->serviceService = new ServiceService(new ServiceRepository($connection), new ServiceHistoryRepository($connection));
     $this->promotionService = new PromotionService($connection);
+    $this->historyService = new HistoryService($connection);
   }
 
   // =========================================================
-  // CATÁLOGO PÚBLICO (locales activos)
+  // CATÁLOGO PÚBLICO (locales activos, con filtros)
   // =========================================================
   public function catalog(): void
   {
-    $venues = $this->venueService->findActive();
+    $filters = [
+      'province' => trim($_GET['province'] ?? ''),
+      'canton'   => trim($_GET['canton'] ?? ''),
+      'district' => trim($_GET['district'] ?? ''),
+      'type'     => trim($_GET['type'] ?? ''),
+      'q'        => trim($_GET['q'] ?? ''),
+    ];
+
+    $hasFilters = implode('', $filters) !== '';
+    $venues = $this->venueService->findByFilters($filters);
+
+    if ($hasFilters) {
+      session_start();
+      if (isset($_SESSION['user'], $_SESSION['type']) && $_SESSION['type'] === 'client') {
+        $this->historyService->logVenueSearch(
+          (int) $_SESSION['user']->getIdRol(),
+          $filters,
+          $filters['type'] ?: null
+        );
+      }
+    }
 
     $ratingsByVenue = [];
     $promosByVenue = [];
@@ -74,13 +97,36 @@ class VenueController
     $avgRating = $this->venueRatingService->getAverage($idVenue);
     $promotions = $this->promotionService->getActiveByVenue($idVenue);
 
-    $services = $this->serviceService->findByLocal($idVenue);
+    $services = $this->serviceService->findAvailableByLocal($idVenue);
     $ratingByService = [];
     foreach ($services as $s) {
-      $avg = $this->serviceRatingService->getAverage($s->getIdLocalService());
+      $avg = $this->serviceRatingService->getAverage($s->getIdService());
       if ($avg !== null) {
-        $ratingByService[$s->getIdLocalService()] = round($avg, 1);
+        $ratingByService[$s->getIdService()] = round($avg, 1);
       }
+    }
+
+    session_start();
+    $loggedRolePk = isset($_SESSION['user']) ? (int) $_SESSION['user']->getIdRol() : 0;
+
+    $myVenueRating = null;
+    if ($loggedRolePk > 0) {
+      $myVenueRating = $this->venueRatingService->getByVenueAndRole($idVenue, $loggedRolePk);
+    }
+    $myRatingByService = [];
+    if ($loggedRolePk > 0) {
+      foreach ($services as $s) {
+        $mine = $this->serviceRatingService->getByServiceAndRole($s->getIdService(), $loggedRolePk);
+        if ($mine !== null) {
+          $myRatingByService[$s->getIdService()] = $mine;
+        }
+      }
+    }
+
+    $venueComments = $this->venueRatingService->getPublicComments($idVenue);
+    $serviceComments = [];
+    foreach ($services as $s) {
+      $serviceComments[$s->getIdService()] = $this->serviceRatingService->getPublicComments($s->getIdService());
     }
 
     require_once __DIR__ . '/../View/Venue/Detail.php';

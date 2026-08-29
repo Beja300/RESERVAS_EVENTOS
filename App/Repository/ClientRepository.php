@@ -13,7 +13,7 @@ class ClientRepository
     }
 
     // =========================================================
-    // GUARDAR (tbrole + tbroleclient + tbclient)
+    // GUARDAR (tbrole + tbclient + tbroleclient)
     // =========================================================
     public function save(Client $client): bool
     {
@@ -22,31 +22,13 @@ class ClientRepository
 
             $idRole = $this->insertRole($client);
 
-            $sqlLink = "
-                INSERT INTO tbroleclient (
-                    tbroleclientrolid,
-                    tbroleclientactive
-                )
-                VALUES (
-                    :idRole,
-                    :isActive
-                )
-            ";
-            $stmtLink = $this->connection->prepare($sqlLink);
-            $stmtLink->execute([
-                ':idRole'   => $idRole,
-                ':isActive' => $this->toDb($client->getIsClientActive()),
-            ]);
-
             $sqlProfile = "
                 INSERT INTO tbclient (
-                    tbclientroleid,
                     tbclientname,
                     tbclientimage,
                     tbclientactive
                 )
                 VALUES (
-                    :idRole,
                     :name,
                     :image,
                     :isActive
@@ -54,13 +36,33 @@ class ClientRepository
             ";
             $stmtProfile = $this->connection->prepare($sqlProfile);
             $stmtProfile->execute([
-                ':idRole'   => $idRole,
                 ':name'     => $client->getName(),
                 ':image'    => $client->getImageClient() ?: null,
                 ':isActive' => $this->toDb($client->getIsClientActive()),
             ]);
 
-            $client->setIdClient($idRole);
+            $idClient = (int) $this->connection->lastInsertId();
+
+            $sqlLink = "
+                INSERT INTO tbroleclient (
+                    tbroleclientrolid,
+                    tbroleclientclientid,
+                    tbroleclientactive
+                )
+                VALUES (
+                    :idRole,
+                    :idClient,
+                    :isActive
+                )
+            ";
+            $stmtLink = $this->connection->prepare($sqlLink);
+            $stmtLink->execute([
+                ':idRole'   => $idRole,
+                ':idClient' => $idClient,
+                ':isActive' => $this->toDb($client->getIsClientActive()),
+            ]);
+
+            $client->setIdClient($idClient);
             $client->setIdRol($idRole);
 
             $this->connection->commit();
@@ -86,10 +88,11 @@ class ClientRepository
                 r.tbroleactive,
                 p.tbclientid,
                 p.tbclientimage,
+                p.tbclientlocationid,
                 p.tbclientactive
             FROM tbrole r
             INNER JOIN tbroleclient c ON c.tbroleclientrolid = r.tbroleid
-            LEFT JOIN tbclient p ON p.tbclientroleid = r.tbroleid
+            INNER JOIN tbclient p ON p.tbclientid = c.tbroleclientclientid
             WHERE r.tbroleemail = :email
             LIMIT 1
         ";
@@ -102,7 +105,7 @@ class ClientRepository
     }
 
     // =========================================================
-    // BUSCAR POR ID DE CLIENTE
+    // BUSCAR POR ID DE CLIENTE (id real del perfil tbclient)
     // =========================================================
     public function findByClientPk(int $clientPk): ?Client
     {
@@ -116,11 +119,12 @@ class ClientRepository
                 r.tbroleactive,
                 p.tbclientid,
                 p.tbclientimage,
+                p.tbclientlocationid,
                 p.tbclientactive
             FROM tbrole r
             INNER JOIN tbroleclient c ON c.tbroleclientrolid = r.tbroleid
-            LEFT JOIN tbclient p ON p.tbclientroleid = r.tbroleid
-            WHERE c.tbroleclientid = :idClient
+            INNER JOIN tbclient p ON p.tbclientid = c.tbroleclientclientid
+            WHERE p.tbclientid = :idClient
             LIMIT 1
         ";
 
@@ -146,10 +150,11 @@ class ClientRepository
                 r.tbroleactive,
                 p.tbclientid,
                 p.tbclientimage,
+                p.tbclientlocationid,
                 p.tbclientactive
             FROM tbrole r
             INNER JOIN tbroleclient c ON c.tbroleclientrolid = r.tbroleid
-            LEFT JOIN tbclient p ON p.tbclientroleid = r.tbroleid
+            INNER JOIN tbclient p ON p.tbclientid = c.tbroleclientclientid
             WHERE r.tbroleid = :idRole
             LIMIT 1
         ";
@@ -176,10 +181,11 @@ class ClientRepository
                 r.tbroleactive,
                 p.tbclientid,
                 p.tbclientimage,
+                p.tbclientlocationid,
                 p.tbclientactive
             FROM tbrole r
             INNER JOIN tbroleclient c ON c.tbroleclientrolid = r.tbroleid
-            LEFT JOIN tbclient p ON p.tbclientroleid = r.tbroleid
+            INNER JOIN tbclient p ON p.tbclientid = c.tbroleclientclientid
             ORDER BY p.tbclientid ASC
         ";
 
@@ -228,6 +234,28 @@ class ClientRepository
     }
 
     // =========================================================
+    // ACTUALIZAR PERFIL (foto de perfil y ubicación)
+    // =========================================================
+    public function updateProfile(int $idClient, string $image, ?int $locationId): bool
+    {
+        $sql = "
+            UPDATE tbclient
+            SET
+                tbclientimage = :image,
+                tbclientlocationid = :locationId
+            WHERE tbclientid = :idClient
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+
+        return $stmt->execute([
+            ':image'      => $image !== '' ? $image : null,
+            ':locationId' => $locationId,
+            ':idClient'   => $idClient,
+        ]);
+    }
+
+    // =========================================================
     // MAPEO FILA -> OBJETO
     // =========================================================
     private function mapRow(array $row): Client
@@ -242,7 +270,8 @@ class ClientRepository
             isClientActive: $this->toBool($row['tbclientactive'] ?? $row['tbroleactive']),
             idRol: (int) $row['tbroleid'],
             imageClient: $row['tbclientimage'] ?? '',
-            phoneNumber: $row['tbrolephone']
+            phoneNumber: $row['tbrolephone'],
+            locationId: ($row['tbclientlocationid'] ?? null) !== null ? (int) $row['tbclientlocationid'] : null
         );
     }
 

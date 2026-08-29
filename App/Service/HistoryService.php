@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../Repository/HistoryRepository.php';
+require_once __DIR__ . '/../Repository/LocationRepository.php';
 require_once __DIR__ . '/../Model/History.php';
 require_once __DIR__ . '/../Model/HistoryAction.php';
 require_once __DIR__ . '/VenueService.php';
@@ -18,11 +19,13 @@ class HistoryService
 
   private HistoryRepository $historyRepo;
   private VenueService $venueService;
+  private LocationRepository $locationRepo;
 
   public function __construct(PDO $connection)
   {
     $this->historyRepo = new HistoryRepository();
     $this->venueService = new VenueService($connection);
+    $this->locationRepo = new LocationRepository($connection);
   }
 
   // =========================================================
@@ -94,6 +97,29 @@ class HistoryService
   }
 
   // =========================================================
+  // GUARDAR BÚSQUEDA (por ubicación y/o tipo)
+  // =========================================================
+  public function logVenueSearch(int $roleId, array $filters = [], ?string $type = null): void
+  {
+    $locationId = null;
+
+    if (!empty($filters['province']) && !empty($filters['canton']) && !empty($filters['district'])) {
+      $locationId = $this->locationRepo->findIdByParts(
+        $filters['province'],
+        $filters['canton'],
+        $filters['district']
+      );
+    }
+
+    $this->logAction(
+      $roleId,
+      HistoryAction::SEARCH,
+      self::ENTITY_VENUE,
+      $locationId
+    );
+  }
+
+  // =========================================================
   // LISTAR HISTORIAL
   // =========================================================
   public function listByRole(int $roleId): array
@@ -159,10 +185,88 @@ class HistoryService
       $excludeIds
     );
 
-    return array_merge(
+    foreach ($popularRecommendations as $venue) {
+      $excludeIds[] = $venue->getIdVenue();
+    }
+
+    $merged = array_merge(
       $personalRecommendations,
       $popularRecommendations
     );
+
+    // Si aún faltan, priorizar búsquedas recientes por ubicación
+    if (count($merged) < $limit) {
+      $locationMatches = $this->getLocationRecommendations(
+        $roleId,
+        $excludeIds,
+        $limit - count($merged)
+      );
+
+      $merged = array_merge($merged, $locationMatches);
+    }
+
+    return $merged;
+  }
+
+  // =========================================================
+  // RECOMENDACIONES POR UBICACIÓN (provincias buscadas recientemente)
+  // =========================================================
+  private function getLocationRecommendations(
+    int $roleId,
+    array $excludeIds,
+    int $limit
+  ): array {
+
+    $history = $this->historyRepo->listByRole($roleId);
+
+    // Provincias asociadas a búsquedas recientes (SEARCH con ubicación)
+    $provinces = [];
+
+    foreach ($history as $item) {
+
+      if (
+        $item->getAction() !== HistoryAction::SEARCH ||
+        $item->getEntity() !== self::ENTITY_VENUE ||
+        $item->getEntityId() === null ||
+        $item->getEntityId() <= 0
+      ) {
+        continue;
+      }
+
+      $location = $this->locationRepo->findById($item->getEntityId());
+
+      if ($location !== null) {
+        $provinces[$location->getProvinceLocation()] = true;
+      }
+    }
+
+    if (empty($provinces)) {
+      return [];
+    }
+
+    $recommendations = [];
+
+    foreach ($this->venueService->findActive() as $venue) {
+
+      if (in_array($venue->getIdVenue(), $excludeIds, true)) {
+        continue;
+      }
+
+      $venueLocation = $this->locationRepo->findById($venue->getIdLocation());
+
+      if ($venueLocation === null || !isset($provinces[$venueLocation->getProvinceLocation()])) {
+        continue;
+      }
+
+      $recommendations[] = $venue;
+      $excludeIds[] = $venue->getIdVenue();
+
+      if (count($recommendations) >= $limit) {
+        break;
+      }
+    }
+
+    return $recommendations;
   }
 
   // =========================================================

@@ -47,7 +47,7 @@ class VenueRepository
       ':typeVenue'     => $venue->getTypeVenue(),
       ':capacityVenue' => $venue->getCapacityVenue(),
       ':imageVenue'    => $venue->getImageVenue(),
-      ':isActive'      => $venue->getIsActive()
+      ':isActive'      => $this->toDb($venue->getIsActive())
     ]);
 
     return (int) $this->connection->lastInsertId();
@@ -118,6 +118,68 @@ class VenueRepository
 
 
   // =========================================================
+  // BUSCAR LOCALES ACTIVOS POR FILTROS (ubicación, tipo, texto)
+  // =========================================================
+  public function findByFilters(array $filters = []): array
+  {
+    $sql = "
+            SELECT
+                v.tbvenueid,
+                v.tbvenueownerid,
+                v.tbvenuelocationid,
+                v.tbvenuename,
+                v.tbvenuetype,
+                v.tbvenuecapacity,
+                v.tbvenueimage,
+                v.tbvenueactive,
+                l.tblocationprovince
+            FROM tbvenue v
+            LEFT JOIN tblocation l ON l.tblocationid = v.tbvenuelocationid
+            WHERE v.tbvenueactive = true
+        ";
+
+    $conditions = [];
+    $params = [];
+
+    if (!empty($filters['province'])) {
+      $conditions[] = 'l.tblocationprovince = :province';
+      $params[':province'] = $filters['province'];
+    }
+
+    if (!empty($filters['canton'])) {
+      $conditions[] = 'l.tblocationcanton = :canton';
+      $params[':canton'] = $filters['canton'];
+    }
+
+    if (!empty($filters['district'])) {
+      $conditions[] = 'l.tblocationdistrict = :district';
+      $params[':district'] = $filters['district'];
+    }
+
+    if (!empty($filters['type'])) {
+      $conditions[] = 'v.tbvenuetype = :type';
+      $params[':type'] = $filters['type'];
+    }
+
+    if (!empty($filters['q'])) {
+      $conditions[] = '(v.tbvenuename LIKE :q OR v.tbvenuetype LIKE :q)';
+      $params[':q'] = '%' . $filters['q'] . '%';
+    }
+
+    if (!empty($conditions)) {
+      $sql .= ' AND ' . implode(' AND ', $conditions);
+    }
+
+    $sql .= ' ORDER BY v.tbvenuename ASC';
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute($params);
+
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+  }
+
+
+  // =========================================================
   // PANEL DEL OWNER (todos sus locales, activos o no)
   // =========================================================
   public function findByOwner(int $idOwner): array
@@ -171,7 +233,7 @@ class VenueRepository
       ':typeVenue'     => $venue->getTypeVenue(),
       ':capacityVenue' => $venue->getCapacityVenue(),
       ':imageVenue'    => $venue->getImageVenue(),
-      ':isActive'      => $venue->getIsActive(),
+      ':isActive'      => $this->toDb($venue->getIsActive()),
       ':idVenue'       => $venue->getIdVenue()
     ]);
   }
@@ -187,9 +249,9 @@ class VenueRepository
       idOwner: (int) $row['tbvenueownerid'],
       idLocation: (int) $row['tbvenuelocationid'],
       nameVenue: $row['tbvenuename'],
-      typeVenue: $row['tbvenuetype'],
+      typeVenue: $row['tbvenuetype'] ?? '',
       capacityVenue: (int) $row['tbvenuecapacity'],
-      imageVenue: $row['tbvenueimage'],
+      imageVenue: $row['tbvenueimage'] ?? '',
       isActive: $this->toBool($row['tbvenueactive'])
     );
   }
@@ -197,5 +259,10 @@ class VenueRepository
   private function toBool(mixed $value): bool
   {
     return $value === 1 || $value === '1' || $value === true;
+  }
+
+  private function toDb(bool $value): int
+  {
+    return $value ? 1 : 0;
   }
 }

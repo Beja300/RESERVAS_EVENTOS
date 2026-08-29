@@ -40,8 +40,8 @@ class NotificationRepository
       ':idRol'    => $notification->getIdRol(),
       ':message'  => $notification->getMessageNotification(),
       ':date'     => $notification->getDateNotification(),
-      ':isRead'   => $notification->getIsRead(),
-      ':isActive' => $notification->getIsActive()
+      ':isRead'   => $this->toDb($notification->getIsRead()),
+      ':isActive' => $this->toDb($notification->getIsActive())
     ]);
 
     return (int) $this->connection->lastInsertId();
@@ -180,7 +180,7 @@ class NotificationRepository
   public function findAdminRoleIds(): array
   {
     $sql = "
-            SELECT tbroleadminid
+            SELECT tbroleadminrolid
             FROM tbroleadmin
             WHERE tbroleadminactive = true
         ";
@@ -209,5 +209,10 @@ class NotificationRepository
   private function toBool(mixed $value): bool
   {
     return $value === 1 || $value === '1' || $value === true;
+  }
+
+  private function toDb(bool $value): int
+  {
+    return $value ? 1 : 0;
   }
 }

@@ -61,11 +61,11 @@ class InvoiceService
         return $this->invoiceRepo->save(
             new Invoice(
                 0,
-                $booking->getIdClient(),
+                $booking->getIdBooking(),
                 $paymentMethodPk,
                 date('Y-m-d'),
                 'pendiente',
-                false
+                true
             )
         );
     }

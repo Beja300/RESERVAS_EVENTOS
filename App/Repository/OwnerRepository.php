@@ -13,7 +13,7 @@ class OwnerRepository
     }
 
     // =========================================================
-    // GUARDAR (tbrole + tbroleowner + tbowner)
+    // GUARDAR (tbrole + tbowner + tbroleowner)
     // =========================================================
     public function save(Owner $owner): bool
     {
@@ -22,25 +22,8 @@ class OwnerRepository
 
             $idRole = $this->insertRole($owner);
 
-            $sqlLink = "
-                INSERT INTO tbroleowner (
-                    tbroleownerrolid,
-                    tbroleowneractive
-                )
-                VALUES (
-                    :idRole,
-                    :isActive
-                )
-            ";
-            $stmtLink = $this->connection->prepare($sqlLink);
-            $stmtLink->execute([
-                ':idRole'   => $idRole,
-                ':isActive' => $this->toDb($owner->getIsOwnerActive()),
-            ]);
-
             $sqlProfile = "
                 INSERT INTO tbowner (
-                    tbownerroleid,
                     tbownerfirstname,
                     tbownerlastname,
                     tbowneralias,
@@ -49,7 +32,6 @@ class OwnerRepository
                     tbowneractive
                 )
                 VALUES (
-                    :idRole,
                     :firstName,
                     :lastName,
                     :alias,
@@ -60,7 +42,6 @@ class OwnerRepository
             ";
             $stmtProfile = $this->connection->prepare($sqlProfile);
             $stmtProfile->execute([
-                ':idRole'                => $idRole,
                 ':firstName'             => $owner->getFirstNameOwner(),
                 ':lastName'              => $owner->getLastNameOwner() !== '' ? $owner->getLastNameOwner() : null,
                 ':alias'                 => $owner->getAliasOwner() !== '' ? $owner->getAliasOwner() : null,
@@ -69,7 +50,28 @@ class OwnerRepository
                 ':isActive'              => $this->toDb($owner->getIsOwnerActive()),
             ]);
 
-            $owner->setIdOwner($idRole);
+            $idOwner = (int) $this->connection->lastInsertId();
+
+            $sqlLink = "
+                INSERT INTO tbroleowner (
+                    tbroleownerrolid,
+                    tbroleownerownerid,
+                    tbroleowneractive
+                )
+                VALUES (
+                    :idRole,
+                    :idOwner,
+                    :isActive
+                )
+            ";
+            $stmtLink = $this->connection->prepare($sqlLink);
+            $stmtLink->execute([
+                ':idRole'   => $idRole,
+                ':idOwner'  => $idOwner,
+                ':isActive' => $this->toDb($owner->getIsOwnerActive()),
+            ]);
+
+            $owner->setIdOwner($idOwner);
             $owner->setIdRol($idRole);
 
             $this->connection->commit();
@@ -94,7 +96,7 @@ class OwnerRepository
                 tbownerlastname = :lastName,
                 tbowneralias = :alias,
                 tbowneridentificationnumber = :identificationNumber
-            WHERE tbownerroleid = :idRole
+            WHERE tbownerid = :idOwner
         ";
 
         $stmt = $this->connection->prepare($sql);
@@ -104,7 +106,7 @@ class OwnerRepository
             ':lastName'             => $owner->getLastNameOwner() !== '' ? $owner->getLastNameOwner() : null,
             ':alias'                => $owner->getAliasOwner() !== '' ? $owner->getAliasOwner() : null,
             ':identificationNumber' => $owner->getIdentificationNumberOwner() !== '' ? $owner->getIdentificationNumberOwner() : null,
-            ':idRole'               => $owner->getIdRol(),
+            ':idOwner'              => $owner->getIdOwner(),
         ]);
     }
 
@@ -130,7 +132,7 @@ class OwnerRepository
                 p.tbowneractive
             FROM tbrole r
             INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
-            LEFT JOIN tbowner p ON p.tbownerroleid = r.tbroleid
+            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
             WHERE r.tbroleemail = :email
             LIMIT 1
         ";
@@ -143,7 +145,7 @@ class OwnerRepository
     }
 
     // =========================================================
-    // BUSCAR POR ID DE OWNER
+    // BUSCAR POR ID DE OWNER (id real del perfil tbowner)
     // =========================================================
     public function findByOwnerPk(int $ownerPk): ?Owner
     {
@@ -164,8 +166,8 @@ class OwnerRepository
                 p.tbowneractive
             FROM tbrole r
             INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
-            LEFT JOIN tbowner p ON p.tbownerroleid = r.tbroleid
-            WHERE o.tbroleownerid = :idOwner
+            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
+            WHERE p.tbownerid = :idOwner
             LIMIT 1
         ";
 
@@ -198,7 +200,7 @@ class OwnerRepository
                 p.tbowneractive
             FROM tbrole r
             INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
-            LEFT JOIN tbowner p ON p.tbownerroleid = r.tbroleid
+            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
             WHERE r.tbroleid = :idRole
             LIMIT 1
         ";
@@ -232,7 +234,7 @@ class OwnerRepository
                 p.tbowneractive
             FROM tbrole r
             INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
-            LEFT JOIN tbowner p ON p.tbownerroleid = r.tbroleid
+            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
             ORDER BY p.tbownerid ASC
         ";
 
@@ -268,7 +270,7 @@ class OwnerRepository
                 p.tbowneractive
             FROM tbrole r
             INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
-            LEFT JOIN tbowner p ON p.tbownerroleid = r.tbroleid
+            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
             WHERE p.tbowneridentificationnumber = :identificationNumber
             LIMIT 1
         ";
