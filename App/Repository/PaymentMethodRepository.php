@@ -32,12 +32,34 @@ class PaymentMethodRepository
 
     $stmt->execute([
       ':paymentMethod' => $paymentMethod->getPaymentMethod(),
-      ':isActive'      => $paymentMethod->getIsActive()
+      ':isActive'      => (int) $paymentMethod->getIsActive()
     ]);
 
     return (int) $this->connection->lastInsertId();
   }
 
+
+  // =========================================================
+  // OBTENER TODOS (admin: muestra activos e inactivos)
+  // =========================================================
+  public function findAll(): array
+  {
+    $sql = "
+            SELECT
+                tbpaymentmethodid,
+                tbpaymentmethodtype,
+                tbpaymentmethodactive
+
+            FROM tbpaymentmethod
+
+            ORDER BY tbpaymentmethodactive DESC, tbpaymentmethodtype ASC
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute();
+
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+  }
 
   // =========================================================
   // OBTENER ACTIVOS
@@ -89,6 +111,45 @@ class PaymentMethodRepository
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
     return $row ? $this->mapRow($row) : null;
+  }
+
+  // =========================================================
+  // ACTUALIZAR
+  // =========================================================
+  public function update(PaymentMethod $paymentMethod): void
+  {
+    $sql = "
+            UPDATE tbpaymentmethod
+            SET    tbpaymentmethodtype   = :type,
+                   tbpaymentmethodactive = :isActive
+            WHERE  tbpaymentmethodid = :idPaymentMethod
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':type'            => $paymentMethod->getPaymentMethod(),
+      ':isActive'        => (int) $paymentMethod->getIsActive(),
+      ':idPaymentMethod' => $paymentMethod->getIdPaymentMethod()
+    ]);
+  }
+
+  // =========================================================
+  // DESACTIVAR (soft delete: se oculta de los catálogos activos)
+  // =========================================================
+  public function deactivate(int $idPaymentMethod): void
+  {
+    $sql = "
+            UPDATE tbpaymentmethod
+            SET    tbpaymentmethodactive = 0
+            WHERE  tbpaymentmethodid = :idPaymentMethod
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':idPaymentMethod' => $idPaymentMethod
+    ]);
   }
 
 

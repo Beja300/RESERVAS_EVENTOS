@@ -1,6 +1,5 @@
 <?php require_once __DIR__ . '/../_helpers.php';
 // Vista de respaldo para acciones de administración.
-$error = $error ?? null;
 ?>
 <!DOCTYPE html>
 <html lang="es">

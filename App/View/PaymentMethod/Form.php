@@ -3,7 +3,6 @@
 <div class="page-head">
   <div>
     <h1>Nuevo método de pago</h1>
-    <a href="<?= e(base_url('paymentMethod', 'list')) ?>">&larr; Volver a la lista</a>
   </div>
 </div>
 

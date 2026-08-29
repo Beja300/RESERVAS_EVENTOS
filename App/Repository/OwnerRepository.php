@@ -81,6 +81,34 @@ class OwnerRepository
     }
 
     // =========================================================
+    // ACTUALIZAR PERFIL DEL PROPIETARIO (tbowner)
+    // Recibe un Owner ya actualizado; sincroniza tbownerfirstname
+    // con el nombre base (tbrole) y actualiza sus datos propios.
+    // =========================================================
+    public function updateProfile(Owner $owner): bool
+    {
+        $sql = "
+            UPDATE tbowner
+            SET
+                tbownerfirstname = :firstName,
+                tbownerlastname = :lastName,
+                tbowneralias = :alias,
+                tbowneridentificationnumber = :identificationNumber
+            WHERE tbownerroleid = :idRole
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+
+        return $stmt->execute([
+            ':firstName'            => $owner->getFirstNameOwner(),
+            ':lastName'             => $owner->getLastNameOwner() !== '' ? $owner->getLastNameOwner() : null,
+            ':alias'                => $owner->getAliasOwner() !== '' ? $owner->getAliasOwner() : null,
+            ':identificationNumber' => $owner->getIdentificationNumberOwner() !== '' ? $owner->getIdentificationNumberOwner() : null,
+            ':idRole'               => $owner->getIdRol(),
+        ]);
+    }
+
+    // =========================================================
     // BUSCAR POR EMAIL
     // =========================================================
     public function findByEmail(string $email): ?Owner
@@ -143,6 +171,40 @@ class OwnerRepository
 
         $stmt = $this->connection->prepare($sql);
         $stmt->execute([':idOwner' => $ownerPk]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->mapRow($row) : null;
+    }
+
+    // =========================================================
+    // BUSCAR POR ID DE ROL
+    // =========================================================
+    public function findByRoleId(int $roleId): ?Owner
+    {
+        $sql = "
+            SELECT
+                r.tbroleid,
+                r.tbrolename,
+                r.tbroleemail,
+                r.tbrolepassword,
+                r.tbrolephone,
+                r.tbroleactive,
+                p.tbownerid,
+                p.tbownerfirstname,
+                p.tbownerlastname,
+                p.tbowneralias,
+                p.tbowneridentificationnumber,
+                p.tbownerimage,
+                p.tbowneractive
+            FROM tbrole r
+            INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
+            LEFT JOIN tbowner p ON p.tbownerroleid = r.tbroleid
+            WHERE r.tbroleid = :idRole
+            LIMIT 1
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute([':idRole' => $roleId]);
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ? $this->mapRow($row) : null;

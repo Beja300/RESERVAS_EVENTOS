@@ -155,6 +155,26 @@ class RoleRepository
 
 
   // =========================================================
+  // ACTUALIZAR CONTRASEÑA (solo si se pide explícitamente)
+  // =========================================================
+  public function updatePassword(int $idRole, string $password): bool
+  {
+    $sql = "
+            UPDATE tbrole
+            SET tbrolepassword = :password
+            WHERE tbroleid = :idRole
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    return $stmt->execute([
+      ':password' => password_hash($password, PASSWORD_DEFAULT),
+      ':idRole'   => $idRole
+    ]);
+  }
+
+
+  // =========================================================
   // ACTIVAR / DESACTIVAR CUENTA (controla el login)
   // La usan AdminService/ClientService/OwnerService antes de
   // tocar sus propias tablas de subtipo.

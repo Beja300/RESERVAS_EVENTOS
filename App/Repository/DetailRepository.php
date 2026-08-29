@@ -18,13 +18,13 @@ class DetailRepository
   public function save(Detail $detail): int
   {
     $sql = "
-            INSERT INTO tbdetail (
-                tbdetailbookingid,
-                tbdetaillocalserviceid,
-                tbdetailquantity,
-                tbdetailunitprice,
-                tbdetaildiscount,
-                tbdetailactive
+            INSERT INTO tbbookingdetail (
+                tbbookingdetailbookingid,
+                tbbookingdetaildetailid,
+                tbbookingdetailquantity,
+                tbbookingdetailunitprice,
+                tbbookingdetaildiscount,
+                tbbookingdetailactive
             )
             VALUES (
                 :idClientBooking,
@@ -58,20 +58,20 @@ class DetailRepository
   {
     $sql = "
             SELECT
-                tbdetailid,
-                tbdetailbookingid,
-                tbdetaillocalserviceid,
-                tbdetailquantity,
-                tbdetailunitprice,
-                tbdetaildiscount,
-                tbdetailactive
+                tbbookingdetailid,
+                tbbookingdetailbookingid,
+                tbbookingdetaildetailid,
+                tbbookingdetailquantity,
+                tbbookingdetailunitprice,
+                tbbookingdetaildiscount,
+                tbbookingdetailactive
 
-            FROM tbdetail
+            FROM tbbookingdetail
 
-            WHERE tbdetailbookingid = :idClientBooking
-              AND tbdetailactive = true
+            WHERE tbbookingdetailbookingid = :idClientBooking
+              AND tbbookingdetailactive = true
 
-            ORDER BY tbdetailid ASC
+            ORDER BY tbbookingdetailid ASC
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -92,14 +92,14 @@ class DetailRepository
     $sql = "
             SELECT
                 s.tbservicename AS name,
-                SUM(d.tbdetailquantity) AS totalQuantity
+                SUM(d.tbbookingdetailquantity) AS totalQuantity
 
-            FROM tbdetail d
+            FROM tbbookingdetail d
 
             INNER JOIN tbservice s
-                ON s.tbserviceid = d.tbdetaillocalserviceid
+                ON s.tbserviceid = d.tbbookingdetaildetailid
 
-            GROUP BY d.tbdetaillocalserviceid, s.tbservicename
+            GROUP BY d.tbbookingdetaildetailid, s.tbservicename
 
             ORDER BY totalQuantity DESC
 
@@ -117,18 +117,18 @@ class DetailRepository
   // =========================================================
   // MAPEO FILA -> OBJETO
   // =========================================================
-  private function mapRow(array $row): Detail
-  {
-    return new Detail(
-      idDetail: (int) $row['tbdetailid'],
-      idClientBooking: (int) $row['tbdetailbookingid'],
-      idLocalService: (int) $row['tbdetaillocalserviceid'],
-      quantityDetail: (int) $row['tbdetailquantity'],
-      unitPrice: (float) $row['tbdetailunitprice'],
-      discount: (float) $row['tbdetaildiscount'],
-      isActiveDetail: $this->toBool($row['tbdetailactive'])
-    );
-  }
+private function mapRow(array $row): Detail
+    {
+        return new Detail(
+          idDetail: (int) $row['tbbookingdetailid'],
+          idClientBooking: (int) $row['tbbookingdetailbookingid'],
+          idLocalService: (int) $row['tbbookingdetaildetailid'],
+          quantityDetail: (int) $row['tbbookingdetailquantity'],
+          unitPrice: (float) $row['tbbookingdetailunitprice'],
+          discount: (float) $row['tbbookingdetaildiscount'],
+          isActiveDetail: $this->toBool($row['tbbookingdetailactive'])
+        );
+    }
 
   private function toBool(mixed $value): bool
   {

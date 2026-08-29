@@ -44,22 +44,25 @@
           <label for="name">Nombre</label>
           <input class="form-control" type="text" id="name" name="name"
                  value="<?= e($_POST['name'] ?? '') ?>" required>
+          <div class="form-hint">Ej: Ana Lucía</div>
         </div>
         <div class="form-group">
           <label for="email">Correo electrónico</label>
           <input class="form-control" type="email" id="email" name="email"
                  value="<?= e($_POST['email'] ?? '') ?>" required>
+          <div class="form-hint">Ej: analucia@correo.com</div>
         </div>
         <div class="form-group">
           <label for="password">Contraseña</label>
           <input class="form-control" type="password" id="password" name="password"
                  minlength="8" required>
-          <div class="form-hint">Mínimo 8 caracteres y un número.</div>
+          <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
         </div>
         <div class="form-group">
           <label for="phoneNumber">Teléfono</label>
           <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
                  value="<?= e($_POST['phoneNumber'] ?? '') ?>" maxlength="8" placeholder="8 dígitos">
+          <div class="form-hint">Ej: 8888-7777</div>
         </div>
       </div>
 
@@ -69,37 +72,49 @@
           <label for="ownerFirstName">Nombre</label>
           <input class="form-control" type="text" id="ownerFirstName" name="ownerFirstName"
                  value="<?= e($_POST['ownerFirstName'] ?? '') ?>" required>
+          <div class="form-hint">Ej: María José</div>
         </div>
         <div class="form-group">
           <label for="ownerLastName">Apellidos</label>
           <input class="form-control" type="text" id="ownerLastName" name="ownerLastName"
                  value="<?= e($_POST['ownerLastName'] ?? '') ?>">
+          <div class="form-hint">Ej: Pérez Rodríguez</div>
         </div>
         <div class="form-group">
-          <label for="ownerAlias">Alias / nombre de negocio</label>
+          <label for="ownerAlias">Alias (apodo)</label>
           <input class="form-control" type="text" id="ownerAlias" name="ownerAlias"
                  value="<?= e($_POST['ownerAlias'] ?? '') ?>">
+          <div class="form-hint">Ej: Mari</div>
+        </div>
+        <div class="form-group">
+          <label for="ownerBusinessName">Nombre de negocio</label>
+          <input class="form-control" type="text" id="ownerBusinessName" name="ownerBusinessName"
+                 value="<?= e($_POST['ownerBusinessName'] ?? '') ?>" required>
+          <div class="form-hint">Ej: Salon comunal</div>
         </div>
         <div class="form-group">
           <label for="ownerIdentification">Cédula / identificación</label>
           <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification"
                  value="<?= e($_POST['ownerIdentification'] ?? '') ?>">
+          <div class="form-hint">Ej: 1-2345-0678</div>
         </div>
         <div class="form-group">
           <label for="ownerEmail">Correo electrónico</label>
           <input class="form-control" type="email" id="ownerEmail" name="email"
                  value="<?= e($_POST['email'] ?? '') ?>" required>
+          <div class="form-hint">Ej: mariosepe@correo.com</div>
         </div>
         <div class="form-group">
           <label for="ownerPassword">Contraseña</label>
           <input class="form-control" type="password" id="ownerPassword" name="password"
                  minlength="8" required>
-          <div class="form-hint">Mínimo 8 caracteres y un número.</div>
+          <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
         </div>
         <div class="form-group">
           <label for="ownerPhone">Teléfono</label>
           <input class="form-control" type="tel" id="ownerPhone" name="phoneNumber"
                  value="<?= e($_POST['phoneNumber'] ?? '') ?>" maxlength="8" placeholder="8 dígitos">
+          <div class="form-hint">Ej: 8888-7777</div>
         </div>
       </div>
 

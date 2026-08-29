@@ -142,7 +142,7 @@ class AuthController
       return;
     }
 
-    $name = trim($_POST['name'] ?? '');
+    $name = trim($_POST['ownerBusinessName'] ?? $_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
@@ -169,6 +169,10 @@ class AuthController
     }
 
     try {
+
+      if ($name === '') {
+        throw new BusinessRuleException('El nombre de negocio es obligatorio.');
+      }
 
       $owner = $this->authService->registerOwner(
         $name,
