@@ -29,8 +29,14 @@ class VenueRatingService
       throw new BusinessRuleException('El local a calificar no existe.');
     }
 
-    if ($this->ratingRepo->findByVenueAndRole($venuePk, $rolePk) !== null) {
-      throw new BusinessRuleException('Ya calificaste este local.');
+    $existing = $this->ratingRepo->findByVenueAndRole($venuePk, $rolePk);
+
+    if ($existing !== null) {
+      $existing->setStars($stars);
+      $existing->setComment($comment ?? '');
+      if ($this->ratingRepo->update($existing)) {
+        return $existing->getIdVenueRating();
+      }
     }
 
     return $this->ratingRepo->save(
@@ -50,6 +56,22 @@ class VenueRatingService
   public function getAverage(int $venuePk): ?float
   {
     return $this->ratingRepo->findAverageByVenue($venuePk);
+  }
+
+  // =========================================================
+  // CALIFICACIÓN EXISTENTE DE UN ROL SOBRE EL LOCAL
+  // =========================================================
+  public function getByVenueAndRole(int $venuePk, int $rolePk): ?VenueRating
+  {
+    return $this->ratingRepo->findByVenueAndRole($venuePk, $rolePk);
+  }
+
+  // =========================================================
+  // COMENTARIOS PÚBLICOS DE UN LOCAL
+  // =========================================================
+  public function getPublicComments(int $venuePk): array
+  {
+    return $this->ratingRepo->findByVenueWithUser($venuePk);
   }
 
   // =========================================================

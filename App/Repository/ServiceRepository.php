@@ -44,7 +44,7 @@ class ServiceRepository
       ':typeService'  => $service->getTypeService(),
       ':priceService' => $service->getPriceService(),
       ':stateService' => $service->getStateService(),
-      ':isActive'     => $service->getIsActive()
+      ':isActive'     => $this->toDb($service->getIsActive())
     ]);
 
     return (int) $this->connection->lastInsertId();
@@ -216,7 +216,7 @@ class ServiceRepository
       ':nameService'  => $service->getNameService(),
       ':typeService'  => $service->getTypeService(),
       ':priceService' => $service->getPriceService(),
-      ':isActive'     => $service->getIsActive(),
+      ':isActive'     => $this->toDb($service->getIsActive()),
       ':idService'    => $service->getIdService()
     ]);
   }
@@ -241,5 +241,10 @@ class ServiceRepository
   private function toBool(mixed $value): bool
   {
     return $value === 1 || $value === '1' || $value === true;
+  }
+
+  private function toDb(bool $value): int
+  {
+    return $value ? 1 : 0;
   }
 }

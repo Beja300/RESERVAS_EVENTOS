@@ -97,6 +97,14 @@ class VenueService
     }
 
     // =========================================================
+    // BUSCAR VENUES ACTIVOS POR FILTROS
+    // =========================================================
+    public function findByFilters(array $filters = []): array
+    {
+        return $this->venueRepo->findByFilters($filters);
+    }
+
+    // =========================================================
     // BUSCAR VENUES DE UN OWNER (panel del propietario)
     // =========================================================
     public function findByOwner(int $ownerPk): array

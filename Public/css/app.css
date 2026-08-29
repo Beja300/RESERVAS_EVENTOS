@@ -596,3 +596,67 @@ table.table {
   text-align: center;
   padding: 16px;
 }
+
+/* ============ Widget de estrellas (calificaciones) ============ */
+.star-widget {
+  display: inline-flex;
+  gap: 6px;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.star-widget .star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--neutral-300);
+  transition: color 0.15s ease, transform 0.1s ease;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.star-widget .star:hover {
+  transform: scale(1.15);
+}
+
+.star-widget .star.is-hover,
+.star-widget .star.is-active {
+  color: var(--warning);
+}
+
+.star-widget.is-sm {
+  font-size: 1.15rem;
+  gap: 3px;
+}
+
+.rating-stars {
+  color: var(--warning);
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.comment-list {
+  margin-top: 8px;
+}
+
+.comment-item {
+  border-top: 1px solid var(--neutral-200);
+  padding: 10px 0;
+}
+
+.comment-item .c-author {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--neutral-700);
+}
+
+.comment-item .c-body {
+  font-size: 0.9rem;
+  color: var(--neutral-500);
+}
+
+.muted {
+  color: var(--neutral-500);
+  font-size: 0.95rem;
+}

@@ -41,7 +41,29 @@ class VenueRatingRepository
       ':comment' => $rating->getComment() !== '' ? $rating->getComment() : null,
     ]);
 
-    return (int) $this->connection->lastInsertId();
+return (int) $this->connection->lastInsertId();
+  }
+
+  // =========================================================
+  // ACTUALIZAR (re-calificar: cambia estrellas y comentario)
+  // =========================================================
+  public function update(VenueRating $rating): bool
+  {
+    $sql = "
+      UPDATE tbvenuerating
+      SET
+        tbvenueratingstars = :stars,
+        tbvenueratingcomment = :comment
+      WHERE tbvenueratingid = :idVenueRating
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    return $stmt->execute([
+      ':idVenueRating' => $rating->getIdVenueRating(),
+      ':stars'         => $rating->getStars(),
+      ':comment'       => $rating->getComment() !== '' ? $rating->getComment() : null,
+    ]);
   }
 
   // =========================================================
@@ -96,6 +118,30 @@ class VenueRatingRepository
     $stmt->execute([':idVenue' => $idVenue]);
 
     return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+  }
+
+  // =========================================================
+  // COMENTARIOS PÚBLICOS DE UN LOCAL (con el nombre de quien calificó)
+  // =========================================================
+  public function findByVenueWithUser(int $idVenue): array
+  {
+    $sql = "
+      SELECT
+        vr.tbvenueratingroleid,
+        vr.tbvenueratingstars,
+        vr.tbvenueratingcomment,
+        r.tbrolename
+      FROM tbvenuerating vr
+      INNER JOIN tbrole r ON r.tbroleid = vr.tbvenueratingroleid
+      WHERE vr.tbvenueratingvenueid = :idVenue
+        AND vr.tbvenueratingactive = true
+      ORDER BY vr.tbvenueratingid DESC
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([':idVenue' => $idVenue]);
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
   // =========================================================

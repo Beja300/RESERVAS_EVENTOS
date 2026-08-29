@@ -29,8 +29,14 @@ class ServiceRatingService
       throw new BusinessRuleException('El servicio a calificar no existe.');
     }
 
-    if ($this->ratingRepo->findByServiceAndRole($servicePk, $rolePk) !== null) {
-      throw new BusinessRuleException('Ya calificaste este servicio.');
+    $existing = $this->ratingRepo->findByServiceAndRole($servicePk, $rolePk);
+
+    if ($existing !== null) {
+      $existing->setStars($stars);
+      $existing->setComment($comment ?? '');
+      if ($this->ratingRepo->update($existing)) {
+        return $existing->getIdServiceRating();
+      }
     }
 
     return $this->ratingRepo->save(
@@ -50,6 +56,22 @@ class ServiceRatingService
   public function getAverage(int $servicePk): ?float
   {
     return $this->ratingRepo->findAverageByService($servicePk);
+  }
+
+  // =========================================================
+  // CALIFICACIÓN EXISTENTE DE UN ROL SOBRE EL SERVICIO
+  // =========================================================
+  public function getByServiceAndRole(int $servicePk, int $rolePk): ?ServiceRating
+  {
+    return $this->ratingRepo->findByServiceAndRole($servicePk, $rolePk);
+  }
+
+  // =========================================================
+  // COMENTARIOS PÚBLICOS DE UN SERVICIO
+  // =========================================================
+  public function getPublicComments(int $servicePk): array
+  {
+    return $this->ratingRepo->findByServiceWithUser($servicePk);
   }
 
   // =========================================================

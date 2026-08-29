@@ -51,7 +51,7 @@ class RoleRepository
       ':email'       => $role->getEmail(),
       ':password'    => password_hash($role->getPassword(), PASSWORD_DEFAULT),
       ':phoneNumber' => $role->getPhoneNumber(),
-      ':isActive'    => $role->getIsActive()
+      ':isActive'    => $this->toDb($role->getIsActive())
     ]);
 
     // lastInsertId() devuelve el AUTO_INCREMENT que la base
@@ -190,7 +190,7 @@ class RoleRepository
     $stmt = $this->connection->prepare($sql);
 
     return $stmt->execute([
-      ':isActive' => $isActive,
+      ':isActive' => $this->toDb($isActive),
       ':idRole'   => $idRole
     ]);
   }
@@ -250,5 +250,10 @@ class RoleRepository
   private function toBool(mixed $value): bool
   {
     return $value === 1 || $value === '1' || $value === true;
+  }
+
+  private function toDb(bool $value): int
+  {
+    return $value ? 1 : 0;
   }
 }

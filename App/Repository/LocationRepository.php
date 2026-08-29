@@ -86,6 +86,32 @@ class LocationRepository
         return array_map([$this, 'mapRow'], $stmt->fetchAll());
     }
 
+    // =========================================================
+    // BUSCAR ID POR PROVINCIA/CANTÓN/DISTRITO (para historial)
+    // =========================================================
+    public function findIdByParts(string $province, string $canton, string $district): ?int
+    {
+        $sql = "
+            SELECT tblocationid
+            FROM tblocation
+            WHERE tblocationprovince = :province
+              AND tblocationcanton = :canton
+              AND tblocationdistrict = :district
+            LIMIT 1
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute([
+            ':province' => $province,
+            ':canton'   => $canton,
+            ':district' => $district,
+        ]);
+
+        $id = $stmt->fetchColumn();
+
+        return $id !== false ? (int) $id : null;
+    }
+
     private function mapRow(array $row): Location
     {
         return new Location(

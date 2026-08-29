@@ -41,7 +41,7 @@ class InvoiceRepository
       ':idPaymentMethod' => $invoice->getIdPaymentMethod(),
       ':dateInvoice'     => $invoice->getDateInvoice(),
       ':statusInvoice'   => $invoice->getStatusInvoice(),
-      ':isActiveInvoice' => $invoice->getIsActiveInvoice()
+      ':isActiveInvoice' => $this->toDb($invoice->getIsActiveInvoice())
     ]);
 
     return (int) $this->connection->lastInsertId();
@@ -117,5 +117,10 @@ class InvoiceRepository
   private function toBool(mixed $value): bool
   {
     return $value === 1 || $value === '1' || $value === true;
+  }
+
+  private function toDb(bool $value): int
+  {
+    return $value ? 1 : 0;
   }
 }

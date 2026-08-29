@@ -12,6 +12,7 @@ class Client extends Role
   private bool $isClientActive;
   private int $idRol;
   private string $imageClient;
+  private ?int $locationId;
   public function __construct(
     int $id,
     string $name,
@@ -22,13 +23,15 @@ class Client extends Role
     bool $isClientActive,
     int $idRol,
     string $imageClient,
-    ?string $phoneNumber = null
+    ?string $phoneNumber = null,
+    ?int $locationId = null
   ) {
     parent::__construct($id, $name, $email, $password, $phoneNumber, $isActive);
     $this->idClient = $idClient;
     $this->isClientActive = $isClientActive;
     $this->idRol = $idRol;
     $this->imageClient = $imageClient;
+    $this->locationId = $locationId;
   }
 
   // Getters
@@ -52,6 +55,11 @@ class Client extends Role
     return $this->imageClient;
   }
 
+  public function getLocationId(): ?int
+  {
+    return $this->locationId;
+  }
+
   // Setters
   public function setIdClient(int $idClient): void
   {
@@ -71,5 +79,10 @@ class Client extends Role
   public function setImageClient(string $imageClient): void
   {
     $this->imageClient = $imageClient;
+  }
+
+  public function setLocationId(?int $locationId): void
+  {
+    $this->locationId = $locationId;
   }
 }
