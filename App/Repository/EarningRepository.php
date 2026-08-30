@@ -153,6 +153,50 @@ class EarningRepository
   }
 
   // =========================================================
+  // TOTALES ECONÓMICOS DEL MES PARA UN OWNER (YYYY-MM)
+  // Suma de las ganancias registradas de las reservas de los
+  // locales de ese propietario (por fecha en que se aprobó el pago).
+  // =========================================================
+  public function totalsByOwnerForMonth(int $idOwner, string $yearMonth): array
+  {
+    $sql = "
+            SELECT
+                COALESCE(SUM(e.tbeearningtotal), 0)       AS total,
+                COALESCE(SUM(e.tbeearningcommission), 0)  AS commission,
+                COALESCE(SUM(e.tbeearningtax), 0)         AS tax,
+                COALESCE(SUM(e.tbeearningowneramount), 0) AS ownerAmount
+
+            FROM tbeearning e
+
+            INNER JOIN tbbooking b
+                ON b.tbbookingid = e.tbeearningbookingid
+
+            INNER JOIN tbvenue v
+                ON v.tbvenueid = b.tbbookinglocalid
+
+            WHERE v.tbvenueownerid = :idOwner
+              AND e.tbeearningactive = true
+              AND e.tbeearningdate LIKE :yearMonth
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':idOwner'   => $idOwner,
+      ':yearMonth' => $yearMonth . '%'
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return [
+      'total'       => (float) ($row['total'] ?? 0),
+      'commission'  => (float) ($row['commission'] ?? 0),
+      'tax'         => (float) ($row['tax'] ?? 0),
+      'ownerAmount' => (float) ($row['ownerAmount'] ?? 0),
+    ];
+  }
+
+  // =========================================================
   // MAPEO FILA -> OBJETO
   // =========================================================
   private function mapRow(array $row): Earning
