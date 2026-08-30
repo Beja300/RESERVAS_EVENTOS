@@ -8,7 +8,7 @@
   <!-- Vista de reservas del admin -->
   <div class="page-head">
     <div>
-      <h1>Reservas del mes</h1>
+      <h1>Panel de reservas</h1>
     </div>
   </div>
 
@@ -22,6 +22,43 @@
       <button class="btn btn-primary btn-sm" type="submit">Filtrar</button>
     </form>
   </div>
+
+  <?php if (!empty($refundsPending)): ?>
+    <div class="card" style="border-color:var(--warning);margin-bottom:18px;">
+      <h2 style="font-size:1.05rem;color:var(--warning);margin-bottom:10px;">
+        Solicitudes de reembolso pendientes (<?= count($refundsPending) ?>)
+      </h2>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Reserva</th>
+              <th>Cliente</th>
+              <th>Local</th>
+              <th>Fecha</th>
+              <th>Motivo</th>
+              <th class="actions">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <?php foreach ($refundsPending as $rf): ?>
+              <tr>
+                <td>#<?= (int) $rf['tbbookingrefundbookingid'] ?></td>
+                <td><?= e($rf['clientName'] ?? '—') ?></td>
+                <td><?= e($rf['venueName'] ?? '—') ?></td>
+                <td><?= e(date('d/m/Y', strtotime($rf['tbbookingdate']))) ?></td>
+                <td><?= e($rf['tbbookingrefunddetail']) ?></td>
+                <td>
+                  <a class="btn btn-sm btn-primary"
+                     href="<?= e(base_url('admin', 'bookingDetail', ['id' => $rf['tbbookingrefundbookingid']])) ?>">Revisar</a>
+                </td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <?php endif; ?>
 
   <?php if (empty($bookings)): ?>
     <div class="card empty"><span class="emoji">&#128197;</span>No hay reservas en este mes.</div>
@@ -41,31 +78,60 @@
         <tbody>
           <?php foreach ($bookings as $b): ?>
             <tr>
-              <td>#<?= (int) $b->getIdBooking() ?></td>
-              <td>#<?= (int) $b->getIdClient() ?></td>
-              <td>#<?= (int) $b->getIdLocal() ?></td>
-              <td><?= e(date('d/m/Y', strtotime($b->getBookingDate()))) ?></td>
+              <td>#<?= (int) $b['tbbookingid'] ?></td>
+              <td><?= e($b['clientName'] ?? '—') ?></td>
+              <td><?= e($b['venueName'] ?? '—') ?></td>
+              <td><?= e(date('d/m/Y', strtotime($b['tbbookingdate']))) ?></td>
               <td>
                 <?php
-                  $badge = ['pendiente' => 'warning', 'confirmado' => 'success', 'cancelado' => 'neutral', 'rechazado' => 'danger'][$b->getBookingState()] ?? 'neutral';
+                  $badge = ['pendiente' => 'warning', 'confirmado' => 'success', 'cancelado' => 'neutral', 'rechazado' => 'danger'][$b['tbbookingstate']] ?? 'neutral';
                 ?>
-                <span class="badge <?= $badge ?>"><?= e($b->getBookingState()) ?></span>
+                <span class="badge <?= $badge ?>"><?= e($b['tbbookingstate']) ?></span>
               </td>
               <td>
-                <div class="actions">
-                  <form method="post" action="<?= e(base_url('admin', 'approvePayment')) ?>">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="id" value="<?= (int) $b->getIdBooking() ?>">
-                    <button class="btn btn-sm btn-success" type="submit">Aprobar pago</button>
-                  </form>
-                  <form method="post" action="<?= e(base_url('admin', 'rejectPayment')) ?>"
-                        data-confirm="¿Rechazar el pago de esta reserva?">
-                    <?= csrf_field() ?>
-                    <input type="hidden" name="id" value="<?= (int) $b->getIdBooking() ?>">
-                    <button class="btn btn-sm btn-danger" type="submit">Rechazar pago</button>
-                  </form>
-                </div>
+                <a class="btn btn-sm btn-primary"
+                   href="<?= e(base_url('admin', 'bookingDetail', ['id' => $b['tbbookingid']])) ?>">Ver detalle</a>
               </td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  <?php endif; ?>
+
+  <h2 style="font-size:1.1rem;color:var(--neutral-700);margin:24px 0 12px;">
+    Historial global de modificaciones
+  </h2>
+  <div class="form-group" style="max-width:360px;margin-bottom:12px;">
+    <input class="form-control" type="search" data-table-filter=".history-table"
+           placeholder="Buscar por reserva, responsable o acción...">
+  </div>
+  <?php if (empty($history)): ?>
+    <p class="muted">Aún no hay modificaciones registradas.</p>
+  <?php else: ?>
+    <div class="table-wrap">
+      <table class="table history-table">
+        <thead>
+          <tr>
+            <th>Reserva</th>
+            <th>Cliente</th>
+            <th>Fecha reserva</th>
+            <th>Responsable</th>
+            <th>Acción</th>
+            <th>Detalle</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($history as $h): ?>
+            <tr>
+              <td>#<?= (int) $h['tbbookinghistorybookingid'] ?></td>
+              <td><?= e($h['clientName'] ?? '—') ?></td>
+              <td><?= e($h['tbbookingdate'] ? date('d/m/Y', strtotime($h['tbbookingdate'])) : '—') ?></td>
+              <td><?= e($h['responsibleName'] ?? '—') ?></td>
+              <td><span class="badge neutral"><?= e($h['tbbookinghistoryaction']) ?></span></td>
+              <td><?= e($h['tbbookinghistorydetail'] ?? '—') ?></td>
+              <td><?= e(date('d/m/Y H:i', strtotime($h['tbbookinghistorydate']))) ?></td>
             </tr>
           <?php endforeach; ?>
         </tbody>

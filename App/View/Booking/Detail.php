@@ -167,6 +167,35 @@ $hasTicket = $ticket !== null;
     </div>
   <?php endif; ?>
 
+  <?php if ($isClient): ?>
+    <?php if ($refundRequest !== null): ?>
+      <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
+      <h3 style="margin:0 0 10px;">Solicitud de reembolso</h3>
+      <?php if ($refundRequest->getState() === 'pendiente'): ?>
+        <div class="alert alert-warning" style="text-align:left;">
+          Tu solicitud está pendiente de revisión. Motivo: “<?= e($refundRequest->getDetail()) ?>”
+        </div>
+      <?php elseif ($refundRequest->getState() === 'aprobado'): ?>
+        <div class="alert alert-success" style="text-align:left;">Tu solicitud de reembolso fue aprobada.</div>
+      <?php else: ?>
+        <div class="alert alert-error" style="text-align:left;">Tu solicitud de reembolso fue rechazada.</div>
+      <?php endif; ?>
+    <?php elseif ($hasTicket && !in_array($booking->getBookingState(), ['cancelado', 'rechazado'], true)): ?>
+      <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
+      <h3 style="margin:0 0 10px;">Solicitar reembolso</h3>
+      <form method="post" action="<?= e(base_url('booking', 'requestRefund')) ?>"
+            style="max-width:460px;">
+        <?= csrf_field() ?>
+        <input type="hidden" name="id" value="<?= (int) $booking->getIdBooking() ?>">
+        <div class="form-group">
+          <label for="motivoRefund">Motivo (mínimo 10 caracteres)</label>
+          <textarea class="form-control" id="motivoRefund" name="motivo" rows="3" minlength="10" required></textarea>
+        </div>
+        <button class="btn btn-outline" type="submit">Enviar solicitud de reembolso</button>
+      </form>
+    <?php endif; ?>
+  <?php endif; ?>
+
   <?php if ($hasTicket): ?>
     <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
     <h3 style="margin:0 0 10px;">Comprobante de pago</h3>

@@ -15,6 +15,7 @@ require_once __DIR__ . '/../Repository/ServiceRepository.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
 require_once __DIR__ . '/../Repository/ClientRepository.php';
+require_once __DIR__ . '/../Repository/BookingRefundRepository.php';
 require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
@@ -32,6 +33,7 @@ class BookingController
   private ServiceRepository $serviceRepo;
   private VenueRepository $venueRepo;
   private BookingTicketRepository $ticketRepo;
+  private BookingRefundRepository $refundRepo;
   private PaymentMethodRepository $paymentMethodRepo;
   private ClientRepository $clientRepo;
   private OwnerPaymentRepository $ownerPaymentRepo;
@@ -52,6 +54,7 @@ class BookingController
     $this->serviceRepo = new ServiceRepository($connection);
     $this->venueRepo = new VenueRepository($connection);
     $this->ticketRepo = new BookingTicketRepository($connection);
+    $this->refundRepo = new BookingRefundRepository($connection);
     $this->paymentMethodRepo = new PaymentMethodRepository($connection);
     $this->clientRepo = new ClientRepository($connection);
     $this->ownerPaymentRepo = new OwnerPaymentRepository($connection);
@@ -220,6 +223,8 @@ class BookingController
     $isClient = ($_SESSION['type'] ?? null) === 'client';
     $hasTicket = $ticket !== null;
 
+    $refundRequest = $isClient ? $this->refundRepo->findByBooking($idBooking) : null;
+
     require_once __DIR__ . '/../View/Booking/Detail.php';
   }
 
@@ -267,34 +272,6 @@ class BookingController
   }
 
   // =========================================================
-  // CONFIRMAR RESERVA (cliente)
-  // =========================================================
-  public function confirm(): void
-  {
-    session_start();
-    $this->requireClient();
-
-    $client = $_SESSION['user'];
-    $idBooking = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
-
-    try {
-
-      $this->clientService->assertOwnsBooking($client->getIdClient(), $idBooking);
-
-      $this->bookingService->confirm($idBooking);
-
-      header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
-      exit;
-    } catch (BusinessRuleException $e) {
-
-      $error = $e->getMessage();
-
-      header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
-      exit;
-    }
-  }
-
-  // =========================================================
   // CANCELAR RESERVA (cliente)
   // =========================================================
   public function cancel(): void
@@ -331,8 +308,41 @@ class BookingController
   }
 
   // =========================================================
-  // GENERAR PAGO / FACTURA (cliente)
+  // SOLICITAR REEMBOLSO (cliente -> admin la valida)
   // =========================================================
+  public function requestRefund(): void
+  {
+    session_start();
+    $this->requireClient();
+
+    $client = $_SESSION['user'];
+    $idBooking = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
+    $motivo = trim($_POST['motivo'] ?? '');
+
+    try {
+
+      $this->clientService->assertOwnsBooking($client->getIdClient(), $idBooking);
+
+      $this->bookingService->requestRefund($idBooking, (int) $client->getIdRol(), $motivo);
+
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Solicitud de reembolso enviada.']);
+      }
+
+      header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
+
+      header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking . '&error=' . urlencode($error));
+      exit;
+    }
+  }
   public function pay(): void
   {
     session_start();

@@ -4,12 +4,13 @@ require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../Repository/AdminRepository.php';
 require_once __DIR__ . '/../Repository/RoleRepository.php';
+require_once __DIR__ . '/../Service/BookingTicketService.php';
 
 class AdminService
 {
     private AdminRepository $adminRepo;
     private RoleRepository $roleRepo;
-
+  
     public function __construct()
     {
         $connection = DataBase::getConnection();
@@ -52,4 +53,7 @@ class AdminService
     {
         $this->roleRepo->setActive($idRole, true);
     }
+
+
+
 }

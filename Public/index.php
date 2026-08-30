@@ -108,10 +108,10 @@ $controllers = [
 // =========================================================
 $allowedActions = [
   'auth'          => ['showLogin', 'login', 'showRegister', 'registerClient', 'registerOwner', 'logout'],
-  'service'       => ['list', 'showForm', 'create', 'update', 'pending', 'approve', 'reject'],
+  'service'       => ['list', 'showForm', 'create', 'update', 'pending', 'approve', 'reject', 'detail'],
   'venue'         => ['catalog', 'detail', 'showOwner', 'list', 'showForm', 'create', 'update', 'rate', 'rateService', 'updateComment'],
-  'booking'       => ['create', 'showForm', 'myBookings', 'detail', 'addLine', 'cancel', 'pay', 'venueBookings', 'uploadTicket', 'approveTicket', 'rejectTicket'],
-  'admin'         => ['dashboard', 'users', 'activateUser', 'deactivateUser', 'bookings', 'approvePayment', 'rejectPayment', 'cleanTestData', 'showAdminForm', 'createAdmin', 'showClientForm', 'createClient', 'showOwnerForm', 'createOwner', 'showEditForm', 'updateUser'],
+  'booking'       => ['create', 'showForm', 'myBookings', 'detail', 'addLine', 'cancel', 'pay', 'venueBookings', 'uploadTicket', 'approveTicket', 'rejectTicket', 'requestRefund'],
+  'admin'         => ['dashboard', 'users', 'activateUser', 'deactivateUser', 'bookings', 'approvePayment', 'rejectPayment', 'cleanTestData', 'showAdminForm', 'createAdmin', 'showClientForm', 'createClient', 'showOwnerForm', 'createOwner', 'showEditForm', 'updateUser', 'bookingDetail', 'cancelBooking', 'rescheduleBooking', 'changeBookingVenue', 'refundBooking', 'rejectRefundBooking'],
   'client'        => ['dashboard', 'profile', 'updateProfile', 'deactivateAccount'],
   'owner'         => ['dashboard', 'profile', 'updateProfile', 'removePhoto', 'deactivateAccount', 'paymentData', 'savePayment', 'removePayment'],
   'invoice'       => ['showForm', 'generate', 'detail', 'list'],

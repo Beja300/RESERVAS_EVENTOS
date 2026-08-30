@@ -80,6 +80,22 @@ class EarningRepository
   }
 
   // =========================================================
+  // DESACTIVAR LA GANANCIA DE UNA RESERVA (reembolso)
+  // =========================================================
+  public function deactivateByBooking(int $idBooking): bool
+  {
+    $sql = "
+      UPDATE tbeearning
+      SET tbeearningactive = false
+      WHERE tbeearningbookingid = :idBooking
+        AND tbeearningactive = true
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    return $stmt->execute([':idBooking' => $idBooking]);
+  }
+
+  // =========================================================
   // OBTENER TODOS
   // =========================================================
   public function findAll(): array
@@ -106,41 +122,33 @@ class EarningRepository
   }
 
   // =========================================================
-  // SUMAS DEL MES PARA UN OWNER (ganancias, comisión, IVA, total)
-  // Filtra por 'YYYY-MM' usando la fecha en que se registró la
-  // ganancia (cuando el comprobante fue aprobado).
+  // RESUMEN ECONÓMICO DE UN MES (YYYY-MM)
+  // Suma directamente de las ganancias registradas (por la fecha
+  // en que se aprobó el pago), sin depender del estado de reservas.
   // =========================================================
-  public function totalsByOwnerForMonth(int $idOwner, string $yearMonth): array
+  public function summarizeByMonth(string $yearMonth): array
   {
     $sql = "
       SELECT
-        COALESCE(SUM(e.tbeearningtotal), 0)          AS total,
-        COALESCE(SUM(e.tbeearningcommission), 0)     AS commission,
-        COALESCE(SUM(e.tbeearningtax), 0)            AS tax,
-        COALESCE(SUM(e.tbeearningowneramount), 0)    AS ownerAmount
-      FROM tbeearning e
-      INNER JOIN tbbooking b
-        ON b.tbbookingid = e.tbeearningbookingid
-      INNER JOIN tbvenue v
-        ON v.tbvenueid = b.tbbookinglocalid
-      WHERE v.tbvenueownerid = :idOwner
-        AND e.tbeearningactive = true
-        AND e.tbeearningdate LIKE :yearMonth
+        COALESCE(SUM(tbeearningtotal), 0)       AS ingreso_bruto,
+        COALESCE(SUM(tbeearningcommission), 0)  AS comision,
+        COALESCE(SUM(tbeearningtax), 0)         AS iva,
+        COALESCE(SUM(tbeearningowneramount), 0) AS propietarios
+      FROM tbeearning
+      WHERE tbeearningdate LIKE :yearMonth
+        AND tbeearningactive = true
     ";
 
     $stmt = $this->connection->prepare($sql);
-    $stmt->execute([
-      ':idOwner'   => $idOwner,
-      ':yearMonth' => $yearMonth . '%'
-    ]);
+    $stmt->execute([':yearMonth' => $yearMonth . '%']);
 
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
     return [
-      'total'       => (float) ($row['total'] ?? 0),
-      'commission'  => (float) ($row['commission'] ?? 0),
-      'tax'         => (float) ($row['tax'] ?? 0),
-      'ownerAmount' => (float) ($row['ownerAmount'] ?? 0),
+      'ingreso_bruto' => (float) $row['ingreso_bruto'],
+      'comision'      => (float) $row['comision'],
+      'iva'           => (float) $row['iva'],
+      'propietarios'  => (float) $row['propietarios'],
     ];
   }
 

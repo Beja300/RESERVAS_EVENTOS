@@ -185,6 +185,42 @@ class ServiceRatingRepository
   }
 
   // =========================================================
+  // PROMEDIO GLOBAL DE ESTRELLAS (todos los servicios)
+  // =========================================================
+  public function averageStars(): ?float
+  {
+    $sql = "
+      SELECT AVG(tbserviceratingstars) AS average
+      FROM tbservicerating
+      WHERE tbserviceratingactive = true
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute();
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $row && $row['average'] !== null ? (float) $row['average'] : null;
+  }
+
+  // =========================================================
+  // TOTAL DE CALIFICACIONES (todos los servicios)
+  // =========================================================
+  public function countAll(): int
+  {
+    $sql = "
+      SELECT COUNT(*) AS total
+      FROM tbservicerating
+      WHERE tbserviceratingactive = true
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute();
+
+    return (int) $stmt->fetchColumn();
+  }
+
+  // =========================================================
   // MAPEO FILA -> OBJETO
   // =========================================================
   private function mapRow(array $row): ServiceRating

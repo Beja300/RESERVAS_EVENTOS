@@ -113,4 +113,20 @@ class EarningService
 
     return $totals;
   }
+
+  // =========================================================
+  // RESUMEN ECONÓMICO DE UN MES (YYYY-MM)
+  // Devuelve ingreso bruto, comisión de la plataforma, IVA e
+  // ingreso de propietarios, redondeados a 2 decimales.
+  // =========================================================
+  public function summarizeByMonth(string $yearMonth): array
+  {
+    $totals = $this->earningRepo->summarizeByMonth($yearMonth);
+
+    foreach ($totals as $key => $value) {
+      $totals[$key] = round($value, 2);
+    }
+
+    return $totals;
+  }
 }

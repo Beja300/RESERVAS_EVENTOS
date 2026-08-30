@@ -3,13 +3,22 @@
 require_once __DIR__ . '/../Service/AdminService.php';
 require_once __DIR__ . '/../Service/AuthService.php';
 require_once __DIR__ . '/../Service/InvoiceService.php';
+require_once __DIR__ . '/../Service/EarningService.php';
+require_once __DIR__ . '/../Service/BookingService.php';
+require_once __DIR__ . '/../Service/BookingAdminService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
+require_once __DIR__ . '/../Repository/BookingHistoryRepository.php';
+require_once __DIR__ . '/../Repository/BookingRefundRepository.php';
+require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
 require_once __DIR__ . '/../Repository/DetailRepository.php';
+require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/RoleRepository.php';
 require_once __DIR__ . '/../Repository/AdminRepository.php';
 require_once __DIR__ . '/../Repository/ClientRepository.php';
 require_once __DIR__ . '/../Repository/OwnerRepository.php';
+require_once __DIR__ . '/../Repository/VenueRatingRepository.php';
+require_once __DIR__ . '/../Repository/ServiceRatingRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class AdminController
@@ -17,12 +26,21 @@ class AdminController
   private AdminService $adminService;
   private AuthService $authService;
   private InvoiceService $invoiceService;
+  private EarningService $earningService;
+  private BookingService $bookingService;
+  private BookingAdminService $bookingAdminService;
   private BookingRepository $bookingRepo;
+  private BookingHistoryRepository $bookingHistoryRepo;
+  private BookingRefundRepository $bookingRefundRepo;
+  private BookingTicketRepository $bookingTicketRepo;
   private DetailRepository $detailRepo;
+  private VenueRepository $venueRepo;
   private RoleRepository $roleRepo;
   private AdminRepository $adminRepo;
   private ClientRepository $clientRepo;
   private OwnerRepository $ownerRepo;
+  private VenueRatingRepository $venueRatingRepo;
+  private ServiceRatingRepository $serviceRatingRepo;
 
   public function __construct()
   {
@@ -31,12 +49,21 @@ class AdminController
     $this->adminService = new AdminService();
     $this->authService = new AuthService();
     $this->invoiceService = new InvoiceService();
+    $this->earningService = new EarningService($connection);
+    $this->bookingService = new BookingService();
+    $this->bookingAdminService = new BookingAdminService($connection);
     $this->bookingRepo = new BookingRepository($connection);
+    $this->bookingHistoryRepo = new BookingHistoryRepository($connection);
+    $this->bookingRefundRepo = new BookingRefundRepository($connection);
+    $this->bookingTicketRepo = new BookingTicketRepository($connection);
     $this->detailRepo = new DetailRepository($connection);
+    $this->venueRepo = new VenueRepository($connection);
     $this->roleRepo = new RoleRepository($connection);
     $this->adminRepo = new AdminRepository($connection);
     $this->clientRepo = new ClientRepository($connection);
     $this->ownerRepo = new OwnerRepository($connection);
+    $this->venueRatingRepo = new VenueRatingRepository($connection);
+    $this->serviceRatingRepo = new ServiceRatingRepository($connection);
   }
 
   // =========================================================
@@ -47,10 +74,29 @@ class AdminController
     session_start();
     $this->requireAdmin();
 
-    $yearMonth = date('Y-m');
+    $yearMonth = trim($_POST['month'] ?? $_GET['month'] ?? date('Y-m'));
+
+    if (!preg_match('/^\d{4}-\d{2}$/', $yearMonth)) {
+      $yearMonth = date('Y-m');
+    }
+
     $bookings = $this->bookingRepo->findByMonth($yearMonth);
     $topVenues = $this->bookingRepo->topActiveVenues(5);
     $topServices = $this->detailRepo->topRequestedServices(5);
+    $monthStats = $this->earningService->summarizeByMonth($yearMonth);
+    $stateCounts = $this->bookingRepo->countByState($yearMonth);
+    $occupancy = $this->bookingRepo->occupancyByVenue($yearMonth);
+    $clientStats = [
+      'nuevos'      => $this->clientRepo->countNewThisMonth($yearMonth),
+      'recurrentes' => $this->clientRepo->countRecurrentThisMonth($yearMonth),
+    ];
+    $topClients = $this->clientRepo->topByBookings($yearMonth, 5);
+    $venueAvg = $this->venueRatingRepo->averageStars();
+    $venueReviews = $this->venueRatingRepo->countAll();
+    $serviceAvg = $this->serviceRatingRepo->averageStars();
+    $serviceReviews = $this->serviceRatingRepo->countAll();
+    $prevMonth = date('Y-m', strtotime($yearMonth . '-01 first day of last month'));
+    $nextMonth = date('Y-m', strtotime($yearMonth . '-01 first day of next month'));
 
     require_once __DIR__ . '/../View/Admin/Dashboard.php';
   }
@@ -121,7 +167,9 @@ class AdminController
     $this->requireAdmin();
 
     $yearMonth = trim($_POST['month'] ?? $_GET['month'] ?? date('Y-m'));
-    $bookings = $this->bookingRepo->findByMonth($yearMonth);
+    $bookings = $this->bookingRepo->findByMonthWithDetails($yearMonth);
+    $history = $this->bookingHistoryRepo->findAllWithDetails();
+    $refundsPending = $this->bookingRefundRepo->findPending();
 
     require_once __DIR__ . '/../View/Admin/List.php';
   }
@@ -140,13 +188,13 @@ class AdminController
 
       $this->invoiceService->approve($idBooking);
 
-      header('Location: ../../Public/index.php?controller=admin&action=dashboard');
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=payment_approved');
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
 
-      header('Location: ../../Public/index.php?controller=admin&action=dashboard');
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&error=' . urlencode($error));
       exit;
     }
   }
@@ -165,13 +213,159 @@ class AdminController
 
       $this->invoiceService->reject($idBooking);
 
-      header('Location: ../../Public/index.php?controller=admin&action=dashboard');
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=payment_rejected');
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
 
-      header('Location: ../../Public/index.php?controller=admin&action=dashboard');
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&error=' . urlencode($error));
+      exit;
+    }
+  }
+
+  // =========================================================
+  // DETALLE DE UNA RESERVA (panel del Admin)
+  // =========================================================
+  public function bookingDetail(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    $idBooking = (int) ($_GET['id'] ?? 0);
+    $booking = $this->bookingRepo->findById($idBooking);
+
+    if ($booking === null) {
+      header('Location: ../../Public/index.php?controller=admin&action=bookings');
+      exit;
+    }
+
+    $client = $this->clientRepo->findByClientPk($booking->getIdClient());
+    $venue = $this->venueRepo->findById($booking->getIdLocal());
+
+    $lines = $this->detailRepo->findByBooking($idBooking);
+    $totals = $this->bookingService->calculateTotals($idBooking);
+
+    $invoice = $this->invoiceService->findByBooking($idBooking);
+    $ticket = $this->bookingTicketRepo->findByBooking($idBooking);
+    $earning = $this->earningService->findByBooking($idBooking);
+    $refundRequest = $this->bookingRefundRepo->findByBooking($idBooking);
+    $history = $this->bookingHistoryRepo->findByBooking($idBooking);
+    $venues = $this->venueRepo->findActive();
+    $bookedDates = $this->bookingRepo->bookedDatesByVenue($booking->getIdLocal());
+
+    require_once __DIR__ . '/../View/Admin/BookingDetail.php';
+  }
+
+  // =========================================================
+  // CANCELAR RESERVA (admin)
+  // =========================================================
+  public function cancelBooking(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    $idBooking = (int) ($_POST['id'] ?? 0);
+    $note = trim($_POST['note'] ?? '') ?: null;
+    $adminRoleId = $this->currentAdminRoleId();
+
+    try {
+      $this->bookingAdminService->cancel($idBooking, $adminRoleId, $note);
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=cancelled');
+      exit;
+    } catch (BusinessRuleException $e) {
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&error=' . urlencode($e->getMessage()));
+      exit;
+    }
+  }
+
+  // =========================================================
+  // REPROGRAMAR (cambiar fecha) — admin
+  // =========================================================
+  public function rescheduleBooking(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    $idBooking = (int) ($_POST['id'] ?? 0);
+    $newDate = trim($_POST['date'] ?? '');
+    $note = trim($_POST['note'] ?? '') ?: null;
+    $adminRoleId = $this->currentAdminRoleId();
+
+    try {
+      $this->bookingAdminService->reschedule($idBooking, $adminRoleId, $newDate, $note);
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=rescheduled');
+      exit;
+    } catch (BusinessRuleException $e) {
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&error=' . urlencode($e->getMessage()));
+      exit;
+    }
+  }
+
+  // =========================================================
+  // CAMBIAR LOCAL — admin
+  // =========================================================
+  public function changeBookingVenue(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    $idBooking = (int) ($_POST['id'] ?? 0);
+    $newVenueId = (int) ($_POST['venueId'] ?? 0);
+    $note = trim($_POST['note'] ?? '') ?: null;
+    $adminRoleId = $this->currentAdminRoleId();
+
+    try {
+      $this->bookingAdminService->changeVenue($idBooking, $adminRoleId, $newVenueId, $note);
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=venue_changed');
+      exit;
+    } catch (BusinessRuleException $e) {
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&error=' . urlencode($e->getMessage()));
+      exit;
+    }
+  }
+
+  // =========================================================
+  // APROBAR REEMBOLSO (admin valida la solicitud del cliente)
+  // =========================================================
+  public function refundBooking(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    $idBooking = (int) ($_POST['id'] ?? 0);
+    $refundRequestId = (int) ($_POST['refundId'] ?? 0);
+    $note = trim($_POST['note'] ?? '') ?: null;
+    $adminRoleId = $this->currentAdminRoleId();
+
+    try {
+      $this->bookingAdminService->approveRefund($idBooking, $adminRoleId, $refundRequestId, $note);
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=refunded');
+      exit;
+    } catch (BusinessRuleException $e) {
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&error=' . urlencode($e->getMessage()));
+      exit;
+    }
+  }
+
+  // =========================================================
+  // RECHAZAR SOLICITUD DE REEMBOLSO
+  // =========================================================
+  public function rejectRefundBooking(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    $idBooking = (int) ($_POST['id'] ?? 0);
+    $refundRequestId = (int) ($_POST['refundId'] ?? 0);
+    $adminRoleId = $this->currentAdminRoleId();
+
+    try {
+      $this->bookingAdminService->rejectRefund($refundRequestId, $adminRoleId);
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=refund_rejected');
+      exit;
+    } catch (BusinessRuleException $e) {
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&error=' . urlencode($e->getMessage()));
       exit;
     }
   }
@@ -542,5 +736,14 @@ class AdminController
       header('Location: ../../Public/index.php?controller=auth&action=showLogin');
       exit;
     }
+  }
+
+  // =========================================================
+  // ROL ID DEL ADMIN EN SESIÓN (para la auditoría)
+  // =========================================================
+  private function currentAdminRoleId(): int
+  {
+    $user = $_SESSION['user'] ?? null;
+    return $user instanceof Admin && method_exists($user, 'getIdRol') ? (int) $user->getIdRol() : 0;
   }
 }

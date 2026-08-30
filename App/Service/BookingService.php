@@ -4,7 +4,12 @@ require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/DetailRepository.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
+require_once __DIR__ . '/../Repository/InvoiceRepository.php';
+require_once __DIR__ . '/../Repository/BookingHistoryRepository.php';
+require_once __DIR__ . '/../Repository/BookingRefundRepository.php';
 require_once __DIR__ . '/../Model/Booking.php';
+require_once __DIR__ . '/../Model/BookingHistory.php';
+require_once __DIR__ . '/../Model/BookingRefund.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class BookingService
@@ -13,6 +18,9 @@ class BookingService
     private BookingRepository $bookingRepo;
     private DetailRepository $detailRepo;
     private VenueRepository $venueRepo;
+    private InvoiceRepository $invoiceRepo;
+    private BookingHistoryRepository $historyRepo;
+    private BookingRefundRepository $refundRepo;
 
     public function __construct()
     {
@@ -21,6 +29,9 @@ class BookingService
         $this->bookingRepo = new BookingRepository($this->connection);
         $this->detailRepo = new DetailRepository($this->connection);
         $this->venueRepo = new VenueRepository($this->connection);
+        $this->invoiceRepo = new InvoiceRepository($this->connection);
+        $this->historyRepo = new BookingHistoryRepository($this->connection);
+        $this->refundRepo = new BookingRefundRepository($this->connection);
     }
 
     public function createBooking(
@@ -128,46 +139,89 @@ class BookingService
         ];
     }
 
-    public function confirm(int $bookingPk): void
-    {
-        if (
-            count(
-                $this->detailRepo->findByBooking($bookingPk)
-            ) === 0
-        ) {
-            throw new BusinessRuleException(
-                'No puedes confirmar una reserva sin detalle.'
-            );
-        }
+public function cancel(int $bookingPk): void
+  {
+    $booking =
+      $this->bookingRepo->findById($bookingPk);
 
-        $this->bookingRepo->updateStatus(
-            $bookingPk,
-            'confirmado'
-        );
+    if ($booking === null) {
+      throw new BusinessRuleException(
+        'La reserva no existe.'
+      );
     }
 
-    public function cancel(int $bookingPk): void
-    {
-        $booking =
-            $this->bookingRepo->findById($bookingPk);
-
-        if ($booking === null) {
-            throw new BusinessRuleException(
-                'La reserva no existe.'
-            );
-        }
-
-        if (
-            $booking->getBookingState() !== 'pendiente'
-        ) {
-            throw new BusinessRuleException(
-                'Solo se pueden cancelar reservas pendientes.'
-            );
-        }
-
-        $this->bookingRepo->updateStatus(
-            $bookingPk,
-            'cancelado'
-        );
+    if (
+      $booking->getBookingState() !== 'pendiente'
+    ) {
+      throw new BusinessRuleException(
+        'Solo se pueden cancelar reservas pendientes.'
+      );
     }
+
+    $this->bookingRepo->updateStatus(
+      $bookingPk,
+      'cancelado'
+    );
+  }
+
+  // =========================================================
+  // SOLICITAR REEMBOLSO (cliente -> administrador la valida)
+  // El cliente debe dar un motivo válido (mín. 10 caracteres).
+  // =========================================================
+  public function requestRefund(int $bookingPk, int $clientRoleId, string $motivo): void
+  {
+    $motivo = trim($motivo);
+
+    $length = function_exists('mb_strlen') ? mb_strlen($motivo) : strlen($motivo);
+
+    if ($length < 10) {
+      throw new BusinessRuleException(
+        'Debes indicar un motivo válido para el reembolso (mínimo 10 caracteres).'
+      );
+    }
+
+    $booking = $this->bookingRepo->findById($bookingPk);
+
+    if ($booking === null) {
+      throw new BusinessRuleException('La reserva no existe.');
+    }
+
+    if (in_array($booking->getBookingState(), ['cancelado', 'rechazado'], true)) {
+      throw new BusinessRuleException('Esta reserva ya no puede solicitar un reembolso.');
+    }
+
+    if ($this->invoiceRepo->findByBooking($bookingPk) === null) {
+      throw new BusinessRuleException(
+        'Solo se puede solicitar un reembolso si la reserva tiene un pago registrado.'
+      );
+    }
+
+    $existing = $this->refundRepo->findByBooking($bookingPk);
+
+    if ($existing !== null && in_array($existing->getState(), ['pendiente', 'aprobado'], true)) {
+      throw new BusinessRuleException(
+        'Esta reserva ya tiene una solicitud de reembolso en curso.'
+      );
+    }
+
+    $this->refundRepo->save(
+      new BookingRefund(
+        id: 0,
+        idBooking: $bookingPk,
+        clientRoleId: $clientRoleId,
+        detail: $motivo,
+        state: 'pendiente'
+      )
+    );
+
+    $this->historyRepo->save(
+      new BookingHistory(
+        id: 0,
+        idBooking: $bookingPk,
+        roleId: $clientRoleId,
+        action: 'SOLICITUD_REEMBOLSO',
+        detail: $motivo
+      )
+    );
+  }
 }
