@@ -7,6 +7,8 @@
     'venue_changed' => 'El local fue cambiado.',
     'refunded' => 'Reembolso aprobado y procesado.',
     'refund_rejected' => 'La solicitud de reembolso fue rechazada.',
+    'payment_approved' => 'Pago aprobado y reserva confirmada.',
+    'payment_rejected' => 'Pago rechazado.',
   ]; ?>
   <?php if (isset($msgMap[$_GET['msg']])): ?>
     <div class="alert alert-success"><?= e($msgMap[$_GET['msg']]) ?></div>
@@ -60,7 +62,30 @@
       </div>
     </div>
     <?php if ($ticket !== null): ?>
-      <p class="muted" style="margin-top:8px;">Comprobante: <?= e($ticket->getType()) ?> (<?= e($ticket->getState()) ?>)</p>
+      <p class="muted" style="margin-top:8px;">
+        Comprobante: <?= e($ticket->getType()) ?> (<?= e($ticket->getState()) ?>)
+        <a class="btn btn-sm btn-ghost" style="margin-left:6px;"
+           href="<?= e(image_url($ticket->getFile())) ?>" target="_blank" rel="noopener">
+          &#128065; Ver comprobante
+        </a>
+      </p>
+    <?php endif; ?>
+
+    <?php if ($invoice->getStatusInvoice() === 'pendiente'): ?>
+      <div class="actions" style="margin-top:12px;">
+        <form method="post" action="<?= e(base_url('admin', 'approvePayment')) ?>"
+              data-confirm="¿Aprobar el pago y confirmar la reserva?">
+          <?= csrf_field() ?>
+          <input type="hidden" name="id" value="<?= (int) $booking->getIdBooking() ?>">
+          <button class="btn btn-sm btn-success" type="submit">Aprobar pago</button>
+        </form>
+        <form method="post" action="<?= e(base_url('admin', 'rejectPayment')) ?>"
+              data-confirm="¿Rechazar el pago de esta reserva?">
+          <?= csrf_field() ?>
+          <input type="hidden" name="id" value="<?= (int) $booking->getIdBooking() ?>">
+          <button class="btn btn-sm btn-danger" type="submit">Rechazar pago</button>
+        </form>
+      </div>
     <?php endif; ?>
   </div>
 <?php endif; ?>

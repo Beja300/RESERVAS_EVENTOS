@@ -139,24 +139,6 @@ class BookingService
         ];
     }
 
-    public function confirm(int $bookingPk): void
-    {
-        if (
-            count(
-                $this->detailRepo->findByBooking($bookingPk)
-            ) === 0
-        ) {
-            throw new BusinessRuleException(
-                'No puedes confirmar una reserva sin detalle.'
-            );
-        }
-
-        $this->bookingRepo->updateStatus(
-            $bookingPk,
-            'confirmado'
-        );
-    }
-
 public function cancel(int $bookingPk): void
   {
     $booking =

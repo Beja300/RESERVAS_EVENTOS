@@ -259,34 +259,6 @@ class BookingController
   }
 
   // =========================================================
-  // CONFIRMAR RESERVA (cliente)
-  // =========================================================
-  public function confirm(): void
-  {
-    session_start();
-    $this->requireClient();
-
-    $client = $_SESSION['user'];
-    $idBooking = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
-
-    try {
-
-      $this->clientService->assertOwnsBooking($client->getIdClient(), $idBooking);
-
-      $this->bookingService->confirm($idBooking);
-
-      header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
-      exit;
-    } catch (BusinessRuleException $e) {
-
-      $error = $e->getMessage();
-
-      header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
-      exit;
-    }
-  }
-
-  // =========================================================
   // CANCELAR RESERVA (cliente)
   // =========================================================
   public function cancel(): void

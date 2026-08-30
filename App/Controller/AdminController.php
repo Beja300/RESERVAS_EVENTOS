@@ -188,13 +188,13 @@ class AdminController
 
       $this->invoiceService->approve($idBooking);
 
-      header('Location: ../../Public/index.php?controller=admin&action=dashboard');
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=payment_approved');
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
 
-      header('Location: ../../Public/index.php?controller=admin&action=dashboard');
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&error=' . urlencode($error));
       exit;
     }
   }
@@ -213,13 +213,13 @@ class AdminController
 
       $this->invoiceService->reject($idBooking);
 
-      header('Location: ../../Public/index.php?controller=admin&action=dashboard');
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=payment_rejected');
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
 
-      header('Location: ../../Public/index.php?controller=admin&action=dashboard');
+      header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&error=' . urlencode($error));
       exit;
     }
   }
