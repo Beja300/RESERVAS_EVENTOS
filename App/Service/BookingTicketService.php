@@ -135,11 +135,4 @@ class BookingTicketService
     $this->bookingRepo->updateStatus($ticket->getIdBooking(), 'rechazado');
   }
 
-  // =========================================================
-  // COMPROBANTE DE UNA RESERVA
-  // =========================================================
-  public function findByBooking(int $bookingPk): ?BookingTicket
-  {
-    return $this->ticketRepo->findByBooking($bookingPk);
-  }
 }

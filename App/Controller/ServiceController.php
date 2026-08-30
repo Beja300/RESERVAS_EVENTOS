@@ -2,13 +2,20 @@
 
 require_once __DIR__ . '/../Service/ServiceService.php';
 require_once __DIR__ . '/../Service/OwnerService.php';
+require_once __DIR__ . '/../Service/HistoryService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
+require_once __DIR__ . '/../Repository/OwnerRepository.php';
+require_once __DIR__ . '/../Repository/VenueRepository.php';
+require_once __DIR__ . '/../Repository/AdminRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class ServiceController
 {
   private ServiceService $serviceService;
   private OwnerService $ownerService;
+  private OwnerRepository $ownerRepo;
+  private VenueRepository $venueRepo;
+  private AdminRepository $adminRepo;
 
   public function __construct()
   {
@@ -16,6 +23,9 @@ class ServiceController
 
     $this->serviceService = new ServiceService(new ServiceRepository($connection), new ServiceHistoryRepository($connection));
     $this->ownerService = new OwnerService($connection);
+    $this->ownerRepo = new OwnerRepository($connection);
+    $this->venueRepo = new VenueRepository($connection);
+    $this->adminRepo = new AdminRepository($connection);
   }
 
   // =========================================================
@@ -107,6 +117,15 @@ class ServiceController
       $service = null;
 
       require_once __DIR__ . '/../View/Service/Form.php';
+    } catch (\Throwable $e) {
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => 'Error al guardar el servicio: ' . $e->getMessage()], 500);
+      }
+
+      $error = 'Error al guardar el servicio: ' . $e->getMessage();
+      $service = null;
+      require_once __DIR__ . '/../View/Service/Form.php';
     }
   }
 
@@ -168,7 +187,8 @@ class ServiceController
   }
 
   // =========================================================
-  // PANEL DEL ADMIN (servicios pendientes de aprobación)
+  // PANEL DEL ADMIN (servicios pendientes de aprobación +
+  // historial de aprobados/rechazados)
   // =========================================================
   public function pending(): void
   {
@@ -176,12 +196,13 @@ class ServiceController
     $this->requireAdmin();
 
     $services = $this->serviceService->findPending();
+    $history  = $this->serviceService->findHistory();
 
     require_once __DIR__ . '/../View/Admin/PendingServices.php';
   }
 
   // =========================================================
-  // APROBAR
+  // APROBAR (registra qué administrador lo aprobó)
   // =========================================================
   public function approve(): void
   {
@@ -189,10 +210,15 @@ class ServiceController
     $this->requireAdmin();
 
     $idService = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
+    $admin = $_SESSION['user'] ?? null;
+    $approvedByRoleId = $admin instanceof Admin && method_exists($admin, 'getIdRol') ? $admin->getIdRol() : 0;
 
     try {
 
-      $this->serviceService->approve($idService);
+      $this->serviceService->approve($idService, $approvedByRoleId > 0 ? $approvedByRoleId : null);
+
+      $historyService = new HistoryService(DataBase::getConnection());
+      $historyService->logAction($approvedByRoleId, 'APPROVE', 'Service', $idService);
 
       if (is_ajax()) {
         respond_json(['ok' => true, 'message' => 'Servicio aprobado.']);
@@ -234,6 +260,31 @@ class ServiceController
 
     header('Location: ../../Public/index.php?controller=service&action=pending');
     exit;
+  }
+
+  // =========================================================
+  // DETALLE DE UN SERVICIO (Admin)
+  // Muestra toda la info del servicio, del propietario que lo
+  // solicita y del local al que pertenece, en cualquier estado.
+  // =========================================================
+  public function detail(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    $idService = (int) ($_GET['id'] ?? 0);
+    $service = $this->serviceService->findById($idService);
+
+    if ($service === null) {
+      header('Location: ../../Public/index.php?controller=service&action=pending');
+      exit;
+    }
+
+    $venue = $this->venueRepo->findById($service->getIdLocal());
+    $owner = $venue !== null ? $this->ownerRepo->findByOwnerPk($venue->getIdOwner()) : null;
+    $approvedBy = $service->getApprovedBy() !== null ? $this->adminRepo->findByRoleId($service->getApprovedBy()) : null;
+
+    require_once __DIR__ . '/../View/Service/AdminDetail.php';
   }
 
   // =========================================================

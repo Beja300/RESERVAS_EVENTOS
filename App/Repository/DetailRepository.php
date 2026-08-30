@@ -158,6 +158,70 @@ class DetailRepository
 
 
   // =========================================================
+  // LÍNEA DE RENTA DEL LOCAL de una reserva (la que tiene
+  // tbdetailvenueid > 0). Devuelve null si no existe.
+  // =========================================================
+  public function findVenueLine(int $idClientBooking): ?Detail
+  {
+    $sql = "
+            SELECT
+                d.tbdetailid AS tbbookingdetailid,
+                b.tbbookingdetailbookingid AS tbbookingdetailbookingid,
+                d.tbdetailserviceid AS tbbookingdetaildetailid,
+                d.tbdetailvenueid AS tbbookingdetailvenueid,
+                d.tbdetailquantity AS tbbookingdetailquantity,
+                d.tbdetailunitprice AS tbbookingdetailunitprice,
+                d.tbdetaildiscount AS tbbookingdetaildiscount,
+                d.tbdetailactive AS tbbookingdetailactive
+
+            FROM tbbookingdetail b
+
+            INNER JOIN tbdetail d
+                ON d.tbdetailid = b.tbbookingdetaildetailid
+
+            WHERE b.tbbookingdetailbookingid = :idClientBooking
+              AND b.tbbookingdetailactive = true
+              AND d.tbdetailactive = true
+              AND d.tbdetailvenueid IS NOT NULL
+              AND d.tbdetailvenueid > 0
+
+            LIMIT 1
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':idClientBooking' => $idClientBooking
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $row ? $this->mapRow($row) : null;
+  }
+
+  // =========================================================
+  // ACTUALIZAR LÍNEA DE RENTA (al cambiar de local)
+  // =========================================================
+  public function updateVenueLine(int $detailId, int $venueId, float $unitPrice): bool
+  {
+    $sql = "
+            UPDATE tbdetail
+            SET tbdetailvenueid = :venueId,
+                tbdetailunitprice = :unitPrice
+            WHERE tbdetailid = :detailId
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    return $stmt->execute([
+      ':venueId'   => $venueId,
+      ':unitPrice' => $unitPrice,
+      ':detailId'  => $detailId
+    ]);
+  }
+
+
+  // =========================================================
   // SERVICIOS MÁS SOLICITADOS (para estadísticas del Admin)
   // =========================================================
   public function topRequestedServices(int $limit = 5): array

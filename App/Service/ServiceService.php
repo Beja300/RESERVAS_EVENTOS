@@ -30,9 +30,9 @@ class ServiceService
     }
 
     // Solo el Admin puede llamar approve()/reject() -- el Controller ya valida $_SESSION['type'].
-    public function approve(int $servicePk): void
+    public function approve(int $servicePk, ?int $approvedByRoleId = null): void
     {
-        $this->serviceRepo->updateState($servicePk, 'aprobado');
+        $this->serviceRepo->approve($servicePk, $approvedByRoleId ?? 0);
     }
 
     public function reject(int $servicePk): void
@@ -132,5 +132,14 @@ class ServiceService
     public function findPending(): array
     {
         return $this->serviceRepo->findPending();
+    }
+
+    // =========================================================
+    // HISTORIAL DE APROBACIÓN/EXPEDIENTE (panel del Admin):
+    // servicios ya aprobados o rechazados
+    // =========================================================
+    public function findHistory(): array
+    {
+        return $this->serviceRepo->findHistory();
     }
 }

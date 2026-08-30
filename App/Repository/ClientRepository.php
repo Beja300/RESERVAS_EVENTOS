@@ -200,6 +200,78 @@ class ClientRepository
     }
 
     // =========================================================
+    // CLIENTES NUEVOS DEL MES: clientes cuya primera reserva
+    // (la más antigua) cae dentro del mes seleccionado.
+    // =========================================================
+    public function countNewThisMonth(string $yearMonth): int
+    {
+        $sql = "
+            SELECT COUNT(*) AS total
+            FROM (
+                SELECT tbbookingclientid
+                FROM tbbooking
+                GROUP BY tbbookingclientid
+                HAVING MIN(tbbookingdate) LIKE :yearMonth
+            ) AS first_bookings
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute([':yearMonth' => $yearMonth . '%']);
+
+        return (int) $stmt->fetchColumn();
+    }
+
+    // =========================================================
+    // CLIENTES RECURRENTES DEL MES: clientes con más de una
+    // reserva dentro del mes seleccionado.
+    // =========================================================
+    public function countRecurrentThisMonth(string $yearMonth): int
+    {
+        $sql = "
+            SELECT COUNT(*) AS total
+            FROM (
+                SELECT tbbookingclientid
+                FROM tbbooking
+                WHERE tbbookingdate LIKE :yearMonth
+                GROUP BY tbbookingclientid
+                HAVING COUNT(*) > 1
+            ) AS recurring
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute([':yearMonth' => $yearMonth . '%']);
+
+        return (int) $stmt->fetchColumn();
+    }
+
+    // =========================================================
+    // CLIENTES CON MÁS RESERVAS DEL MES (top por nombre)
+    // =========================================================
+    public function topByBookings(string $yearMonth, int $limit = 5): array
+    {
+        $sql = "
+            SELECT
+                r.tbroleid AS idRol,
+                r.tbrolename AS name,
+                COUNT(b.tbbookingid) AS bookingCount
+            FROM tbbooking b
+            INNER JOIN tbroleclient c ON c.tbroleclientclientid = b.tbbookingclientid
+            INNER JOIN tbrole r ON r.tbroleid = c.tbroleclientrolid
+            WHERE b.tbbookingdate LIKE :yearMonth
+            GROUP BY b.tbbookingclientid, r.tbroleid, r.tbrolename
+            ORDER BY bookingCount DESC
+            LIMIT :limit
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+        $stmt->bindValue(':yearMonth', $yearMonth . '%');
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // =========================================================
     // COMPARTIDO CON ADMIN/OWNER: insertar registro base tbrole
     // =========================================================
     private function insertRole(Client $client): int

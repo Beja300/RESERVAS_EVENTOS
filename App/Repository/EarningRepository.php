@@ -80,6 +80,22 @@ class EarningRepository
   }
 
   // =========================================================
+  // DESACTIVAR LA GANANCIA DE UNA RESERVA (reembolso)
+  // =========================================================
+  public function deactivateByBooking(int $idBooking): bool
+  {
+    $sql = "
+      UPDATE tbeearning
+      SET tbeearningactive = false
+      WHERE tbeearningbookingid = :idBooking
+        AND tbeearningactive = true
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    return $stmt->execute([':idBooking' => $idBooking]);
+  }
+
+  // =========================================================
   // OBTENER TODOS
   // =========================================================
   public function findAll(): array
@@ -103,6 +119,37 @@ class EarningRepository
     $stmt->execute();
 
     return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+  }
+
+  // =========================================================
+  // RESUMEN ECONÓMICO DE UN MES (YYYY-MM)
+  // Suma directamente de las ganancias registradas (por la fecha
+  // en que se aprobó el pago), sin depender del estado de reservas.
+  // =========================================================
+  public function summarizeByMonth(string $yearMonth): array
+  {
+    $sql = "
+      SELECT
+        COALESCE(SUM(tbeearningtotal), 0)       AS ingreso_bruto,
+        COALESCE(SUM(tbeearningcommission), 0)  AS comision,
+        COALESCE(SUM(tbeearningtax), 0)         AS iva,
+        COALESCE(SUM(tbeearningowneramount), 0) AS propietarios
+      FROM tbeearning
+      WHERE tbeearningdate LIKE :yearMonth
+        AND tbeearningactive = true
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([':yearMonth' => $yearMonth . '%']);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return [
+      'ingreso_bruto' => (float) $row['ingreso_bruto'],
+      'comision'      => (float) $row['comision'],
+      'iva'           => (float) $row['iva'],
+      'propietarios'  => (float) $row['propietarios'],
+    ];
   }
 
   // =========================================================

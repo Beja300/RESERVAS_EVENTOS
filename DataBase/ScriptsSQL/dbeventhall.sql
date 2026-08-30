@@ -126,6 +126,8 @@ CREATE TABLE tbservice (
     tbservicetype VARCHAR(100),
     tbserviceprice DECIMAL(10,2) NOT NULL,
     tbservicestate VARCHAR(30) DEFAULT 'solicitado',
+    tbserviceapprovedby INT NULL,
+    tbserviceapprovedon DATETIME NULL,
     tbserviceactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
@@ -272,6 +274,33 @@ CREATE TABLE tbeearning (
     tbeearningreviewedbyrole INT,
     tbeearningdate DATETIME DEFAULT CURRENT_TIMESTAMP,
     tbeearningactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 22b) tbbookinghistory: auditoria de modificaciones de reservas
+--      (quién lo modificó = tbbookinghistoryroleid -> tbrole.tbroleid)
+-- =========================================================
+CREATE TABLE tbbookinghistory (
+    tbbookinghistoryid INT AUTO_INCREMENT PRIMARY KEY,
+    tbbookinghistorybookingid INT NOT NULL,
+    tbbookinghistoryroleid INT,
+    tbbookinghistoryaction VARCHAR(50) NOT NULL,
+    tbbookinghistorydetail VARCHAR(500),
+    tbbookinghistorydate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    tbbookinghistoryactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 22c) tbbookingrefund: solicitudes de reembolso (cliente -> admin)
+-- =========================================================
+CREATE TABLE tbbookingrefund (
+    tbbookingrefundid INT AUTO_INCREMENT PRIMARY KEY,
+    tbbookingrefundbookingid INT NOT NULL,
+    tbbookingrefundclientroleid INT NOT NULL,
+    tbbookingrefunddetail VARCHAR(500) NOT NULL,
+    tbbookingrefundstate VARCHAR(30) DEFAULT 'pendiente',
+    tbbookingrefunddate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    tbbookingrefundactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
 -- =========================================================

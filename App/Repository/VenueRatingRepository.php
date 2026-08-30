@@ -209,6 +209,42 @@ return (int) $this->connection->lastInsertId();
   }
 
   // =========================================================
+  // PROMEDIO GLOBAL DE ESTRELLAS (todos los locales)
+  // =========================================================
+  public function averageStars(): ?float
+  {
+    $sql = "
+      SELECT AVG(tbvenueratingstars) AS average
+      FROM tbvenuerating
+      WHERE tbvenueratingactive = true
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute();
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $row && $row['average'] !== null ? (float) $row['average'] : null;
+  }
+
+  // =========================================================
+  // TOTAL DE CALIFICACIONES (todos los locales)
+  // =========================================================
+  public function countAll(): int
+  {
+    $sql = "
+      SELECT COUNT(*) AS total
+      FROM tbvenuerating
+      WHERE tbvenueratingactive = true
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute();
+
+    return (int) $stmt->fetchColumn();
+  }
+
+  // =========================================================
   // MAPEO FILA -> OBJETO
   // =========================================================
   private function mapRow(array $row): VenueRating
