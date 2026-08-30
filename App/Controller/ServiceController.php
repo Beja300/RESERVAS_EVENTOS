@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../Service/ServiceService.php';
 require_once __DIR__ . '/../Service/OwnerService.php';
 require_once __DIR__ . '/../Service/HistoryService.php';
+require_once __DIR__ . '/../Service/NotificationService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/OwnerRepository.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
@@ -16,6 +17,7 @@ class ServiceController
   private OwnerRepository $ownerRepo;
   private VenueRepository $venueRepo;
   private AdminRepository $adminRepo;
+  private NotificationService $notificationService;
 
   public function __construct()
   {
@@ -26,6 +28,7 @@ class ServiceController
     $this->ownerRepo = new OwnerRepository($connection);
     $this->venueRepo = new VenueRepository($connection);
     $this->adminRepo = new AdminRepository($connection);
+    $this->notificationService = new NotificationService(new NotificationRepository($connection));
   }
 
   // =========================================================
@@ -220,6 +223,8 @@ class ServiceController
       $historyService = new HistoryService(DataBase::getConnection());
       $historyService->logAction($approvedByRoleId, 'APPROVE', 'Service', $idService);
 
+      $this->notifyOwnerOfServiceReview($idService, true);
+
       if (is_ajax()) {
         respond_json(['ok' => true, 'message' => 'Servicio aprobado.']);
       }
@@ -247,6 +252,8 @@ class ServiceController
     try {
 
       $this->serviceService->reject($idService);
+
+      $this->notifyOwnerOfServiceReview($idService, false);
 
       if (is_ajax()) {
         respond_json(['ok' => true, 'message' => 'Servicio rechazado.']);
@@ -285,6 +292,36 @@ class ServiceController
     $approvedBy = $service->getApprovedBy() !== null ? $this->adminRepo->findByRoleId($service->getApprovedBy()) : null;
 
     require_once __DIR__ . '/../View/Service/AdminDetail.php';
+  }
+
+  // =========================================================
+  // NOTIFICAR AL PROPIETARIO LA REVISIÓN DE UN SERVICIO SUYO
+  // =========================================================
+  private function notifyOwnerOfServiceReview(int $idService, bool $approved): void
+  {
+    $service = $this->serviceService->findById($idService);
+
+    if ($service === null) {
+      return;
+    }
+
+    $venue = $this->venueRepo->findById($service->getIdLocal());
+
+    if ($venue === null) {
+      return;
+    }
+
+    $owner = $this->ownerRepo->findByOwnerPk($venue->getIdOwner());
+
+    if ($owner === null) {
+      return;
+    }
+
+    $this->notificationService->notifyServiceReviewed(
+      (int) $owner->getIdRol(),
+      $approved,
+      $this->notificationService->serviceListUrl((int) $venue->getIdVenue())
+    );
   }
 
   // =========================================================

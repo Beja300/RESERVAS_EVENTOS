@@ -334,6 +334,7 @@ CREATE TABLE tbnotification (
     tbnotificationid INT AUTO_INCREMENT PRIMARY KEY,
     tbnotificationroleid INT NOT NULL,
     tbnotificationmessage VARCHAR(255) NOT NULL,
+    tbnotificationlink VARCHAR(255) NULL DEFAULT NULL,
     tbnotificationdate DATETIME DEFAULT CURRENT_TIMESTAMP,
     tbnotificationread BOOLEAN NOT NULL DEFAULT FALSE,
     tbnotificationactive BOOLEAN NOT NULL DEFAULT TRUE

@@ -21,6 +21,7 @@ class NotificationRepository
             INSERT INTO tbnotification (
                 tbnotificationroleid,
                 tbnotificationmessage,
+                tbnotificationlink,
                 tbnotificationdate,
                 tbnotificationread,
                 tbnotificationactive
@@ -28,6 +29,7 @@ class NotificationRepository
             VALUES (
                 :idRol,
                 :message,
+                :link,
                 :date,
                 :isRead,
                 :isActive
@@ -39,6 +41,7 @@ class NotificationRepository
     $stmt->execute([
       ':idRol'    => $notification->getIdRol(),
       ':message'  => $notification->getMessageNotification(),
+      ':link'     => $notification->getLink(),
       ':date'     => $notification->getDateNotification(),
       ':isRead'   => $this->toDb($notification->getIsRead()),
       ':isActive' => $this->toDb($notification->getIsActive())
@@ -58,6 +61,7 @@ class NotificationRepository
                 tbnotificationid,
                 tbnotificationroleid,
                 tbnotificationmessage,
+                tbnotificationlink,
                 tbnotificationdate,
                 tbnotificationread,
                 tbnotificationactive
@@ -90,6 +94,7 @@ class NotificationRepository
                 tbnotificationid,
                 tbnotificationroleid,
                 tbnotificationmessage,
+                tbnotificationlink,
                 tbnotificationdate,
                 tbnotificationread,
                 tbnotificationactive
@@ -192,6 +197,48 @@ class NotificationRepository
 
 
   // =========================================================
+  // OBTENER ROL ID DE UN PROPIETARIO (tbroleowner)
+  // =========================================================
+  public function findRoleIdByOwner(int $idOwner): ?int
+  {
+    $sql = "
+            SELECT tbroleownerrolid
+            FROM tbroleowner
+            WHERE tbroleownerownerid = :idOwner
+              AND tbroleowneractive = true
+            LIMIT 1
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([':idOwner' => $idOwner]);
+
+    $value = $stmt->fetchColumn();
+
+    return $value !== false ? (int) $value : null;
+  }
+
+  // =========================================================
+  // OBTENER ROL ID DE UN CLIENTE (tbroleclient)
+  // =========================================================
+  public function findRoleIdByClient(int $idClient): ?int
+  {
+    $sql = "
+            SELECT tbroleclientrolid
+            FROM tbroleclient
+            WHERE tbroleclientclientid = :idClient
+              AND tbroleclientactive = true
+            LIMIT 1
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([':idClient' => $idClient]);
+
+    $value = $stmt->fetchColumn();
+
+    return $value !== false ? (int) $value : null;
+  }
+
+  // =========================================================
   // MAPEO FILA -> OBJETO
   // =========================================================
   private function mapRow(array $row): Notification
@@ -202,7 +249,8 @@ class NotificationRepository
       messageNotification: $row['tbnotificationmessage'],
       dateNotification: $row['tbnotificationdate'],
       isActive: $this->toBool($row['tbnotificationactive']),
-      isRead: $this->toBool($row['tbnotificationread'])
+      isRead: $this->toBool($row['tbnotificationread']),
+      link: $row['tbnotificationlink'] ?? null
     );
   }
 

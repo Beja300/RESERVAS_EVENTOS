@@ -29,6 +29,10 @@
           </div>
           <div class="desc"><?= e(date('d/m/Y H:i', strtotime($n->getDateNotification()))) ?></div>
         </div>
+        <div class="actions">
+        <?php if (!empty($n->getLink())): ?>
+          <a class="btn btn-sm btn-outline" href="<?= e(base_url('notification', 'open', ['id' => $n->getIdNotification()])) ?>">Ver</a>
+        <?php endif; ?>
         <?php if (!$n->getIsRead()): ?>
           <form method="post" action="<?= e(base_url('notification', 'markAsRead')) ?>">
             <?= csrf_field() ?>
@@ -36,6 +40,7 @@
             <button class="btn btn-sm btn-outline" type="submit">Marcar leído</button>
           </form>
         <?php endif; ?>
+        </div>
       </div>
     <?php endforeach; ?>
   </div>

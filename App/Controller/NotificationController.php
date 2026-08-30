@@ -61,6 +61,29 @@ class NotificationController
   }
 
   // =========================================================
+  // ABRIR (marca como leída y redirige al motivo)
+  // =========================================================
+  public function open(): void
+  {
+    session_start();
+    $this->requireLogin();
+
+    $role = $_SESSION['user'];
+    $idNotification = (int) ($_GET['id'] ?? 0);
+    $listUrl = '../../Public/index.php?controller=notification&action=list';
+
+    try {
+      $link = $this->notificationService->open($idNotification, $role->getIdRol());
+
+      header('Location: ' . ($link !== null && $link !== '' ? $link : $listUrl));
+      exit;
+    } catch (BusinessRuleException $e) {
+      header('Location: ' . $listUrl);
+      exit;
+    }
+  }
+
+  // =========================================================
   // MARCAR TODAS COMO LEÍDAS
   // =========================================================
   public function markAllAsRead(): void

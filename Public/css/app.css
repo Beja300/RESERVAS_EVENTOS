@@ -469,6 +469,8 @@ table.table {
 
 .list-item .title { font-weight: 600; color: var(--neutral-800); }
 .list-item .desc { color: var(--neutral-500); font-size: 0.88rem; }
+.list-item .actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.list-item .actions form { margin: 0; }
 
 .empty {
   text-align: center;

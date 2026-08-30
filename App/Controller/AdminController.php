@@ -6,6 +6,7 @@ require_once __DIR__ . '/../Service/InvoiceService.php';
 require_once __DIR__ . '/../Service/EarningService.php';
 require_once __DIR__ . '/../Service/BookingService.php';
 require_once __DIR__ . '/../Service/BookingAdminService.php';
+require_once __DIR__ . '/../Service/NotificationService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/BookingHistoryRepository.php';
@@ -41,6 +42,7 @@ class AdminController
   private OwnerRepository $ownerRepo;
   private VenueRatingRepository $venueRatingRepo;
   private ServiceRatingRepository $serviceRatingRepo;
+  private NotificationService $notificationService;
 
   public function __construct()
   {
@@ -64,6 +66,7 @@ class AdminController
     $this->ownerRepo = new OwnerRepository($connection);
     $this->venueRatingRepo = new VenueRatingRepository($connection);
     $this->serviceRatingRepo = new ServiceRatingRepository($connection);
+    $this->notificationService = new NotificationService(new NotificationRepository($connection));
   }
 
   // =========================================================
@@ -188,6 +191,16 @@ class AdminController
 
       $this->invoiceService->approve($idBooking);
 
+      $approvedBooking = $this->bookingRepo->findById($idBooking);
+      if ($approvedBooking !== null) {
+        $this->notificationService->notifyClientPaymentApproved((int) $approvedBooking->getIdClient(), (int) $idBooking);
+
+        $approvedVenue = $this->venueRepo->findById($approvedBooking->getIdLocal());
+        if ($approvedVenue !== null) {
+          $this->notificationService->notifyOwnerPaymentReceived((int) $approvedVenue->getIdOwner(), (int) $idBooking);
+        }
+      }
+
       header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=payment_approved');
       exit;
     } catch (BusinessRuleException $e) {
@@ -212,6 +225,11 @@ class AdminController
     try {
 
       $this->invoiceService->reject($idBooking);
+
+      $rejectedBooking = $this->bookingRepo->findById($idBooking);
+      if ($rejectedBooking !== null) {
+        $this->notificationService->notifyClientPaymentRejected((int) $rejectedBooking->getIdClient(), (int) $idBooking);
+      }
 
       header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=payment_rejected');
       exit;
@@ -271,6 +289,10 @@ class AdminController
 
     try {
       $this->bookingAdminService->cancel($idBooking, $adminRoleId, $note);
+      $cancelledBooking = $this->bookingRepo->findById($idBooking);
+      if ($cancelledBooking !== null) {
+        $this->notificationService->notifyClientBookingCancelled((int) $cancelledBooking->getIdClient(), (int) $idBooking);
+      }
       header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=cancelled');
       exit;
     } catch (BusinessRuleException $e) {
@@ -294,6 +316,10 @@ class AdminController
 
     try {
       $this->bookingAdminService->reschedule($idBooking, $adminRoleId, $newDate, $note);
+      $rescheduledBooking = $this->bookingRepo->findById($idBooking);
+      if ($rescheduledBooking !== null) {
+        $this->notificationService->notifyClientBookingRescheduled((int) $rescheduledBooking->getIdClient(), (int) $idBooking);
+      }
       header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=rescheduled');
       exit;
     } catch (BusinessRuleException $e) {
@@ -317,6 +343,10 @@ class AdminController
 
     try {
       $this->bookingAdminService->changeVenue($idBooking, $adminRoleId, $newVenueId, $note);
+      $venueChangedBooking = $this->bookingRepo->findById($idBooking);
+      if ($venueChangedBooking !== null) {
+        $this->notificationService->notifyClientVenueChanged((int) $venueChangedBooking->getIdClient(), (int) $idBooking);
+      }
       header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=venue_changed');
       exit;
     } catch (BusinessRuleException $e) {
@@ -340,6 +370,10 @@ class AdminController
 
     try {
       $this->bookingAdminService->approveRefund($idBooking, $adminRoleId, $refundRequestId, $note);
+      $refundedBooking = $this->bookingRepo->findById($idBooking);
+      if ($refundedBooking !== null) {
+        $this->notificationService->notifyClientRefundApproved((int) $refundedBooking->getIdClient(), (int) $idBooking);
+      }
       header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=refunded');
       exit;
     } catch (BusinessRuleException $e) {
@@ -362,6 +396,10 @@ class AdminController
 
     try {
       $this->bookingAdminService->rejectRefund($refundRequestId, $adminRoleId);
+      $refundRejectedBooking = $this->bookingRepo->findById($idBooking);
+      if ($refundRejectedBooking !== null) {
+        $this->notificationService->notifyClientRefundRejected((int) $refundRejectedBooking->getIdClient(), (int) $idBooking);
+      }
       header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&msg=refund_rejected');
       exit;
     } catch (BusinessRuleException $e) {

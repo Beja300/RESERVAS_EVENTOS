@@ -117,7 +117,7 @@ $allowedActions = [
   'invoice'       => ['showForm', 'generate', 'detail', 'list'],
   'paymentmethod' => ['list', 'showForm', 'create', 'edit', 'update', 'delete'],
   'location'      => ['list', 'showForm', 'create'],
-  'notification'  => ['list', 'markAsRead', 'markAllAsRead'],
+  'notification'  => ['list', 'markAsRead', 'markAllAsRead', 'open'],
   'promotion'     => ['list', 'showForm', 'create', 'addService'],
   'api'           => ['locations', 'venueComments', 'serviceComments'],
 ];

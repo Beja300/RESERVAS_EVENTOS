@@ -8,6 +8,7 @@ require_once __DIR__ . '/../Service/ServiceService.php';
 require_once __DIR__ . '/../Service/OwnerService.php';
 require_once __DIR__ . '/../Service/OwnerPaymentService.php';
 require_once __DIR__ . '/../Service/BookingTicketService.php';
+require_once __DIR__ . '/../Service/NotificationService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/DetailRepository.php';
@@ -38,6 +39,7 @@ class BookingController
   private ClientRepository $clientRepo;
   private OwnerPaymentRepository $ownerPaymentRepo;
   private OwnerPaymentService $ownerPaymentService;
+  private NotificationService $notificationService;
 
   public function __construct()
   {
@@ -60,6 +62,7 @@ class BookingController
     $this->ownerPaymentRepo = new OwnerPaymentRepository($connection);
     $this->ownerPaymentService = new OwnerPaymentService($connection);
     $this->bookingTicketService = new BookingTicketService($connection);
+    $this->notificationService = new NotificationService(new NotificationRepository($connection));
   }
 
   // =========================================================
@@ -90,6 +93,16 @@ class BookingController
         $date,
         $eventType
       );
+
+      $venue = $this->venueRepo->findById($idVenue);
+      if ($venue !== null) {
+        $this->notificationService->notifyOwnerOfNewBooking(
+          (int) $venue->getIdOwner(),
+          $venue->getNameVenue(),
+          (int) $idBooking
+        );
+      }
+      $this->notificationService->notifyNewBookingToAdmins((int) $idBooking);
 
       header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
       exit;
@@ -288,6 +301,17 @@ class BookingController
 
       $this->bookingService->cancel($idBooking);
 
+      $cancelledBooking = $this->bookingRepo->findById($idBooking);
+      if ($cancelledBooking !== null) {
+        $cancelledVenue = $this->venueRepo->findById($cancelledBooking->getIdLocal());
+        if ($cancelledVenue !== null) {
+          $this->notificationService->notifyOwnerBookingCancelled(
+            (int) $cancelledVenue->getIdOwner(),
+            (int) $idBooking
+          );
+        }
+      }
+
       if (is_ajax()) {
         respond_json(['ok' => true, 'message' => 'Reserva cancelada correctamente.']);
       }
@@ -324,6 +348,8 @@ class BookingController
       $this->clientService->assertOwnsBooking($client->getIdClient(), $idBooking);
 
       $this->bookingService->requestRefund($idBooking, (int) $client->getIdRol(), $motivo);
+
+      $this->notificationService->notifyAdminsRefundRequested($idBooking);
 
       if (is_ajax()) {
         respond_json(['ok' => true, 'message' => 'Solicitud de reembolso enviada.']);
@@ -458,6 +484,17 @@ class BookingController
 
       $this->bookingTicketService->upload($idBooking, 'resource/tickets/' . $fileName, $ext, $idPaymentMethod);
 
+      $ticketBooking = $this->bookingRepo->findById($idBooking);
+      if ($ticketBooking !== null) {
+        $ticketVenue = $this->venueRepo->findById($ticketBooking->getIdLocal());
+        if ($ticketVenue !== null) {
+          $this->notificationService->notifyOwnerPaymentVerification(
+            (int) $ticketVenue->getIdOwner(),
+            (int) $idBooking
+          );
+        }
+      }
+
       if (is_ajax()) {
         respond_json(['ok' => true, 'message' => 'Comprobante subido. El propietario lo revisará para aprobar la reserva.']);
       }
@@ -511,6 +548,8 @@ class BookingController
 
       $this->bookingTicketService->approve($ticket->getIdTicket(), $owner->getIdRol());
 
+      $this->notificationService->notifyClientPaymentApproved((int) $booking->getIdClient(), (int) $idBooking);
+
       if (is_ajax()) {
         respond_json(['ok' => true, 'message' => 'Comprobante aprobado y reserva confirmada.']);
       }
@@ -563,6 +602,8 @@ class BookingController
       }
 
       $this->bookingTicketService->reject($ticket->getIdTicket());
+
+      $this->notificationService->notifyClientPaymentRejected((int) $booking->getIdClient(), (int) $idBooking);
 
       if (is_ajax()) {
         respond_json(['ok' => true, 'message' => 'Comprobante rechazado.']);
