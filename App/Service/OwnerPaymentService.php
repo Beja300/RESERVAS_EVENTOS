@@ -15,7 +15,7 @@ class OwnerPaymentService
   // =========================================================
   // CONFIGURAR / ACTUALIZAR UN MÉTODO DE COBRO DEL OWNER
   // =========================================================
-  public function save(int $ownerPk, int $paymentMethodPk, string $holder, string $account, string $instructions, bool $active): int
+  public function save(int $ownerPk, int $paymentMethodPk, string $holder, string $account, string $instructions, bool $active, int $ownerPaymentPk = 0): int
   {
     if ($paymentMethodPk <= 0) {
       throw new BusinessRuleException('Selecciona un método de pago.');
@@ -23,6 +23,24 @@ class OwnerPaymentService
 
     if ($active && trim($holder) === '') {
       throw new BusinessRuleException('El titular es obligatorio para este método de cobro.');
+    }
+
+    if ($ownerPaymentPk > 0) {
+      $op = $this->repo->findById($ownerPaymentPk);
+
+      if ($op === null || $op->getIdOwner() !== $ownerPk) {
+        throw new BusinessRuleException('Este método de cobro no existe.');
+      }
+
+      $op->setIdPaymentMethod($paymentMethodPk);
+      $op->setHolder($holder);
+      $op->setAccount($account);
+      $op->setInstructions($instructions);
+      $op->setIsActive($active);
+
+      $this->repo->update($op);
+
+      return $op->getIdOwnerPayment();
     }
 
     $existing = $this->repo->findByOwnerAndMethod($ownerPk, $paymentMethodPk);

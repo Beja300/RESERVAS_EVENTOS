@@ -14,6 +14,7 @@ require_once __DIR__ . '/../Repository/DetailRepository.php';
 require_once __DIR__ . '/../Repository/ServiceRepository.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
+require_once __DIR__ . '/../Repository/ClientRepository.php';
 require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
@@ -32,6 +33,7 @@ class BookingController
   private VenueRepository $venueRepo;
   private BookingTicketRepository $ticketRepo;
   private PaymentMethodRepository $paymentMethodRepo;
+  private ClientRepository $clientRepo;
   private OwnerPaymentRepository $ownerPaymentRepo;
   private OwnerPaymentService $ownerPaymentService;
 
@@ -51,6 +53,7 @@ class BookingController
     $this->venueRepo = new VenueRepository($connection);
     $this->ticketRepo = new BookingTicketRepository($connection);
     $this->paymentMethodRepo = new PaymentMethodRepository($connection);
+    $this->clientRepo = new ClientRepository($connection);
     $this->ownerPaymentRepo = new OwnerPaymentRepository($connection);
     $this->ownerPaymentService = new OwnerPaymentService($connection);
     $this->bookingTicketService = new BookingTicketService($connection);
@@ -127,6 +130,16 @@ class BookingController
 
     $client = $_SESSION['user'];
     $bookings = $this->bookingRepo->findByClient($client->getIdClient());
+
+    $venueNames = [];
+    $hasTicket = [];
+    foreach ($bookings as $b) {
+      $venue = $this->venueRepo->findById($b->getIdLocal());
+      $venueNames[$b->getIdBooking()] = $venue !== null
+        ? $venue->getNameVenue()
+        : 'Local #' . $b->getIdLocal();
+      $hasTicket[$b->getIdBooking()] = $this->ticketRepo->findByBooking($b->getIdBooking()) !== null;
+    }
 
     require_once __DIR__ . '/../View/Booking/List.php';
   }
@@ -367,6 +380,21 @@ class BookingController
       $this->ownerService->assertOwnsVenue($owner->getIdOwner(), $idVenue);
 
       $bookings = $this->bookingRepo->findByVenue($idVenue);
+
+      $venueNames = [];
+      $hasTicket = [];
+      $clientNames = [];
+      foreach ($bookings as $b) {
+        $venue = $this->venueRepo->findById($b->getIdLocal());
+        $venueNames[$b->getIdBooking()] = $venue !== null
+          ? $venue->getNameVenue()
+          : 'Local #' . $b->getIdLocal();
+        $hasTicket[$b->getIdBooking()] = $this->ticketRepo->findByBooking($b->getIdBooking()) !== null;
+        $client = $this->clientRepo->findByClientPk($b->getIdClient());
+        $clientNames[$b->getIdBooking()] = $client !== null
+          ? $client->getName()
+          : '#' . $b->getIdClient();
+      }
 
       require_once __DIR__ . '/../View/Booking/List.php';
     } catch (BusinessRuleException $e) {

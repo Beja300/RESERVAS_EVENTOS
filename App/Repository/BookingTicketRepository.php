@@ -102,6 +102,31 @@ class BookingTicketRepository
   }
 
   // =========================================================
+  // RESERVAS "POR REVISAR" DE UN OWNER.
+  // Son las reservas en estado 'pendiente' que además ya tienen
+  // un comprobante de pago subido (a la espera de aprobación).
+  // =========================================================
+  public function countPendingByOwner(int $idOwner): int
+  {
+    $sql = "
+      SELECT COUNT(*)
+      FROM tbbooking b
+      INNER JOIN tbvenue v
+        ON v.tbvenueid = b.tbbookinglocalid
+      INNER JOIN tbbookingticket t
+        ON t.tbbookingticketbookingid = b.tbbookingid
+      WHERE v.tbvenueownerid = :idOwner
+        AND b.tbbookingstate = 'pendiente'
+        AND t.tbbookingticketactive = true
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([':idOwner' => $idOwner]);
+
+    return (int) $stmt->fetchColumn();
+  }
+
+  // =========================================================
   // CAMBIAR ESTADO DEL COMPROBANTE
   // =========================================================
   public function updateState(int $idTicket, string $state): bool

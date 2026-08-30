@@ -19,7 +19,7 @@ $userType = current_user_type();
 <header class="topbar">
   <div class="container">
     <a class="brand" href="<?= e(base_url('venue', 'catalog')) ?>">
-      <span>&#127881;</span> Reservas Eventos
+      <span>&#127881;</span> Bienvenid@ a Event Hall
     </a>
     <nav class="nav">
       <?php if ($userType === 'client'): ?>

@@ -59,6 +59,7 @@ class OwnerPaymentRepository
     $sql = "
       UPDATE tbownerpayment
       SET
+        tbownerpaymentpaymentmethodid = :idPaymentMethod,
         tbownerpaymentholder = :holder,
         tbownerpaymentaccount = :account,
         tbownerpaymentinstructions = :instructions,
@@ -69,6 +70,7 @@ class OwnerPaymentRepository
     $stmt = $this->connection->prepare($sql);
 
     return $stmt->execute([
+      ':idPaymentMethod'   => $op->getIdPaymentMethod(),
       ':holder'          => $op->getHolder() !== '' ? $op->getHolder() : null,
       ':account'         => $op->getAccount() !== '' ? $op->getAccount() : null,
       ':instructions'    => $op->getInstructions() !== '' ? $op->getInstructions() : null,

@@ -200,30 +200,24 @@ $hasTicket = $ticket !== null;
         &#128065; Ver comprobante
       </a>
     </div>
-    <p class="form-hint">Factura generada el día del pago; el propietario la aprueba para confirmar la reserva.</p>
+    <p class="form-hint">Factura generada el día del pago.</p>
   <?php endif; ?>
 
   <?php if ($isOwner && $ticket !== null && $ticket->getState() === 'pendiente'): ?>
     <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
-    <h3 style="margin:0 0 10px;">Verificar comprobante</h3>
-    <div class="alert alert-info" style="text-align:left;margin-bottom:12px;">
-      <p style="margin-bottom:8px;">
-        Archivo: <strong><?= e($ticket->getFile()) ?></strong> (<?= strtoupper(e($ticket->getType())) ?>)
-      </p>
-      <a class="btn btn-sm btn-ghost" href="<?= e(image_url($ticket->getFile())) ?>" target="_blank" rel="noopener">
-        &#128065; Ver comprobante
-      </a>
-    </div>
+
     <form method="post" action="<?= e(base_url('booking', 'approveTicket')) ?>"
           data-ajax-approve data-booking-id="<?= (int) $booking->getIdBooking() ?>"
           style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
       <?= csrf_field() ?>
+      <input type="hidden" name="bookingId" value="<?= (int) $booking->getIdBooking() ?>">
       <button class="btn btn-success" type="submit">Aprobar comprobante</button>
     </form>
     <form method="post" action="<?= e(base_url('booking', 'rejectTicket')) ?>"
           data-ajax-reject data-booking-id="<?= (int) $booking->getIdBooking() ?>"
           style="margin-top:10px;" data-confirm="¿Rechazar el comprobante de esta reserva?">
       <?= csrf_field() ?>
+      <input type="hidden" name="bookingId" value="<?= (int) $booking->getIdBooking() ?>">
       <button class="btn btn-danger btn-sm" type="submit">Rechazar comprobante</button>
     </form>
   <?php endif; ?>

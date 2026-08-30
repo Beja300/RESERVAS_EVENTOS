@@ -7,7 +7,6 @@ $paymentMethods = $paymentMethods ?? [];
 <div class="page-head">
   <div>
     <h1>Datos de cobro de mi local</h1>
-    <a href="<?= e(base_url('owner', 'profile')) ?>">&larr; Volver a mi perfil</a>
   </div>
 </div>
 
@@ -22,11 +21,18 @@ $paymentMethods = $paymentMethods ?? [];
   <div class="alert alert-error"><?= e($error) ?></div>
 <?php endif; ?>
 
-<div class="card form-card" style="max-width:640px;margin-bottom:18px;">
+<div style="margin-bottom:18px;max-width:640px;">
+  <button class="btn btn-primary" type="button" data-toggle-payment-form>
+    + Agregar método de pago nuevo
+  </button>
+</div>
+
+<div class="card form-card" style="max-width:640px;margin-bottom:18px;" data-payment-form-wrap hidden>
   <h3 class="card-title">Agregar / actualizar método</h3>
   <form method="post" action="<?= e(base_url('owner', 'savePayment')) ?>"
         data-ajax-payment-save data-payment-form>
     <?= csrf_field() ?>
+    <input type="hidden" name="idOwnerPayment" data-payment-id value="0">
 
     <div class="form-group">
       <label for="paymentMethodId">Método de pago *</label>
@@ -93,12 +99,24 @@ $paymentMethods = $paymentMethods ?? [];
                 </span>
               </td>
               <td style="text-align:right;">
-                <form method="post" action="<?= e(base_url('owner', 'removePayment')) ?>"
-                      data-ajax-payment-remove data-id="<?= (int) $op->getIdOwnerPayment() ?>">
-                  <?= csrf_field() ?>
-                  <input type="hidden" name="idOwnerPayment" value="<?= (int) $op->getIdOwnerPayment() ?>">
-                  <button class="btn btn-sm btn-danger" type="submit">Eliminar</button>
-                </form>
+                <div style="display:flex;gap:6px;justify-content:flex-end;align-items:center;">
+                  <button class="btn btn-sm btn-ghost" type="button" data-edit-payment
+                          data-id="<?= (int) $op->getIdOwnerPayment() ?>"
+                          data-method-id="<?= (int) $op->getIdPaymentMethod() ?>"
+                          data-method="<?= e($op->getPaymentMethod()) ?>"
+                          data-holder="<?= e($op->getHolder()) ?>"
+                          data-account="<?= e($op->getAccount()) ?>"
+                          data-instructions="<?= e($op->getInstructions()) ?>"
+                          data-active="<?= $op->getIsActive() ? '1' : '0' ?>">
+                    Editar
+                  </button>
+                  <form method="post" action="<?= e(base_url('owner', 'removePayment')) ?>"
+                        data-ajax-payment-remove data-id="<?= (int) $op->getIdOwnerPayment() ?>">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="idOwnerPayment" value="<?= (int) $op->getIdOwnerPayment() ?>">
+                    <button class="btn btn-sm btn-danger" type="submit">Eliminar</button>
+                  </form>
+                </div>
               </td>
             </tr>
           <?php endforeach; ?>
@@ -108,47 +126,5 @@ $paymentMethods = $paymentMethods ?? [];
   <?php endif; ?>
 </div>
 
-<script>
-(function () {
-  function base() {
-    var p = (window.location.pathname || '').split('/'); p.pop(); return p.join('/');
-  }
-  function post(url, data, cb) {
-    fetch(url, {
-      method: 'POST',
-      headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-      body: data
-    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
-      .then(function (r) { cb(r.ok, r.data); })
-      .catch(function () { cb(false, { message: 'Error de red.' }); });
-  }
-  function attach() {
-    var save = document.querySelector('form[data-ajax-payment-save]');
-    if (save) {
-      save.addEventListener('submit', function (e) {
-        e.preventDefault();
-        post(save.getAttribute('action'), new FormData(save), function (ok, d) {
-          window.App && App.toast(d.message, ok ? 'success' : 'error');
-          if (ok) setTimeout(function () { window.location.reload(); }, 600);
-        });
-      });
-    }
-    document.querySelectorAll('form[data-ajax-payment-remove]').forEach(function (f) {
-      f.addEventListener('submit', function (e) {
-        e.preventDefault();
-        window.App && App.confirmModal('¿Eliminar este método de cobro?', 'Eliminar método').then(function (ok) {
-          if (!ok) return;
-          post(f.getAttribute('action'), new FormData(f), function (ok, d) {
-            window.App && App.toast(d.message, ok ? 'success' : 'error');
-            if (ok) setTimeout(function () { window.location.reload(); }, 600);
-          });
-        });
-      });
-    });
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attach);
-  else attach();
-})();
-</script>
-
+<script src="<?= e(js_url('owner-payment')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

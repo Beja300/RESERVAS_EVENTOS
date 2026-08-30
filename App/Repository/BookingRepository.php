@@ -169,6 +169,70 @@ class BookingRepository
     return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
+  // =========================================================
+  // RESERVAS DEL MES DE UN OWNER (todos sus locales)
+  // =========================================================
+  public function countByOwnerForMonth(int $idOwner, string $yearMonth): int
+  {
+    $sql = "
+            SELECT COUNT(*)
+
+            FROM tbbooking b
+
+            INNER JOIN tbvenue v
+                ON v.tbvenueid = b.tbbookinglocalid
+
+            WHERE v.tbvenueownerid = :idOwner
+              AND b.tbbookingdate LIKE :yearMonth
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':idOwner'   => $idOwner,
+      ':yearMonth' => $yearMonth . '%'
+    ]);
+
+    return (int) $stmt->fetchColumn();
+  }
+
+  // =========================================================
+  // PRÓXIMA RESERVA DE UN OWNER (fecha más cercana >= hoy)
+  // =========================================================
+  public function nextBookingByOwner(int $idOwner, string $today): ?array
+  {
+    $sql = "
+            SELECT
+                b.tbbookingdate,
+                v.tbvenuename
+
+            FROM tbbooking b
+
+            INNER JOIN tbvenue v
+                ON v.tbvenueid = b.tbbookinglocalid
+
+            WHERE v.tbvenueownerid = :idOwner
+              AND b.tbbookingdate >= :today
+              AND b.tbbookingstate IN ('pendiente', 'confirmado')
+              AND b.tbbookingactive = true
+
+            ORDER BY b.tbbookingdate ASC
+
+            LIMIT 1
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':idOwner' => $idOwner,
+      ':today'   => $today
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $row ? $row : null;
+  }
+
 
   // =========================================================
   // LOCALES MÁS ACTIVOS (venues con más reservas)

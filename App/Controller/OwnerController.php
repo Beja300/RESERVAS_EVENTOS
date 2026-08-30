@@ -6,6 +6,9 @@ require_once __DIR__ . '/../Service/OwnerPaymentService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
+require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
+require_once __DIR__ . '/../Repository/EarningRepository.php';
+require_once __DIR__ . '/../Repository/VenueRatingRepository.php';
 require_once __DIR__ . '/../Repository/RoleRepository.php';
 require_once __DIR__ . '/../Repository/OwnerRepository.php';
 require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
@@ -17,6 +20,9 @@ class OwnerController
   private HistoryService $historyService;
   private VenueRepository $venueRepo;
   private BookingRepository $bookingRepo;
+  private BookingTicketRepository $ticketRepo;
+  private EarningRepository $earningRepo;
+  private VenueRatingRepository $venueRatingRepo;
   private RoleRepository $roleRepo;
   private OwnerRepository $ownerRepo;
   private OwnerPaymentService $ownerPaymentService;
@@ -30,6 +36,9 @@ class OwnerController
     $this->historyService = new HistoryService($connection);
     $this->venueRepo = new VenueRepository($connection);
     $this->bookingRepo = new BookingRepository($connection);
+    $this->ticketRepo = new BookingTicketRepository($connection);
+    $this->earningRepo = new EarningRepository($connection);
+    $this->venueRatingRepo = new VenueRatingRepository($connection);
     $this->roleRepo = new RoleRepository($connection);
     $this->ownerRepo = new OwnerRepository($connection);
     $this->ownerPaymentService = new OwnerPaymentService($connection);
@@ -52,6 +61,29 @@ class OwnerController
     foreach ($venues as $venue) {
       $bookings[$venue->getIdVenue()] = $this->bookingRepo->findByVenue($venue->getIdVenue());
     }
+
+    $yearMonth = date('Y-m');
+    $earnings = $this->earningRepo->totalsByOwnerForMonth($owner->getIdOwner(), $yearMonth);
+    $nextBooking = $this->bookingRepo->nextBookingByOwner($owner->getIdOwner(), date('Y-m-d'));
+    $averageRating = $this->venueRatingRepo->findAverageByOwner($owner->getIdOwner());
+
+    $monthNames = [
+      1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+      5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+      9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
+    ];
+
+    $stats = [
+      'locales'       => count($venues),
+      'porRevisar'    => $this->ticketRepo->countPendingByOwner($owner->getIdOwner()),
+      'ganancias'     => $earnings['ownerAmount'],
+      'comision'      => $earnings['commission'],
+      'totalBruto'    => $earnings['total'],
+      'reservasMes'   => $this->bookingRepo->countByOwnerForMonth($owner->getIdOwner(), $yearMonth),
+      'proximaReserva'=> $nextBooking,
+      'rating'        => $averageRating,
+      'monthLabel'    => $monthNames[(int) date('n')] . ' ' . date('Y'),
+    ];
 
     require_once __DIR__ . '/../View/Owner/Dashboard.php';
   }
@@ -347,6 +379,7 @@ class OwnerController
     $owner = $_SESSION['user'];
 
     $idPaymentMethod = (int) ($_POST['paymentMethodId'] ?? 0);
+    $ownerPaymentPk = (int) ($_POST['idOwnerPayment'] ?? 0);
     $holder = trim($_POST['holder'] ?? '');
     $account = trim($_POST['account'] ?? '');
     $instructions = trim($_POST['instructions'] ?? '');
@@ -360,7 +393,8 @@ class OwnerController
         $holder,
         $account,
         $instructions,
-        $active
+        $active,
+        $ownerPaymentPk
       );
 
       if (is_ajax()) {

@@ -32,14 +32,15 @@ $isOwnerView = current_user_type() === 'owner';
           <th>Local</th>
           <th>Fecha</th>
           <th>Estado</th>
+          <th>Comprobante</th>
           <th class="actions">Acciones</th>
         </tr>
       </thead>
       <tbody>
         <?php foreach ($bookings as $b): ?>
           <tr>
-            <?php if ($isOwnerView): ?><td>#<?= (int) $b->getIdClient() ?></td><?php endif; ?>
-            <td><strong>Local #<?= (int) $b->getIdLocal() ?></strong></td>
+            <?php if ($isOwnerView): ?><td><?= e($clientNames[$b->getIdBooking()] ?? '#' . (int) $b->getIdClient()) ?></td><?php endif; ?>
+            <td><strong><?= e($venueNames[$b->getIdBooking()] ?? 'Local #' . (int) $b->getIdLocal()) ?></strong></td>
             <td><?= e(date('d/m/Y', strtotime($b->getBookingDate()))) ?></td>
             <td>
               <?php
@@ -52,6 +53,7 @@ $isOwnerView = current_user_type() === 'owner';
               ?>
               <span class="badge <?= $badge ?>"><?= e($b->getBookingState()) ?></span>
             </td>
+            <td><?= ($hasTicket[$b->getIdBooking()] ?? false) ? 'Sí' : 'No' ?></td>
             <td>
               <a class="btn btn-sm btn-primary" href="<?= e(base_url('booking', 'detail', ['id' => $b->getIdBooking()])) ?>">Ver detalle</a>
             </td>

@@ -189,6 +189,28 @@ return (int) $this->connection->lastInsertId();
   }
 
   // =========================================================
+  // PROMEDIO DE ESTRELLAS DE TODOS LOS LOCALES DE UN OWNER
+  // =========================================================
+  public function findAverageByOwner(int $idOwner): ?float
+  {
+    $sql = "
+      SELECT AVG(vr.tbvenueratingstars) AS average
+      FROM tbvenuerating vr
+      INNER JOIN tbvenue v
+        ON v.tbvenueid = vr.tbvenueratingvenueid
+      WHERE v.tbvenueownerid = :idOwner
+        AND vr.tbvenueratingactive = true
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([':idOwner' => $idOwner]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    return $row && $row['average'] !== null ? (float) $row['average'] : null;
+  }
+
+  // =========================================================
   // CANTIDAD DE CALIFICACIONES DE UN LOCAL
   // =========================================================
   public function countByVenue(int $idVenue): int
