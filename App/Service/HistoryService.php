@@ -28,9 +28,6 @@ class HistoryService
     $this->locationRepo = new LocationRepository($connection);
   }
 
-  // =========================================================
-  // GUARDAR ACCIÓN
-  // =========================================================
   public function logAction(
     int $roleId,
     string $action,
@@ -48,9 +45,6 @@ class HistoryService
     $this->historyRepo->save($history);
   }
 
-  // =========================================================
-  // GUARDAR VISUALIZACIÓN DE VENUE
-  // =========================================================
   public function logVenueView(
     int $roleId,
     int $venueId
@@ -64,9 +58,6 @@ class HistoryService
     );
   }
 
-  // =========================================================
-  // GUARDAR RESERVA DE VENUE
-  // =========================================================
   public function logVenueBooking(
     int $roleId,
     int $venueId
@@ -80,9 +71,6 @@ class HistoryService
     );
   }
 
-  // =========================================================
-  // GUARDAR COMPRA DE VENUE
-  // =========================================================
   public function logVenuePurchase(
     int $roleId,
     int $venueId
@@ -96,9 +84,6 @@ class HistoryService
     );
   }
 
-  // =========================================================
-  // GUARDAR BÚSQUEDA (por ubicación y/o tipo)
-  // =========================================================
   public function logVenueSearch(int $roleId, array $filters = [], ?string $type = null): void
   {
     $locationId = null;
@@ -119,17 +104,11 @@ class HistoryService
     );
   }
 
-  // =========================================================
-  // LISTAR HISTORIAL
-  // =========================================================
   public function listByRole(int $roleId): array
   {
     return $this->historyRepo->listByRole($roleId);
   }
 
-  // =========================================================
-  // RECOMENDAR VENUES
-  // =========================================================
   public function recommendVenues(
     int $roleId,
     int $limit = 5
@@ -149,19 +128,16 @@ class HistoryService
       }
     }
 
-    // Usuario nuevo o con poco historial
     if (count($venueHistory) < self::MIN_HISTORY_FOR_PERSONAL) {
 
       return $this->getPopularVenues($limit);
     }
 
-    // Usuario con suficiente historial
     $personalRecommendations = $this->getPersonalRecommendations(
       $venueHistory,
       $limit
     );
 
-    // Ya tenemos suficientes recomendaciones
     if (count($personalRecommendations) >= $limit) {
 
       return array_slice(
@@ -171,7 +147,6 @@ class HistoryService
       );
     }
 
-    // Faltan recomendaciones
     $excludeIds = [];
 
     foreach ($personalRecommendations as $venue) {
@@ -194,7 +169,6 @@ class HistoryService
       $popularRecommendations
     );
 
-    // Si aún faltan, priorizar búsquedas recientes por ubicación
     if (count($merged) < $limit) {
       $locationMatches = $this->getLocationRecommendations(
         $roleId,
@@ -208,9 +182,6 @@ class HistoryService
     return $merged;
   }
 
-  // =========================================================
-  // RECOMENDACIONES POR UBICACIÓN (provincias buscadas recientemente)
-  // =========================================================
   private function getLocationRecommendations(
     int $roleId,
     array $excludeIds,
@@ -219,7 +190,6 @@ class HistoryService
 
     $history = $this->historyRepo->listByRole($roleId);
 
-    // Provincias asociadas a búsquedas recientes (SEARCH con ubicación)
     $provinces = [];
 
     foreach ($history as $item) {
@@ -269,9 +239,6 @@ class HistoryService
     return $recommendations;
   }
 
-  // =========================================================
-  // RECOMENDACIONES PERSONALIZADAS
-  // =========================================================
   private function getPersonalRecommendations(
     array $venueHistory,
     int $limit
@@ -284,8 +251,6 @@ class HistoryService
 
       $venueId = $history->getEntityId();
 
-      // Si reservó o compró este Venue,
-      // no queremos recomendárselo nuevamente.
       if (
         $history->getAction() === HistoryAction::BOOKING ||
         $history->getAction() === HistoryAction::PURCHASE
@@ -310,30 +275,24 @@ class HistoryService
       }
     }
 
-    // No encontramos ningún tipo
     if (empty($typeCounts)) {
       return [];
     }
 
-    // Ordenamos los tipos de mayor a menor
     arsort($typeCounts);
 
-    // Obtenemos el tipo más interactuado
     $topType = array_key_first($typeCounts);
 
-    // Obtenemos todos los venues activos
     $venues = $this->venueService->findActive();
 
     $recommendations = [];
 
     foreach ($venues as $venue) {
 
-      // Debe ser del mismo tipo
       if ($venue->getTypeVenue() !== $topType) {
         continue;
       }
 
-      // No recomendar uno que ya reservó o compró
       if (isset($convertedIds[$venue->getIdVenue()])) {
         continue;
       }
@@ -348,9 +307,6 @@ class HistoryService
     return $recommendations;
   }
 
-  // =========================================================
-  // VENUES MÁS POPULARES
-  // =========================================================
   private function getPopularVenues(
     int $limit,
     array $excludeIds = []
@@ -373,7 +329,6 @@ class HistoryService
 
       $venue = $this->venueService->findById($venueId);
 
-      // Solo venues activos
       if ($venue !== null && $venue->getIsActive()) {
 
         $recommendations[] = $venue;
