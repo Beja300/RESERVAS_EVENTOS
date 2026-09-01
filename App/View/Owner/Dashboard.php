@@ -16,7 +16,7 @@ $next = $stats['proximaReserva'] ?? null;
   <a class="btn btn-primary" href="<?= e(base_url('venue', 'showForm')) ?>">+ Nuevo local</a>
 </div>
 
-<div style="margin-bottom:24px;">
+<div style="margin-bottom:24px; background-color:white;padding:16px;border-radius:6px;">
   <p class="muted" style="margin-bottom:12px;">Resumen de <?= e($monthLabel) ?></p>
   <div class="grid grid-4">
     <div class="stat"><div class="value"><?= (int) ($stats['locales'] ?? 0) ?></div><div class="label">Locales</div></div>

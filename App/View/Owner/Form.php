@@ -156,4 +156,5 @@ if ($owner === null) {
   </form>
 </div>
 
+<script src="<?= e(js_url('owner/form')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>
