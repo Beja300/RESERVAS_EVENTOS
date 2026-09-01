@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../Configuration/DataBase.php';
-require_once __DIR__ . '/PaymentMethod.php';
+require_once __DIR__ . '/../Model/PaymentMethod.php';
 
 class PaymentMethodRepository
 {
@@ -13,6 +13,55 @@ class PaymentMethodRepository
   }
 
   // =========================================================
+  // GUARDAR
+  // =========================================================
+  public function save(PaymentMethod $paymentMethod): int
+  {
+    $sql = "
+            INSERT INTO tbpaymentmethod (
+                tbpaymentmethodtype,
+                tbpaymentmethodactive
+            )
+            VALUES (
+                :paymentMethod,
+                :isActive
+            )
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':paymentMethod' => $paymentMethod->getPaymentMethod(),
+      ':isActive'      => (int) $paymentMethod->getIsActive()
+    ]);
+
+    return (int) $this->connection->lastInsertId();
+  }
+
+
+  // =========================================================
+  // OBTENER TODOS (admin: muestra activos e inactivos)
+  // =========================================================
+  public function findAll(): array
+  {
+    $sql = "
+            SELECT
+                tbpaymentmethodid,
+                tbpaymentmethodtype,
+                tbpaymentmethodactive
+
+            FROM tbpaymentmethod
+
+            ORDER BY tbpaymentmethodactive DESC, tbpaymentmethodtype ASC
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute();
+
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+  }
+
+  // =========================================================
   // OBTENER ACTIVOS
   // =========================================================
   public function findActive(): array
@@ -20,14 +69,14 @@ class PaymentMethodRepository
     $sql = "
             SELECT
                 tbpaymentmethodid,
-                tbpaymentmethodname,
-                tbpaymentmethodisactive
+                tbpaymentmethodtype,
+                tbpaymentmethodactive
 
             FROM tbpaymentmethod
 
-            WHERE tbpaymentmethodisactive = true
+            WHERE tbpaymentmethodactive = true
 
-            ORDER BY tbpaymentmethodname ASC
+            ORDER BY tbpaymentmethodtype ASC
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -45,8 +94,8 @@ class PaymentMethodRepository
     $sql = "
             SELECT
                 tbpaymentmethodid,
-                tbpaymentmethodname,
-                tbpaymentmethodisactive
+                tbpaymentmethodtype,
+                tbpaymentmethodactive
 
             FROM tbpaymentmethod
 
@@ -64,6 +113,45 @@ class PaymentMethodRepository
     return $row ? $this->mapRow($row) : null;
   }
 
+  // =========================================================
+  // ACTUALIZAR
+  // =========================================================
+  public function update(PaymentMethod $paymentMethod): void
+  {
+    $sql = "
+            UPDATE tbpaymentmethod
+            SET    tbpaymentmethodtype   = :type,
+                   tbpaymentmethodactive = :isActive
+            WHERE  tbpaymentmethodid = :idPaymentMethod
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':type'            => $paymentMethod->getPaymentMethod(),
+      ':isActive'        => (int) $paymentMethod->getIsActive(),
+      ':idPaymentMethod' => $paymentMethod->getIdPaymentMethod()
+    ]);
+  }
+
+  // =========================================================
+  // DESACTIVAR (soft delete: se oculta de los catálogos activos)
+  // =========================================================
+  public function deactivate(int $idPaymentMethod): void
+  {
+    $sql = "
+            UPDATE tbpaymentmethod
+            SET    tbpaymentmethodactive = 0
+            WHERE  tbpaymentmethodid = :idPaymentMethod
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':idPaymentMethod' => $idPaymentMethod
+    ]);
+  }
+
 
   // =========================================================
   // MAPEO FILA -> OBJETO
@@ -72,8 +160,13 @@ class PaymentMethodRepository
   {
     return new PaymentMethod(
       idPaymentMethod: (int) $row['tbpaymentmethodid'],
-      paymentMethod: $row['tbpaymentmethodname'],
-      isActive: (bool) $row['tbpaymentmethodisactive']
+      paymentMethod: $row['tbpaymentmethodtype'],
+      isActive: $this->toBool($row['tbpaymentmethodactive'])
     );
+  }
+
+  private function toBool(mixed $value): bool
+  {
+    return $value === 1 || $value === '1' || $value === true;
   }
 }

@@ -8,11 +8,12 @@ class Notification
   private int $idNotification;
   private int $idRol;
   private string $messageNotification;
+  private ?string $link;
   private string $dateNotification;
   private bool $isRead;
   private bool $isActive;
 
-  public function __construct(int $idNotification, int $idRol, string $messageNotification, string $dateNotification, bool $isActive, bool $isRead = false)
+  public function __construct(int $idNotification, int $idRol, string $messageNotification, string $dateNotification, bool $isActive, bool $isRead = false, ?string $link = null)
   {
     $this->idNotification = $idNotification;
     $this->idRol = $idRol;
@@ -20,6 +21,7 @@ class Notification
     $this->dateNotification = $dateNotification;
     $this->isRead = $isRead;
     $this->isActive = $isActive;
+    $this->link = $link;
   }
 
   // Getters
@@ -41,6 +43,11 @@ class Notification
   public function getDateNotification(): string
   {
     return $this->dateNotification;
+  }
+
+  public function getLink(): ?string
+  {
+    return $this->link;
   }
 
   public function getIsRead(): bool
@@ -72,6 +79,11 @@ class Notification
   public function setDateNotification(string $dateNotification): void
   {
     $this->dateNotification = $dateNotification;
+  }
+
+  public function setLink(?string $link): void
+  {
+    $this->link = $link;
   }
 
   public function setIsRead(bool $isRead): void

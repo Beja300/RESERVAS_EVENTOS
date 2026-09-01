@@ -1,267 +1,354 @@
 <?php
 
 require_once __DIR__ . '/../../Configuration/DataBase.php';
-require_once __DIR__ . '/Owner.php';
+require_once __DIR__ . '/../Model/Owner.php';
 
 class OwnerRepository
 {
-  private PDO $connection;
+    private PDO $connection;
 
-  public function __construct(PDO $connection)
-  {
-    $this->connection = $connection;
-  }
+    public function __construct(PDO $connection)
+    {
+        $this->connection = $connection;
+    }
 
-  // =========================================================
-  // GUARDAR
-  // =========================================================
-  public function save(Owner $owner): bool
-  {
-    try {
-      $this->connection->beginTransaction();
+    // =========================================================
+    // GUARDAR (tbrole + tbowner + tbroleowner)
+    // =========================================================
+    public function save(Owner $owner): bool
+    {
+        try {
+            $this->connection->beginTransaction();
 
-      $sqlRole = "
-                INSERT INTO tbrole (
-                    tbrolename,
-                    tbroleemail,
-                    tbrolepassword,
-                    tbrolephonenumber,
-                    tbroleisactive
+            $idRole = $this->insertRole($owner);
+
+            $sqlProfile = "
+                INSERT INTO tbowner (
+                    tbownerfirstname,
+                    tbownerlastname,
+                    tbowneralias,
+                    tbowneridentificationnumber,
+                    tbownerimage,
+                    tbowneractive
                 )
                 VALUES (
-                    :name,
-                    :email,
-                    :password,
-                    :phoneNumber,
+                    :firstName,
+                    :lastName,
+                    :alias,
+                    :identificationNumber,
+                    :image,
                     :isActive
                 )
             ";
+            $stmtProfile = $this->connection->prepare($sqlProfile);
+            $stmtProfile->execute([
+                ':firstName'             => $owner->getFirstNameOwner(),
+                ':lastName'              => $owner->getLastNameOwner() !== '' ? $owner->getLastNameOwner() : null,
+                ':alias'                 => $owner->getAliasOwner() !== '' ? $owner->getAliasOwner() : null,
+                ':identificationNumber'  => $owner->getIdentificationNumberOwner() !== '' ? $owner->getIdentificationNumberOwner() : null,
+                ':image'                 => $owner->getImageOwner() ?: null,
+                ':isActive'              => $this->toDb($owner->getIsOwnerActive()),
+            ]);
 
-      $stmtRole = $this->connection->prepare($sqlRole);
+            $idOwner = (int) $this->connection->lastInsertId();
 
-      $stmtRole->execute([
-        ':name'        => $owner->getName(),
-        ':email'       => $owner->getEmail(),
-        ':password'    => password_hash($owner->getPassword(), PASSWORD_DEFAULT),
-        ':phoneNumber' => $owner->getPhoneNumber(),
-        ':isActive'    => $owner->getIsActive()
-      ]);
-
-      // tbroleownerid comparte el mismo valor que tbroleid (PK compartida, no es FK)
-      $idRole = (int) $this->connection->lastInsertId();
-
-      $sqlOwner = "
+            $sqlLink = "
                 INSERT INTO tbroleowner (
-                    tbroleownerid,
-                    tbroleownerfirstname,
-                    tbroleownerlastname,
-                    tbroleowneralias,
-                    tbroleowneridentificationnumber,
-                    tbroleownerisactive,
                     tbroleownerrolid,
-                    tbroleownerimage
+                    tbroleownerownerid,
+                    tbroleowneractive
                 )
                 VALUES (
+                    :idRole,
                     :idOwner,
-                    :firstNameOwner,
-                    :lastNameOwner,
-                    :aliasOwner,
-                    :identificationNumberOwner,
-                    :isOwnerActive,
-                    :idRol,
-                    :imageOwner
+                    :isActive
                 )
             ";
+            $stmtLink = $this->connection->prepare($sqlLink);
+            $stmtLink->execute([
+                ':idRole'   => $idRole,
+                ':idOwner'  => $idOwner,
+                ':isActive' => $this->toDb($owner->getIsOwnerActive()),
+            ]);
 
-      $stmtOwner = $this->connection->prepare($sqlOwner);
+            $owner->setIdOwner($idOwner);
+            $owner->setIdRol($idRole);
 
-      $stmtOwner->execute([
-        ':idOwner'                   => $idRole,
-        ':firstNameOwner'            => $owner->getFirstNameOwner(),
-        ':lastNameOwner'             => $owner->getLastNameOwner(),
-        ':aliasOwner'                => $owner->getAliasOwner(),
-        ':identificationNumberOwner' => $owner->getIdentificationNumberOwner(),
-        ':isOwnerActive'             => $owner->getIsOwnerActive(),
-        ':idRol'                     => $owner->getIdRol(),
-        ':imageOwner'                => $owner->getImageOwner()
-      ]);
-
-      $owner->setIdOwner($idRole);
-
-      $this->connection->commit();
-
-      return true;
-    } catch (PDOException $e) {
-
-      $this->connection->rollBack();
-
-      return false;
+            $this->connection->commit();
+            return true;
+        } catch (PDOException $e) {
+            $this->connection->rollBack();
+            return false;
+        }
     }
-  }
 
+    // =========================================================
+    // ACTUALIZAR PERFIL DEL PROPIETARIO (tbowner)
+    // Recibe un Owner ya actualizado; sincroniza tbownerfirstname
+    // con el nombre base (tbrole) y actualiza sus datos propios.
+    // =========================================================
+    public function updateProfile(Owner $owner): bool
+    {
+        $sql = "
+            UPDATE tbowner
+            SET
+                tbownerfirstname = :firstName,
+                tbownerlastname = :lastName,
+                tbowneralias = :alias,
+                tbowneridentificationnumber = :identificationNumber,
+                tbownerimage = :image
+            WHERE tbownerid = :idOwner
+        ";
 
-  // =========================================================
-  // BUSCAR POR EMAIL
-  // =========================================================
-  public function findByEmail(string $email): ?Owner
-  {
-    $sql = "
+        $stmt = $this->connection->prepare($sql);
+
+        $ownerImage = $owner->getImageOwner();
+
+        return $stmt->execute([
+            ':firstName'            => $owner->getFirstNameOwner(),
+            ':lastName'             => $owner->getLastNameOwner() !== '' ? $owner->getLastNameOwner() : null,
+            ':alias'                => $owner->getAliasOwner() !== '' ? $owner->getAliasOwner() : null,
+            ':identificationNumber' => $owner->getIdentificationNumberOwner() !== '' ? $owner->getIdentificationNumberOwner() : null,
+            ':image'                => $ownerImage !== '' ? $ownerImage : null,
+            ':idOwner'              => $owner->getIdOwner(),
+        ]);
+    }
+
+    // =========================================================
+    // BUSCAR POR EMAIL
+    // =========================================================
+    public function findByEmail(string $email): ?Owner
+    {
+        $sql = "
             SELECT
                 r.tbroleid,
                 r.tbrolename,
                 r.tbroleemail,
                 r.tbrolepassword,
-                r.tbrolephonenumber,
-                r.tbroleisactive,
-
-                o.tbroleownerid,
-                o.tbroleownerfirstname,
-                o.tbroleownerlastname,
-                o.tbroleowneralias,
-                o.tbroleowneridentificationnumber,
-                o.tbroleownerisactive,
-                o.tbroleownerrolid,
-                o.tbroleownerimage
-
+                r.tbrolephone,
+                r.tbroleactive,
+                p.tbownerid,
+                p.tbownerfirstname,
+                p.tbownerlastname,
+                p.tbowneralias,
+                p.tbowneridentificationnumber,
+                p.tbownerimage,
+                p.tbowneractive
             FROM tbrole r
-
-            INNER JOIN tbroleowner o
-                ON o.tbroleownerid = r.tbroleid
-
+            INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
+            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
             WHERE r.tbroleemail = :email
-
             LIMIT 1
         ";
 
-    $stmt = $this->connection->prepare($sql);
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute([':email' => $email]);
 
-    $stmt->execute([
-      ':email' => $email
-    ]);
-
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$row) {
-      return null;
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->mapRow($row) : null;
     }
 
-    return $this->mapRow($row);
-  }
-
-
-  // =========================================================
-  // BUSCAR POR ID DE OWNER
-  // =========================================================
-  public function findByOwnerPk(int $ownerPk): ?Owner
-  {
-    $sql = "
+    // =========================================================
+    // BUSCAR POR ID DE OWNER (id real del perfil tbowner)
+    // =========================================================
+    public function findByOwnerPk(int $ownerPk): ?Owner
+    {
+        $sql = "
             SELECT
                 r.tbroleid,
                 r.tbrolename,
                 r.tbroleemail,
                 r.tbrolepassword,
-                r.tbrolephonenumber,
-                r.tbroleisactive,
-
-                o.tbroleownerid,
-                o.tbroleownerfirstname,
-                o.tbroleownerlastname,
-                o.tbroleowneralias,
-                o.tbroleowneridentificationnumber,
-                o.tbroleownerisactive,
-                o.tbroleownerrolid,
-                o.tbroleownerimage
-
-            FROM tbroleowner o
-
-            INNER JOIN tbrole r
-                ON r.tbroleid = o.tbroleownerid
-
-            WHERE o.tbroleownerid = :idOwner
-
+                r.tbrolephone,
+                r.tbroleactive,
+                p.tbownerid,
+                p.tbownerfirstname,
+                p.tbownerlastname,
+                p.tbowneralias,
+                p.tbowneridentificationnumber,
+                p.tbownerimage,
+                p.tbowneractive
+            FROM tbrole r
+            INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
+            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
+            WHERE p.tbownerid = :idOwner
             LIMIT 1
         ";
 
-    $stmt = $this->connection->prepare($sql);
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute([':idOwner' => $ownerPk]);
 
-    $stmt->execute([
-      ':idOwner' => $ownerPk
-    ]);
-
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$row) {
-      return null;
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->mapRow($row) : null;
     }
 
-    return $this->mapRow($row);
-  }
-
-
-  // =========================================================
-  // OBTENER TODOS
-  // =========================================================
-  public function findAll(): array
-  {
-    $sql = "
+    // =========================================================
+    // BUSCAR POR ID DE ROL
+    // =========================================================
+    public function findByRoleId(int $roleId): ?Owner
+    {
+        $sql = "
             SELECT
                 r.tbroleid,
                 r.tbrolename,
                 r.tbroleemail,
                 r.tbrolepassword,
-                r.tbrolephonenumber,
-                r.tbroleisactive,
-
-                o.tbroleownerid,
-                o.tbroleownerfirstname,
-                o.tbroleownerlastname,
-                o.tbroleowneralias,
-                o.tbroleowneridentificationnumber,
-                o.tbroleownerisactive,
-                o.tbroleownerrolid,
-                o.tbroleownerimage
-
-            FROM tbroleowner o
-
-            INNER JOIN tbrole r
-                ON r.tbroleid = o.tbroleownerid
-
-            ORDER BY o.tbroleownerid ASC
+                r.tbrolephone,
+                r.tbroleactive,
+                p.tbownerid,
+                p.tbownerfirstname,
+                p.tbownerlastname,
+                p.tbowneralias,
+                p.tbowneridentificationnumber,
+                p.tbownerimage,
+                p.tbowneractive
+            FROM tbrole r
+            INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
+            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
+            WHERE r.tbroleid = :idRole
+            LIMIT 1
         ";
 
-    $stmt = $this->connection->prepare($sql);
-    $stmt->execute();
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute([':idRole' => $roleId]);
 
-    $owners = [];
-
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-      $owners[] = $this->mapRow($row);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->mapRow($row) : null;
     }
 
-    return $owners;
-  }
+    // =========================================================
+    // OBTENER TODOS
+    // =========================================================
+    public function findAll(): array
+    {
+        $sql = "
+            SELECT
+                r.tbroleid,
+                r.tbrolename,
+                r.tbroleemail,
+                r.tbrolepassword,
+                r.tbrolephone,
+                r.tbroleactive,
+                p.tbownerid,
+                p.tbownerfirstname,
+                p.tbownerlastname,
+                p.tbowneralias,
+                p.tbowneridentificationnumber,
+                p.tbownerimage,
+                p.tbowneractive
+            FROM tbrole r
+            INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
+            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
+            ORDER BY p.tbownerid ASC
+        ";
 
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute();
 
-  // =========================================================
-  // MAPEO FILA -> OBJETO
-  // =========================================================
-  private function mapRow(array $row): Owner
-  {
-    return new Owner(
-      id: (int) $row['tbroleid'],
-      name: $row['tbrolename'],
-      email: $row['tbroleemail'],
-      password: $row['tbrolepassword'],
-      isActive: (bool) $row['tbroleisactive'],
-      idOwner: (int) $row['tbroleownerid'],
-      firstName: $row['tbroleownerfirstname'],
-      lastName: $row['tbroleownerlastname'],
-      alias: $row['tbroleowneralias'],
-      identificationNumber: $row['tbroleowneridentificationnumber'],
-      isOwnerActive: (bool) $row['tbroleownerisactive'],
-      idRol: (int) $row['tbroleownerrolid'],
-      imageOwner: $row['tbroleownerimage'],
-      phoneNumber: $row['tbrolephonenumber']
-    );
-  }
+        $owners = [];
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $owners[] = $this->mapRow($row);
+        }
+        return $owners;
+    }
+
+    // =========================================================
+    // BUSCAR POR NÚMERO DE IDENTIFICACIÓN (único en tbowner)
+    // =========================================================
+    public function findByIdentificationNumber(string $identificationNumber): ?Owner
+    {
+        $sql = "
+            SELECT
+                r.tbroleid,
+                r.tbrolename,
+                r.tbroleemail,
+                r.tbrolepassword,
+                r.tbrolephone,
+                r.tbroleactive,
+                p.tbownerid,
+                p.tbownerfirstname,
+                p.tbownerlastname,
+                p.tbowneralias,
+                p.tbowneridentificationnumber,
+                p.tbownerimage,
+                p.tbowneractive
+            FROM tbrole r
+            INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
+            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
+            WHERE p.tbowneridentificationnumber = :identificationNumber
+            LIMIT 1
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute([':identificationNumber' => $identificationNumber]);
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $this->mapRow($row) : null;
+    }
+
+    // =========================================================
+    // COMPARTIDO CON ADMIN/CLIENT: insertar registro base tbrole
+    // =========================================================
+    private function insertRole(Owner $owner): int
+    {
+        $sqlRole = "
+            INSERT INTO tbrole (
+                tbrolename,
+                tbroleemail,
+                tbrolepassword,
+                tbrolephone,
+                tbroleactive
+            )
+            VALUES (
+                :name,
+                :email,
+                :password,
+                :phoneNumber,
+                :isActive
+            )
+        ";
+
+        $stmtRole = $this->connection->prepare($sqlRole);
+        $stmtRole->execute([
+            ':name'        => $owner->getName(),
+            ':email'       => $owner->getEmail(),
+            ':password'    => password_hash($owner->getPassword(), PASSWORD_DEFAULT),
+            ':phoneNumber' => $owner->getPhoneNumber(),
+            ':isActive'    => $this->toDb($owner->getIsActive()),
+        ]);
+
+        return (int) $this->connection->lastInsertId();
+    }
+
+    // =========================================================
+    // MAPEO FILA -> OBJETO
+    // =========================================================
+    private function mapRow(array $row): Owner
+    {
+        return new Owner(
+            id: (int) $row['tbroleid'],
+            name: $row['tbrolename'],
+            email: $row['tbroleemail'],
+            password: $row['tbrolepassword'],
+            isActive: $this->toBool($row['tbroleactive']),
+            idOwner: (int) ($row['tbownerid'] ?? 0),
+            lastName: $row['tbownerlastname'] ?? '',
+            alias: $row['tbowneralias'] ?? '',
+            identificationNumber: $row['tbowneridentificationnumber'] ?? '',
+            isOwnerActive: $this->toBool($row['tbowneractive'] ?? $row['tbroleactive']),
+            idRol: (int) $row['tbroleid'],
+            imageOwner: $row['tbownerimage'] ?? '',
+            phoneNumber: $row['tbrolephone']
+        );
+    }
+
+    private function toBool(mixed $value): bool
+    {
+        return $value === 1 || $value === '1' || $value === true;
+    }
+
+    private function toDb(bool $value): int
+    {
+        return $value ? 1 : 0;
+    }
 }

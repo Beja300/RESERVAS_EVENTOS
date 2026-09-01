@@ -2,10 +2,10 @@
 
 require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
-require_once __DIR__ . '/../Model/RoleRepository.php';
-require_once __DIR__ . '/../Model/AdminRepository.php';
-require_once __DIR__ . '/../Model/ClientRepository.php';
-require_once __DIR__ . '/../Model/OwnerRepository.php';
+require_once __DIR__ . '/../Repository/RoleRepository.php';
+require_once __DIR__ . '/../Repository/AdminRepository.php';
+require_once __DIR__ . '/../Repository/ClientRepository.php';
+require_once __DIR__ . '/../Repository/OwnerRepository.php';
 
 class AuthService
 {
@@ -45,6 +45,13 @@ class AuthService
     {
         if ($phoneNumber !== null && $phoneNumber !== '' && !preg_match('/^[0-9]{8}$/', $phoneNumber)) {
             throw new BusinessRuleException("El teléfono debe tener 8 dígitos.");
+        }
+    }
+
+    public function validateIdentificationIsUnique(string $identificationNumber): void
+    {
+        if ($this->ownerRepo->findByIdentificationNumber($identificationNumber) !== null) {
+            throw new BusinessRuleException("Ya existe un propietario registrado con ese número de identificación.");
         }
     }
 
@@ -94,6 +101,10 @@ class AuthService
         $this->validatePasswordStrength($password);
         $this->validatePhoneFormat($phoneNumber);
 
+        if ($ownerIdentification !== null && trim($ownerIdentification) !== '') {
+            $this->validateIdentificationIsUnique($ownerIdentification);
+        }
+
         $owner = new Owner(
             id: 0,
             name: $name,
@@ -101,7 +112,6 @@ class AuthService
             password: $password,
             isActive: true,
             idOwner: 0,
-            firstName: $ownerFirstName,
             lastName: $ownerLastName ?? '',
             alias: $ownerAlias ?? '',
             identificationNumber: $ownerIdentification ?? '',

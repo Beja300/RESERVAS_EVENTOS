@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../Configuration/DataBase.php';
-require_once __DIR__ . '/Invoice.php';
+require_once __DIR__ . '/../Model/Invoice.php';
 
 class InvoiceRepository
 {
@@ -23,7 +23,7 @@ class InvoiceRepository
                 tbinvoicepaymentmethodid,
                 tbinvoicedate,
                 tbinvoicestatus,
-                tbinvoiceisactive
+                tbinvoiceactive
             )
             VALUES (
                 :idClientBooking,
@@ -41,7 +41,7 @@ class InvoiceRepository
       ':idPaymentMethod' => $invoice->getIdPaymentMethod(),
       ':dateInvoice'     => $invoice->getDateInvoice(),
       ':statusInvoice'   => $invoice->getStatusInvoice(),
-      ':isActiveInvoice' => $invoice->getIsActiveInvoice()
+      ':isActiveInvoice' => $this->toDb($invoice->getIsActiveInvoice())
     ]);
 
     return (int) $this->connection->lastInsertId();
@@ -60,7 +60,7 @@ class InvoiceRepository
                 tbinvoicepaymentmethodid,
                 tbinvoicedate,
                 tbinvoicestatus,
-                tbinvoiceisactive
+                tbinvoiceactive
 
             FROM tbinvoice
 
@@ -110,7 +110,17 @@ class InvoiceRepository
       idPaymentMethod: (int) $row['tbinvoicepaymentmethodid'],
       dateInvoice: $row['tbinvoicedate'],
       statusInvoice: $row['tbinvoicestatus'],
-      isActiveInvoice: (bool) $row['tbinvoiceisactive']
+      isActiveInvoice: $this->toBool($row['tbinvoiceactive'])
     );
+  }
+
+  private function toBool(mixed $value): bool
+  {
+    return $value === 1 || $value === '1' || $value === true;
+  }
+
+  private function toDb(bool $value): int
+  {
+    return $value ? 1 : 0;
   }
 }

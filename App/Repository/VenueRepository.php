@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../Configuration/DataBase.php';
-require_once __DIR__ . '/Venue.php';
+require_once __DIR__ . '/../Model/Venue.php';
 
 class VenueRepository
 {
@@ -20,19 +20,21 @@ class VenueRepository
     $sql = "
             INSERT INTO tbvenue (
                 tbvenueownerid,
-                tbvenueubicationid,
+                tbvenuelocationid,
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
+                tbvenueprice,
                 tbvenueimage,
-                tbvenueisactive
+                tbvenueactive
             )
             VALUES (
                 :idOwner,
-                :idUbication,
+                :idLocation,
                 :nameVenue,
                 :typeVenue,
                 :capacityVenue,
+                :priceVenue,
                 :imageVenue,
                 :isActive
             )
@@ -42,12 +44,13 @@ class VenueRepository
 
     $stmt->execute([
       ':idOwner'       => $venue->getIdOwner(),
-      ':idUbication'   => $venue->getIdUbication(),
+      ':idLocation'   => $venue->getIdLocation(),
       ':nameVenue'     => $venue->getNameVenue(),
       ':typeVenue'     => $venue->getTypeVenue(),
       ':capacityVenue' => $venue->getCapacityVenue(),
+      ':priceVenue'    => $venue->getPriceVenue(),
       ':imageVenue'    => $venue->getImageVenue(),
-      ':isActive'      => $venue->getIsActive()
+      ':isActive'      => $this->toDb($venue->getIsActive())
     ]);
 
     return (int) $this->connection->lastInsertId();
@@ -63,12 +66,13 @@ class VenueRepository
             SELECT
                 tbvenueid,
                 tbvenueownerid,
-                tbvenueubicationid,
+                tbvenuelocationid,
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
+                tbvenueprice,
                 tbvenueimage,
-                tbvenueisactive
+                tbvenueactive
 
             FROM tbvenue
 
@@ -96,22 +100,86 @@ class VenueRepository
             SELECT
                 tbvenueid,
                 tbvenueownerid,
-                tbvenueubicationid,
+                tbvenuelocationid,
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
+                tbvenueprice,
                 tbvenueimage,
-                tbvenueisactive
+                tbvenueactive
 
             FROM tbvenue
 
-            WHERE tbvenueisactive = true
+            WHERE tbvenueactive = true
 
             ORDER BY tbvenuename ASC
         ";
 
     $stmt = $this->connection->prepare($sql);
     $stmt->execute();
+
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+  }
+
+
+  // =========================================================
+  // BUSCAR LOCALES ACTIVOS POR FILTROS (ubicación, tipo, texto)
+  // =========================================================
+  public function findByFilters(array $filters = []): array
+  {
+    $sql = "
+            SELECT
+                v.tbvenueid,
+                v.tbvenueownerid,
+                v.tbvenuelocationid,
+                v.tbvenuename,
+                v.tbvenuetype,
+                v.tbvenuecapacity,
+                v.tbvenueprice,
+                v.tbvenueimage,
+                v.tbvenueactive,
+                l.tblocationprovince
+            FROM tbvenue v
+            LEFT JOIN tblocation l ON l.tblocationid = v.tbvenuelocationid
+            WHERE v.tbvenueactive = true
+        ";
+
+    $conditions = [];
+    $params = [];
+
+    if (!empty($filters['province'])) {
+      $conditions[] = 'l.tblocationprovince = :province';
+      $params[':province'] = $filters['province'];
+    }
+
+    if (!empty($filters['canton'])) {
+      $conditions[] = 'l.tblocationcanton = :canton';
+      $params[':canton'] = $filters['canton'];
+    }
+
+    if (!empty($filters['district'])) {
+      $conditions[] = 'l.tblocationdistrict = :district';
+      $params[':district'] = $filters['district'];
+    }
+
+    if (!empty($filters['type'])) {
+      $conditions[] = 'v.tbvenuetype = :type';
+      $params[':type'] = $filters['type'];
+    }
+
+    if (!empty($filters['q'])) {
+      $conditions[] = '(v.tbvenuename LIKE :q OR v.tbvenuetype LIKE :q)';
+      $params[':q'] = '%' . $filters['q'] . '%';
+    }
+
+    if (!empty($conditions)) {
+      $sql .= ' AND ' . implode(' AND ', $conditions);
+    }
+
+    $sql .= ' ORDER BY v.tbvenuename ASC';
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute($params);
 
     return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
   }
@@ -126,12 +194,13 @@ class VenueRepository
             SELECT
                 tbvenueid,
                 tbvenueownerid,
-                tbvenueubicationid,
+                tbvenuelocationid,
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
+                tbvenueprice,
                 tbvenueimage,
-                tbvenueisactive
+                tbvenueactive
 
             FROM tbvenue
 
@@ -159,8 +228,9 @@ class VenueRepository
                 tbvenuename = :nameVenue,
                 tbvenuetype = :typeVenue,
                 tbvenuecapacity = :capacityVenue,
+                tbvenueprice = :priceVenue,
                 tbvenueimage = :imageVenue,
-                tbvenueisactive = :isActive
+                tbvenueactive = :isActive
             WHERE tbvenueid = :idVenue
         ";
 
@@ -170,8 +240,9 @@ class VenueRepository
       ':nameVenue'     => $venue->getNameVenue(),
       ':typeVenue'     => $venue->getTypeVenue(),
       ':capacityVenue' => $venue->getCapacityVenue(),
+      ':priceVenue'    => $venue->getPriceVenue(),
       ':imageVenue'    => $venue->getImageVenue(),
-      ':isActive'      => $venue->getIsActive(),
+      ':isActive'      => $this->toDb($venue->getIsActive()),
       ':idVenue'       => $venue->getIdVenue()
     ]);
   }
@@ -185,12 +256,23 @@ class VenueRepository
     return new Venue(
       idVenue: (int) $row['tbvenueid'],
       idOwner: (int) $row['tbvenueownerid'],
-      idUbication: (int) $row['tbvenueubicationid'],
+      idLocation: (int) $row['tbvenuelocationid'],
       nameVenue: $row['tbvenuename'],
-      typeVenue: $row['tbvenuetype'],
+      typeVenue: $row['tbvenuetype'] ?? '',
       capacityVenue: (int) $row['tbvenuecapacity'],
-      imageVenue: $row['tbvenueimage'],
-      isActive: (bool) $row['tbvenueisactive']
+      priceVenue: (float) $row['tbvenueprice'],
+      imageVenue: $row['tbvenueimage'] ?? '',
+      isActive: $this->toBool($row['tbvenueactive'])
     );
+  }
+
+  private function toBool(mixed $value): bool
+  {
+    return $value === 1 || $value === '1' || $value === true;
+  }
+
+  private function toDb(bool $value): int
+  {
+    return $value ? 1 : 0;
   }
 }

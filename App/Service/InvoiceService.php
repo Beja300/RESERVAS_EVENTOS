@@ -2,8 +2,8 @@
 
 require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/PaymentMethodService.php';
-require_once __DIR__ . '/../Model/InvoiceRepository.php';
-require_once __DIR__ . '/../Model/BookingRepository.php';
+require_once __DIR__ . '/../Repository/InvoiceRepository.php';
+require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Model/Invoice.php';
 
 class InvoiceService
@@ -14,15 +14,17 @@ class InvoiceService
 
     public function __construct()
     {
-        $this->invoiceRepo = new InvoiceRepository();
-        $this->bookingRepo = new BookingRepository();
-        $this->paymentMethodService =
-            new PaymentMethodService();
+        $connection = DataBase::getConnection();
+
+        $this->invoiceRepo = new InvoiceRepository($connection);
+        $this->bookingRepo = new BookingRepository($connection);
+        $this->paymentMethodService = new PaymentMethodService();
     }
 
     public function generate(
         int $bookingPk,
-        int $paymentMethodPk
+        int $paymentMethodPk,
+        string $date
     ): int {
         $booking =
             $this->bookingRepo->findById($bookingPk);
@@ -34,7 +36,7 @@ class InvoiceService
         }
 
         if (
-            $booking->getStatus() !== 'pendiente'
+            $booking->getBookingState() !== 'pendiente'
         ) {
             throw new BusinessRuleException(
                 'Solo se puede generar el pago para una reserva pendiente.'
@@ -58,9 +60,12 @@ class InvoiceService
 
         return $this->invoiceRepo->save(
             new Invoice(
-                $bookingPk,
+                0,
+                $booking->getIdBooking(),
                 $paymentMethodPk,
-                'pendiente'
+                date('Y-m-d'),
+                'pendiente',
+                true
             )
         );
     }
@@ -77,7 +82,7 @@ class InvoiceService
         }
 
         if (
-            $booking->getStatus() !== 'pendiente'
+            $booking->getBookingState() !== 'pendiente'
         ) {
             throw new BusinessRuleException(
                 'Esta reserva ya no está pendiente.'
@@ -96,7 +101,7 @@ class InvoiceService
         }
 
         if (
-            $invoice->getStatus() !== 'pendiente'
+            $invoice->getStatusInvoice() !== 'pendiente'
         ) {
             throw new BusinessRuleException(
                 'Este pago ya fue procesado.'
@@ -104,7 +109,7 @@ class InvoiceService
         }
 
         $this->invoiceRepo->updateStatus(
-            $invoice->getPk(),
+            $invoice->getIdInvoice(),
             'pagado'
         );
 
@@ -126,7 +131,7 @@ class InvoiceService
         }
 
         if (
-            $booking->getStatus() !== 'pendiente'
+            $booking->getBookingState() !== 'pendiente'
         ) {
             throw new BusinessRuleException(
                 'Esta reserva ya no está pendiente.'
@@ -145,7 +150,7 @@ class InvoiceService
         }
 
         if (
-            $invoice->getStatus() !== 'pendiente'
+            $invoice->getStatusInvoice() !== 'pendiente'
         ) {
             throw new BusinessRuleException(
                 'Este pago ya fue procesado.'
@@ -156,7 +161,7 @@ class InvoiceService
          * El pago queda rechazado.
          */
         $this->invoiceRepo->updateStatus(
-            $invoice->getPk(),
+            $invoice->getIdInvoice(),
             'rechazado'
         );
 
@@ -172,10 +177,10 @@ class InvoiceService
         );
     }
 
-    public function updatePaymentStatus(
-        int $bookingPk,
-        string $status
-    ): void {
+  public function updatePaymentStatus(
+    int $bookingPk,
+    string $status
+  ): void {
         if (
             !in_array(
                 $status,
@@ -209,7 +214,7 @@ class InvoiceService
         }
 
         $this->invoiceRepo->updateStatus(
-            $invoice->getPk(),
+            $invoice->getIdInvoice(),
             $status
         );
 
@@ -219,7 +224,6 @@ class InvoiceService
                 $bookingPk,
                 'confirmado'
             );
-
         } else {
 
             $this->bookingRepo->updateStatus(
@@ -227,5 +231,13 @@ class InvoiceService
                 'pendiente'
             );
         }
+    }
+
+    // =========================================================
+    // FACTURA DE UNA RESERVA (o null)
+    // =========================================================
+    public function findByBooking(int $bookingPk): ?Invoice
+    {
+        return $this->invoiceRepo->findByBooking($bookingPk);
     }
 }

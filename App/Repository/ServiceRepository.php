@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../Configuration/DataBase.php';
-require_once __DIR__ . '/Service.php';
+require_once __DIR__ . '/../Model/Service.php';
 
 class ServiceRepository
 {
@@ -10,6 +10,38 @@ class ServiceRepository
   public function __construct(PDO $connection)
   {
     $this->connection = $connection;
+    $this->ensureApprovalColumns();
+  }
+
+  // =========================================================
+  // AUTO-MIGRACIÓN: garantiza que tbservice tenga las columnas de
+  // aprobación que usa la app. Si faltan (BD creada antes de esta
+  // funcionalidad), las agrega de forma idempotente, para que el
+  // panel del Admin y del Owner funcionen sin pasos manuales.
+  // Se ejecuta en bloque try/catch: NUNCA debe romper una página
+  // si por cualquier motivo (permisos, BD, etc.) no puede alterar.
+  // =========================================================
+  private function ensureApprovalColumns(): void
+  {
+    try {
+      $stmt = $this->connection->prepare(
+        "SELECT COUNT(*) FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbservice' AND COLUMN_NAME = :col"
+      );
+
+      foreach (['tbserviceapprovedby', 'tbserviceapprovedon'] as $column) {
+        $stmt->execute([':col' => $column]);
+        if ((int) $stmt->fetchColumn() === 0) {
+          $type = $column === 'tbserviceapprovedby' ? 'INT NULL' : 'DATETIME NULL';
+          $this->connection->exec("ALTER TABLE tbservice ADD COLUMN {$column} {$type}");
+        }
+      }
+    } catch (\Throwable $e) {
+      // Si la auto-migración falla, lo dejamos pasar: la consulta real
+      // podrá fallar si faltan columnas, pero al menos no rompe la app
+      // en el constructor. Se loguea para diagnóstico.
+      error_log('[ServiceRepository] auto-migración no aplicada: ' . $e->getMessage());
+    }
   }
 
   // =========================================================
@@ -24,7 +56,7 @@ class ServiceRepository
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceisactive
+                tbserviceactive
             )
             VALUES (
                 :idLocal,
@@ -44,7 +76,7 @@ class ServiceRepository
       ':typeService'  => $service->getTypeService(),
       ':priceService' => $service->getPriceService(),
       ':stateService' => $service->getStateService(),
-      ':isActive'     => $service->getIsActive()
+      ':isActive'     => $this->toDb($service->getIsActive())
     ]);
 
     return (int) $this->connection->lastInsertId();
@@ -64,7 +96,9 @@ class ServiceRepository
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceisactive
+                tbserviceapprovedby,
+                tbserviceapprovedon,
+                tbserviceactive
 
             FROM tbservice
 
@@ -97,13 +131,15 @@ class ServiceRepository
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceisactive
+                tbserviceapprovedby,
+                tbserviceapprovedon,
+                tbserviceactive
 
             FROM tbservice
 
             WHERE tbservicelocalid = :idLocal
               AND tbservicestate = 'aprobado'
-              AND tbserviceisactive = true
+              AND tbserviceactive = true
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -130,7 +166,9 @@ class ServiceRepository
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceisactive
+                tbserviceapprovedby,
+                tbserviceapprovedon,
+                tbserviceactive
 
             FROM tbservice
 
@@ -141,6 +179,38 @@ class ServiceRepository
     $stmt->execute();
 
     return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+  }
+
+
+  // =========================================================
+  // HISTORIAL DE APROBACIÓN (lo que ve el Admin): servicios que
+  // ya fueron aprobados o rechazados, con el nombre del local y
+  // del administrador que los aprobó. Devuelve filas asociativas
+  // enriquecidas (no objetos Service).
+  // =========================================================
+  public function findHistory(): array
+  {
+    $sql = "
+            SELECT
+                s.tbserviceid,
+                s.tbservicename,
+                s.tbservicetype,
+                s.tbserviceprice,
+                s.tbservicestate,
+                v.tbvenuename   AS venueName,
+                r.tbrolename    AS approvedByName,
+                s.tbserviceapprovedon
+            FROM tbservice s
+            LEFT JOIN tbvenue v ON v.tbvenueid = s.tbservicelocalid
+            LEFT JOIN tbrole r ON r.tbroleid = s.tbserviceapprovedby
+            WHERE s.tbservicestate IN ('aprobado', 'rechazado')
+            ORDER BY s.tbserviceapprovedon DESC, s.tbserviceid DESC
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
 
@@ -158,7 +228,9 @@ class ServiceRepository
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceisactive
+                tbserviceapprovedby,
+                tbserviceapprovedon,
+                tbserviceactive
 
             FROM tbservice
 
@@ -194,6 +266,27 @@ class ServiceRepository
     ]);
   }
 
+  // =========================================================
+  // APROBAR: cambia el estado y registra quién lo aprobó y cuándo
+  // =========================================================
+  public function approve(int $idService, int $approvedByRoleId): bool
+  {
+    $sql = "
+            UPDATE tbservice
+            SET tbservicestate = 'aprobado',
+                tbserviceapprovedby = :approvedByRoleId,
+                tbserviceapprovedon = NOW()
+            WHERE tbserviceid = :idService
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    return $stmt->execute([
+      ':approvedByRoleId' => $approvedByRoleId,
+      ':idService'        => $idService
+    ]);
+  }
+
 
   // =========================================================
   // EDITAR
@@ -206,7 +299,7 @@ class ServiceRepository
                 tbservicename = :nameService,
                 tbservicetype = :typeService,
                 tbserviceprice = :priceService,
-                tbserviceisactive = :isActive
+                tbserviceactive = :isActive
             WHERE tbserviceid = :idService
         ";
 
@@ -216,7 +309,7 @@ class ServiceRepository
       ':nameService'  => $service->getNameService(),
       ':typeService'  => $service->getTypeService(),
       ':priceService' => $service->getPriceService(),
-      ':isActive'     => $service->getIsActive(),
+      ':isActive'     => $this->toDb($service->getIsActive()),
       ':idService'    => $service->getIdService()
     ]);
   }
@@ -234,7 +327,19 @@ class ServiceRepository
       typeService: $row['tbservicetype'],
       priceService: (float) $row['tbserviceprice'],
       stateService: $row['tbservicestate'],
-      isActive: (bool) $row['tbserviceisactive']
+      isActive: $this->toBool($row['tbserviceactive']),
+      approvedBy: ($row['tbserviceapprovedby'] ?? null) !== null ? (int) $row['tbserviceapprovedby'] : null,
+      approvedOn: $row['tbserviceapprovedon'] ?? null
     );
+  }
+
+  private function toBool(mixed $value): bool
+  {
+    return $value === 1 || $value === '1' || $value === true;
+  }
+
+  private function toDb(bool $value): int
+  {
+    return $value ? 1 : 0;
   }
 }

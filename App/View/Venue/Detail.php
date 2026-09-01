@@ -1,0 +1,195 @@
+<?php require_once __DIR__ . '/../_header.php';
+if ($venue === null) {
+  echo '<div class="alert alert-error">Local no encontrado.</div>';
+  require_once __DIR__ . '/../_footer.php';
+  exit;
+}
+?>
+
+<div class="page-head">
+  <div>
+    <h1 style="margin-top:8px;"><?= e($venue->getNameVenue()) ?></h1>
+  </div>
+</div>
+
+<div class="card">
+  <div class="detail-grid">
+    <div class="detail-item"><div class="k">Tipo</div><div class="v"><?= $venue->getTypeVenue() !== '' ? e($venue->getTypeVenue()) : 'General' ?></div></div>
+    <div class="detail-item"><div class="k">Capacidad</div><div class="v"><?= (int) $venue->getCapacityVenue() ?> personas</div></div>
+    <div class="detail-item"><div class="k">Precio de renta</div><div class="v">&#8353; <?= number_format($venue->getPriceVenue(), 2) ?> <span class="muted">por evento</span></div></div>
+    <div class="detail-item"><div class="k">Ubicación</div><div class="v">Local #<?= (int) $venue->getIdLocation() ?></div></div>
+    <div class="detail-item"><div class="k">Estado</div><div class="v"><span class="badge success">Disponible</span></div></div>
+    <div class="detail-item"><div class="k">Calificación</div>
+      <div class="v" id="venueAvgRating">
+        <?php if ($avgRating !== null): ?>
+          <span class="rating-stars"><?= str_repeat('&#9733;', (int) round($avgRating)) . str_repeat('&#9734;', 5 - (int) round($avgRating)) ?></span>
+          <span class="muted"><?= number_format($avgRating, 1) ?> / 5</span>
+        <?php else: ?>
+          Sin calificaciones
+        <?php endif; ?>
+      </div>
+    </div>
+  </div>
+
+  <?php if (!empty($promotions)): ?>
+    <div style="margin:16px 0 0;">
+      <h4 style="margin-bottom:8px;">Promociones activas</h4>
+      <?php foreach ($promotions as $promo): ?>
+        <div class="alert alert-info" style="text-align:left;margin-bottom:8px;">
+          <strong>&#127881; <?= e($promo->getLabel()) ?></strong><br>
+          <span class="muted"><?= e($promo->getDescription()) ?></span>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+
+  <a class="btn btn-primary" href="<?= e(base_url('booking', 'showForm', ['venueId' => $venue->getIdVenue()])) ?>">
+    &#128197; Reservar este local
+  </a>
+</div>
+
+<?php if ($owner !== null): ?>
+<div class="card" style="margin-top:18px;">
+  <h3 style="margin-bottom:12px;">Propietario del local</h3>
+  <a href="<?= e(base_url('venue', 'showOwner', ['ownerId' => $owner->getIdOwner(), 'venueId' => $venue->getIdVenue()])) ?>"
+     style="display:inline-flex;align-items:center;gap:14px;text-decoration:none;">
+    <?php if ($owner->getImageOwner() !== ''): ?>
+      <img src="<?= e(image_url($owner->getImageOwner())) ?>" alt="Foto del propietario"
+           style="width:72px;height:72px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 4px #fff,0 0 0 5px var(--neutral-200),0 4px 12px rgba(0,0,0,.15);">
+    <?php else: ?>
+      <span class="avatar" aria-hidden="true"
+            style="width:72px;height:72px;font-size:2rem;">&#128100;</span>
+    <?php endif; ?>
+    <span>
+      <span style="display:block;font-weight:700;color:var(--neutral-900);">
+        <?= e($owner->getFirstNameOwner()) ?><?= $owner->getLastNameOwner() !== '' ? ' ' . e($owner->getLastNameOwner()) : '' ?>
+      </span>
+      <span class="muted">Ver información del propietario &rarr;</span>
+    </span>
+  </a>
+</div>
+<?php endif; ?>
+
+<?php if (!empty($services)): ?>
+<div class="card" style="margin-top:18px;">
+  <h3 style="margin-bottom:12px;">Servicios del local</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Servicio</th>
+          <th>Tipo</th>
+          <th>Precio</th>
+          <th>Calificación</th>
+          <th>Calificar</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($services as $s): ?>
+          <tr>
+            <td><?= e($s->getNameService()) ?></td>
+            <td><?= $s->getTypeService() !== null ? e($s->getTypeService()) : '—' ?></td>
+            <td>&#8353; <?= number_format($s->getPriceService(), 2) ?></td>
+            <td>
+              <?php if (isset($ratingByService[$s->getIdService()])): ?>
+                <span class="rating-stars"><?= str_repeat('&#9733;', (int) round($ratingByService[$s->getIdService()])) . str_repeat('&#9734;', 5 - (int) round($ratingByService[$s->getIdService()])) ?></span>
+                <span class="muted"><?= number_format($ratingByService[$s->getIdService()], 1) ?> / 5</span>
+              <?php else: ?>
+                Sin calificaciones
+              <?php endif; ?>
+            </td>
+            <td>
+              <?php if (current_user_type() !== null): ?>
+                <details>
+                  <summary class="btn btn-outline btn-sm">Calificar servicio</summary>
+                  <form method="post" action="<?= e(base_url('venue', 'rateService')) ?>" style="margin-top:8px;">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="serviceId" value="<?= (int) $s->getIdService() ?>">
+                    <input type="hidden" name="venueId" value="<?= (int) $venue->getIdVenue() ?>">
+                    <div class="form-group">
+                      <div class="star-widget is-sm" data-value="<?= (int) (isset($myRatingByService[$s->getIdService()]) ? $myRatingByService[$s->getIdService()]->getStars() : 0) ?>">
+                        <input type="hidden" name="stars" value="">
+                        <?php for ($i = 1; $i <= 5; $i++): ?>
+                          <button type="button" class="star" data-star="<?= $i ?>" aria-label="<?= $i ?> estrellas">&#9733;</button>
+                        <?php endfor; ?>
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <input class="form-control" name="comment" placeholder="Comentario (opcional)" value="<?= e(isset($myRatingByService[$s->getIdService()]) ? $myRatingByService[$s->getIdService()]->getComment() : '') ?>">
+                    </div>
+                    <button class="btn btn-primary btn-sm" type="submit">
+                      <?= isset($myRatingByService[$s->getIdService()]) ? 'Actualizar calificación' : 'Publicar calificación' ?>
+                    </button>
+                  </form>
+                </details>
+              <?php else: ?>
+                <span class="muted">Inicia sesión</span>
+              <?php endif; ?>
+            </td>
+          </tr>
+          <?php if (!empty($serviceComments[$s->getIdService()])): ?>
+            <tr>
+              <td colspan="5" class="comment-list">
+                <?php foreach ($serviceComments[$s->getIdService()] as $c): ?>
+                  <div class="comment-item">
+                    <span class="c-author"><?= e($c['tbrolename']) ?></span>
+                    <span class="rating-stars"><?= str_repeat('&#9733;', (int) $c['tbserviceratingstars']) . str_repeat('&#9734;', 5 - (int) $c['tbserviceratingstars']) ?></span>
+                    <?php if (!empty($c['tbserviceratingcomment'])): ?>
+                      <div class="c-body"><?= e($c['tbserviceratingcomment']) ?></div>
+                    <?php endif; ?>
+                  </div>
+                <?php endforeach; ?>
+              </td>
+            </tr>
+          <?php endif; ?>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+<?php endif; ?>
+
+<?php if (current_user_type() !== null): ?>
+<div class="card" id="commentCard" style="max-width:520px;margin-top:18px;">
+  <div class="page-head" style="margin:0 0 10px;">
+    <h3 style="margin:0;">Tu comentario sobre este local</h3>
+    <button class="btn btn-outline btn-sm" id="newComment" type="button" style="display:none;">&#10133; Nuevo comentario</button>
+  </div>
+  <form id="commentForm" method="post"
+        action="<?= e(base_url('venue', 'rate')) ?>"
+        data-update-url="<?= e(base_url('venue', 'updateComment')) ?>"
+        data-refresh-url="<?= e(base_url('api', 'venueComments', ['id' => $venue->getIdVenue()])) ?>">
+    <?= csrf_field() ?>
+    <input type="hidden" name="venueId" value="<?= (int) $venue->getIdVenue() ?>">
+    <input type="hidden" name="commentId" value="">
+    <div class="form-group">
+      <label>Calificación</label>
+      <div class="star-widget" id="venueStarWidget" data-value="0">
+        <input type="hidden" name="stars" value="">
+        <?php for ($i = 1; $i <= 5; $i++): ?>
+          <button type="button" class="star" data-star="<?= $i ?>" aria-label="<?= $i ?> estrellas">&#9733;</button>
+        <?php endfor; ?>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="comment">Comentario</label>
+      <textarea class="form-control" id="comment" name="comment" rows="3" placeholder="Escribe tu comentario..."></textarea>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" id="submitComment" type="submit">Publicar comentario</button>
+      <button class="btn btn-outline" id="cancelEdit" type="button" style="display:none;">Cancelar edición</button>
+    </div>
+  </form>
+</div>
+<?php endif; ?>
+
+<div class="card" id="venueCommentsCard" style="margin-top:18px;">
+  <h3 style="margin-bottom:10px;">Comentarios del local</h3>
+  <div id="venueCommentsList">
+    <?= render_partial(__DIR__ . '/_venueComments.php', ['venueComments' => $venueComments]) ?>
+  </div>
+</div>
+
+<script src="<?= e(js_url('stars')) ?>"></script>
+<script src="<?= e(js_url('venue-comments')) ?>"></script>
+<?php require_once __DIR__ . '/../_footer.php'; ?>

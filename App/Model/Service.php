@@ -13,9 +13,11 @@ class Service
   private float $priceService;
   private string $stateService;  // 'solicitado' | 'aprobado' | 'rechazado'
   private bool $isActive;
+  private ?int $approvedBy;      // tbroleid del administrador que aprobó
+  private ?string $approvedOn;   // fecha/hora de la aprobación
 
 
-  public function __construct(int $idService, int $idLocal, string $nameService, ?string $typeService, float $priceService, string $stateService, bool $isActive)
+  public function __construct(int $idService, int $idLocal, string $nameService, ?string $typeService, float $priceService, string $stateService, bool $isActive, ?int $approvedBy = null, ?string $approvedOn = null)
   {
     $this->idService = $idService;
     $this->idLocal = $idLocal;
@@ -24,6 +26,8 @@ class Service
     $this->priceService = $priceService;
     $this->stateService = $stateService;
     $this->isActive = $isActive;
+    $this->approvedBy = $approvedBy;
+    $this->approvedOn = $approvedOn;
   }
 
   // Getters
@@ -63,6 +67,16 @@ class Service
     return $this->isActive;
   }
 
+  public function getApprovedBy(): ?int
+  {
+    return $this->approvedBy;
+  }
+
+  public function getApprovedOn(): ?string
+  {
+    return $this->approvedOn;
+  }
+
   // Setters
 
   public function setIdService(int $idService): void
@@ -98,5 +112,15 @@ class Service
   public function setIsActive(bool $isActive): void
   {
     $this->isActive = $isActive;
+  }
+
+  public function setApprovedBy(?int $approvedBy): void
+  {
+    $this->approvedBy = $approvedBy;
+  }
+
+  public function setApprovedOn(?string $approvedOn): void
+  {
+    $this->approvedOn = $approvedOn;
   }
 }

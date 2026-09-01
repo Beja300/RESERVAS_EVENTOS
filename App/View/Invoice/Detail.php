@@ -1,0 +1,93 @@
+<?php require_once __DIR__ . '/../_header.php';
+if ($invoice === null) {
+  echo '<div class="alert alert-error">Factura no encontrada.</div>';
+  require_once __DIR__ . '/../_footer.php';
+  exit;
+}
+?>
+
+<div class="page-head">
+  <div>
+    <h1>Factura #<?= (int) $invoice->getIdInvoice() ?></h1>
+    <a href="<?= e(base_url('invoice', 'list')) ?>">&larr; Volver a mis facturas</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="detail-grid">
+    <div class="detail-item"><div class="k">Reserva</div><div class="v">#<?= (int) $invoice->getIdClientBooking() ?></div></div>
+    <div class="detail-item"><div class="k">Fecha de emisión</div><div class="v"><?= e(date('d/m/Y', strtotime($invoice->getDateInvoice()))) ?></div></div>
+    <div class="detail-item"><div class="k">Método de pago</div><div class="v">#<?= (int) $invoice->getIdPaymentMethod() ?></div></div>
+    <div class="detail-item"><div class="k">Estado</div>
+      <div class="v" style="margin-top:6px;">
+        <?php
+          $badge = [
+            'pagada' => 'success',
+            'pendiente' => 'warning',
+            'anulada' => 'neutral',
+          ][$invoice->getStatusInvoice()] ?? 'neutral';
+        ?>
+        <span class="badge <?= $badge ?>"><?= e($invoice->getStatusInvoice()) ?></span>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin:18px 0 12px;">Detalle</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Concepto</th>
+          <th>Cantidad</th>
+          <th>Precio unitario</th>
+          <th>Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($details as $d): ?>
+          <tr>
+            <td>
+              <?php if ($d->getIdVenue() > 0): ?>
+                Renta del local — <?= e($venue !== null ? $venue->getNameVenue() : ('Local #' . $d->getIdVenue())) ?>
+              <?php else: ?>
+                Servicio #<?= (int) $d->getIdLocalService() ?>
+              <?php endif; ?>
+            </td>
+            <td><?= (int) $d->getQuantityDetail() ?></td>
+            <td>&#8353; <?= number_format($d->getUnitPrice(), 2) ?></td>
+            <td>&#8353; <?= number_format($d->getQuantityDetail() * $d->getUnitPrice() - $d->getDiscount(), 2) ?></td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="3" style="text-align:right;">Subtotal</th>
+          <th>&#8353; <?= number_format($totals['subtotal'], 2) ?></th>
+        </tr>
+        <tr>
+          <th colspan="3" style="text-align:right;">Comisión (5%)</th>
+          <th>&#8353; <?= number_format($totals['commission'], 2) ?></th>
+        </tr>
+        <tr>
+          <th colspan="3" style="text-align:right;">IVA (13%)</th>
+          <th>&#8353; <?= number_format($totals['tax'], 2) ?></th>
+        </tr>
+        <tr>
+          <th colspan="3" style="text-align:right;">Total a pagar</th>
+          <th>&#8353; <?= number_format($total, 2) ?></th>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <?php if ($earning !== null): ?>
+    <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
+    <h3 style="margin:0 0 10px;">Reparto de ganancias</h3>
+    <div class="detail-grid">
+      <div class="detail-item"><div class="k">Total pagado</div><div class="v">&#8353; <?= number_format($earning->getTotal(), 2) ?></div></div>
+      <div class="detail-item"><div class="k">Comisión plataforma</div><div class="v">&#8353; <?= number_format($earning->getCommission(), 2) ?></div></div>
+      <div class="detail-item"><div class="k">IVA retenido</div><div class="v">&#8353; <?= number_format($earning->getTax(), 2) ?></div></div>
+      <div class="detail-item"><div class="k">Ingreso propietario</div><div class="v"><strong>&#8353; <?= number_format($earning->getOwnerAmount(), 2) ?></strong></div></div>
+    </div>
+  <?php endif; ?>
+</div>

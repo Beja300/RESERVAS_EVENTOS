@@ -1,7 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../../Configuration/DataBase.php';
-require_once __DIR__ . '/Notification.php';
+require_once __DIR__ . '/../Model/Notification.php';
 
 class NotificationRepository
 {
@@ -21,13 +21,15 @@ class NotificationRepository
             INSERT INTO tbnotification (
                 tbnotificationroleid,
                 tbnotificationmessage,
+                tbnotificationlink,
                 tbnotificationdate,
-                tbnotificationisread,
-                tbnotificationisactive
+                tbnotificationread,
+                tbnotificationactive
             )
             VALUES (
                 :idRol,
                 :message,
+                :link,
                 :date,
                 :isRead,
                 :isActive
@@ -39,9 +41,10 @@ class NotificationRepository
     $stmt->execute([
       ':idRol'    => $notification->getIdRol(),
       ':message'  => $notification->getMessageNotification(),
+      ':link'     => $notification->getLink(),
       ':date'     => $notification->getDateNotification(),
-      ':isRead'   => $notification->getIsRead(),
-      ':isActive' => $notification->getIsActive()
+      ':isRead'   => $this->toDb($notification->getIsRead()),
+      ':isActive' => $this->toDb($notification->getIsActive())
     ]);
 
     return (int) $this->connection->lastInsertId();
@@ -58,14 +61,15 @@ class NotificationRepository
                 tbnotificationid,
                 tbnotificationroleid,
                 tbnotificationmessage,
+                tbnotificationlink,
                 tbnotificationdate,
-                tbnotificationisread,
-                tbnotificationisactive
+                tbnotificationread,
+                tbnotificationactive
 
             FROM tbnotification
 
             WHERE tbnotificationroleid = :idRol
-              AND tbnotificationisactive = true
+              AND tbnotificationactive = true
 
             ORDER BY tbnotificationdate DESC
         ";
@@ -90,14 +94,15 @@ class NotificationRepository
                 tbnotificationid,
                 tbnotificationroleid,
                 tbnotificationmessage,
+                tbnotificationlink,
                 tbnotificationdate,
-                tbnotificationisread,
-                tbnotificationisactive
+                tbnotificationread,
+                tbnotificationactive
 
             FROM tbnotification
 
             WHERE tbnotificationid = :idNotification
-              AND tbnotificationisactive = true
+              AND tbnotificationactive = true
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -119,7 +124,7 @@ class NotificationRepository
   {
     $sql = "
             UPDATE tbnotification
-            SET tbnotificationisread = true
+            SET tbnotificationread = true
             WHERE tbnotificationid = :idNotification
         ";
 
@@ -138,9 +143,9 @@ class NotificationRepository
   {
     $sql = "
             UPDATE tbnotification
-            SET tbnotificationisread = true
+            SET tbnotificationread = true
             WHERE tbnotificationroleid = :idRol
-              AND tbnotificationisactive = true
+              AND tbnotificationactive = true
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -160,8 +165,8 @@ class NotificationRepository
             SELECT COUNT(*)
             FROM tbnotification
             WHERE tbnotificationroleid = :idRol
-              AND tbnotificationisread = false
-              AND tbnotificationisactive = true
+              AND tbnotificationread = false
+              AND tbnotificationactive = true
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -180,9 +185,9 @@ class NotificationRepository
   public function findAdminRoleIds(): array
   {
     $sql = "
-            SELECT tbroleadminid
+            SELECT tbroleadminrolid
             FROM tbroleadmin
-            WHERE tbroleadminisactive = true
+            WHERE tbroleadminactive = true
         ";
 
     $stmt = $this->connection->query($sql);
@@ -190,6 +195,48 @@ class NotificationRepository
     return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
   }
 
+
+  // =========================================================
+  // OBTENER ROL ID DE UN PROPIETARIO (tbroleowner)
+  // =========================================================
+  public function findRoleIdByOwner(int $idOwner): ?int
+  {
+    $sql = "
+            SELECT tbroleownerrolid
+            FROM tbroleowner
+            WHERE tbroleownerownerid = :idOwner
+              AND tbroleowneractive = true
+            LIMIT 1
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([':idOwner' => $idOwner]);
+
+    $value = $stmt->fetchColumn();
+
+    return $value !== false ? (int) $value : null;
+  }
+
+  // =========================================================
+  // OBTENER ROL ID DE UN CLIENTE (tbroleclient)
+  // =========================================================
+  public function findRoleIdByClient(int $idClient): ?int
+  {
+    $sql = "
+            SELECT tbroleclientrolid
+            FROM tbroleclient
+            WHERE tbroleclientclientid = :idClient
+              AND tbroleclientactive = true
+            LIMIT 1
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([':idClient' => $idClient]);
+
+    $value = $stmt->fetchColumn();
+
+    return $value !== false ? (int) $value : null;
+  }
 
   // =========================================================
   // MAPEO FILA -> OBJETO
@@ -201,8 +248,19 @@ class NotificationRepository
       idRol: (int) $row['tbnotificationroleid'],
       messageNotification: $row['tbnotificationmessage'],
       dateNotification: $row['tbnotificationdate'],
-      isActive: (bool) $row['tbnotificationisactive'],
-      isRead: (bool) $row['tbnotificationisread']
+      isActive: $this->toBool($row['tbnotificationactive']),
+      isRead: $this->toBool($row['tbnotificationread']),
+      link: $row['tbnotificationlink'] ?? null
     );
+  }
+
+  private function toBool(mixed $value): bool
+  {
+    return $value === 1 || $value === '1' || $value === true;
+  }
+
+  private function toDb(bool $value): int
+  {
+    return $value ? 1 : 0;
   }
 }

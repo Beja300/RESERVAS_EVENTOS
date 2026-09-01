@@ -11,29 +11,32 @@ class Venue
 {
   private int $idVenue;
   private int $idOwner;
-  private int $idUbication;
+  private int $idLocation;
   private string $nameVenue;
   private string $typeVenue;
   private int $capacityVenue;
+  private float $priceVenue;
   private string $imageVenue;
   private bool $isActive;
 
   public function __construct(
     int $idVenue,
     int $idOwner,
-    int $idUbication,
+    int $idLocation,
     string $nameVenue,
     string $typeVenue,
     int $capacityVenue,
+    float $priceVenue,
     string $imageVenue,
     bool $isActive
   ) {
     $this->idVenue = $idVenue;
     $this->idOwner = $idOwner;
-    $this->idUbication = $idUbication;
+    $this->idLocation = $idLocation;
     $this->nameVenue = $nameVenue;
     $this->typeVenue = $typeVenue;
     $this->capacityVenue = $capacityVenue;
+    $this->priceVenue = $priceVenue;
     $this->imageVenue = $imageVenue;
     $this->isActive = $isActive;
   }
@@ -50,9 +53,9 @@ class Venue
     return $this->idOwner;
   }
 
-  public function getIdUbication(): int
+  public function getIdLocation(): int
   {
-    return $this->idUbication;
+    return $this->idLocation;
   }
 
   public function getNameVenue(): string
@@ -68,6 +71,11 @@ class Venue
   public function getCapacityVenue(): int
   {
     return $this->capacityVenue;
+  }
+
+  public function getPriceVenue(): float
+  {
+    return $this->priceVenue;
   }
 
   public function getImageVenue(): string
@@ -92,9 +100,9 @@ class Venue
     $this->idOwner = $idOwner;
   }
 
-  public function setIdUbication(int $idUbication): void
+  public function setIdLocation(int $idLocation): void
   {
-    $this->idUbication = $idUbication;
+    $this->idLocation = $idLocation;
   }
 
   public function setNameVenue(string $nameVenue): void
@@ -110,6 +118,11 @@ class Venue
   public function setCapacityVenue(int $capacityVenue): void
   {
     $this->capacityVenue = $capacityVenue;
+  }
+
+  public function setPriceVenue(float $priceVenue): void
+  {
+    $this->priceVenue = $priceVenue;
   }
 
   public function setImageVenue(string $imageVenue): void
