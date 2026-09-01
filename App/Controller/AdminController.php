@@ -170,9 +170,16 @@ class AdminController
     $this->requireAdmin();
 
     $yearMonth = trim($_POST['month'] ?? $_GET['month'] ?? date('Y-m'));
+
+    if (!preg_match('/^\d{4}-\d{2}$/', $yearMonth)) {
+      $yearMonth = date('Y-m');
+    }
+
     $bookings = $this->bookingRepo->findByMonthWithDetails($yearMonth);
     $history = $this->bookingHistoryRepo->findAllWithDetails();
     $refundsPending = $this->bookingRefundRepo->findPending();
+    $prevMonth = date('Y-m', strtotime($yearMonth . '-01 first day of last month'));
+    $nextMonth = date('Y-m', strtotime($yearMonth . '-01 first day of next month'));
 
     require_once __DIR__ . '/../View/Admin/List.php';
   }

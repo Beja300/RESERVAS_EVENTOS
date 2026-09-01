@@ -35,9 +35,9 @@ class ServiceService
         $this->serviceRepo->approve($servicePk, $approvedByRoleId ?? 0);
     }
 
-    public function reject(int $servicePk): void
+    public function reject(int $servicePk, ?int $approvedByRoleId = null): void
     {
-        $this->serviceRepo->updateState($servicePk, 'rechazado');
+        $this->serviceRepo->reject($servicePk, $approvedByRoleId ?? 0);
     }
 
     public function validateAndCreate(int $venueFk, string $name, float $price, ?string $type = null): int

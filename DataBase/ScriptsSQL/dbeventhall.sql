@@ -1,11 +1,3 @@
--- =========================================================
--- EventHall Database Schema
--- Relaciones manejadas desde PHP (sin FOREIGN KEY)
--- Todas las tablas usan el sufijo ...active como BOOLEAN.
--- Solo se definen las TABLAS; los datos de prueba se cargan
--- desde seed_test_data.sql (ejecutarlo después de este script).
--- =========================================================
-
 CREATE DATABASE IF NOT EXISTS dbeventhall;
 
 USE dbeventhall;
@@ -90,7 +82,7 @@ CREATE TABLE tbowner (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 8) tblocation: ubicaciones (provincia/canton/distrito/pueblo/desc) 
+-- 8) tblocation: ubicaciones (provincia/canton/distrito/pueblo/desc)
 -- =========================================================
 CREATE TABLE tblocation (
     tblocationid INT AUTO_INCREMENT PRIMARY KEY,

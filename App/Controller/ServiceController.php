@@ -248,10 +248,12 @@ class ServiceController
     $this->requireAdmin();
 
     $idService = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
+    $admin = $_SESSION['user'] ?? null;
+    $approvedByRoleId = $admin instanceof Admin && method_exists($admin, 'getIdRol') ? $admin->getIdRol() : 0;
 
     try {
 
-      $this->serviceService->reject($idService);
+      $this->serviceService->reject($idService, $approvedByRoleId > 0 ? $approvedByRoleId : null);
 
       $this->notifyOwnerOfServiceReview($idService, false);
 

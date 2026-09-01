@@ -287,6 +287,27 @@ class ServiceRepository
     ]);
   }
 
+  // =========================================================
+  // RECHAZAR: cambia el estado y registra quién lo rechazó y cuándo
+  // =========================================================
+  public function reject(int $idService, int $approvedByRoleId): bool
+  {
+    $sql = "
+            UPDATE tbservice
+            SET tbservicestate = 'rechazado',
+                tbserviceapprovedby = :approvedByRoleId,
+                tbserviceapprovedon = NOW()
+            WHERE tbserviceid = :idService
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    return $stmt->execute([
+      ':approvedByRoleId' => $approvedByRoleId,
+      ':idService'        => $idService
+    ]);
+  }
+
 
   // =========================================================
   // EDITAR

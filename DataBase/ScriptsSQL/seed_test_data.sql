@@ -72,10 +72,10 @@ SET @venueId = LAST_INSERT_ID();
 -- =========================================================
 -- 5) SERVICIOS (estado 'aprobado' para poder reservarse)
 -- =========================================================
-INSERT INTO tbservice (tbservicelocalid, tbservicename, tbservicetype, tbserviceprice, tbservicestate, tbserviceactive) VALUES
-(@venueId, 'Decoración floral',          'Decoración', 150000.00, 'aprobado', TRUE),
-(@venueId, 'Servicio de banquetes',      'Catering',   250000.00, 'aprobado', TRUE),
-(@venueId, 'Sonido y luces',             'Producción',  80000.00, 'aprobado', TRUE);
+INSERT INTO tbservice (tbservicelocalid, tbservicename, tbservicetype, tbserviceprice, tbservicestate, tbserviceapprovedby, tbserviceapprovedon, tbserviceactive) VALUES
+(@venueId, 'Decoración floral',          'Decoración', 150000.00, 'aprobado', @adminRoleId, NOW(), TRUE),
+(@venueId, 'Servicio de banquetes',      'Catering',   250000.00, 'aprobado', @adminRoleId, NOW(), TRUE),
+(@venueId, 'Sonido y luces',             'Producción',  80000.00, 'aprobado', @adminRoleId, NOW(), TRUE);
 SET @service1 = 1;
 SET @service2 = 2;
 SET @service3 = 3;
