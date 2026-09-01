@@ -52,6 +52,7 @@ if ($userType !== null && isset($_SESSION['user']) && is_object($_SESSION['user'
       <?php elseif ($userType === 'owner'): ?>
         <a href="<?= e(base_url('owner', 'dashboard')) ?>">Mi panel</a>
         <a href="<?= e(base_url('venue', 'list')) ?>">Mis locales</a>
+        <a href="<?= e(base_url('booking', 'pendingBookings')) ?>">Reservas pendientes</a>
         <a href="<?= e(base_url('owner', 'paymentData')) ?>">Métodos de pago</a>
         <?= $notificationNav ?>
         <a href="<?= e(base_url('owner', 'profile')) ?>">Perfil</a>

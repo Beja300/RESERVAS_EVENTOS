@@ -197,6 +197,40 @@ class BookingRepository
   }
 
   // =========================================================
+  // RESERVAS PENDIENTES DE UN OWNER (todos sus locales)
+  // =========================================================
+  public function findPendingByOwner(int $idOwner): array
+  {
+    $sql = "
+            SELECT
+                b.tbbookingid,
+                b.tbbookingclientid,
+                b.tbbookinglocalid,
+                b.tbbookingdate,
+                b.tbbookingstate,
+                b.tbbookingactive
+
+            FROM tbbooking b
+
+            INNER JOIN tbvenue v
+                ON v.tbvenueid = b.tbbookinglocalid
+
+            WHERE v.tbvenueownerid = :idOwner
+              AND b.tbbookingstate = 'pendiente'
+
+            ORDER BY b.tbbookingdate ASC
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':idOwner' => $idOwner
+    ]);
+
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+  }
+
+  // =========================================================
   // PRÓXIMA RESERVA CONFIRMADA DE UN OWNER (fecha más cercana >= hoy)
   // =========================================================
   public function nextBookingByOwner(int $idOwner, string $today): ?array

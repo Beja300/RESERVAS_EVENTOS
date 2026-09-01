@@ -1,10 +1,11 @@
 <?php require_once __DIR__ . '/../_header.php';
 $isOwnerView = current_user_type() === 'owner';
+$isPendingBookings = $isPendingBookings ?? false;
 ?>
 
 <div class="page-head">
   <div>
-    <h1><?= $isOwnerView ? 'Reservas del local' : 'Mis reservas' ?></h1>
+    <h1><?= $isOwnerView ? ($isPendingBookings ? 'Reservas pendientes' : 'Reservas del local') : 'Mis reservas' ?></h1>
     <?php if (!$isOwnerView): ?>
       <p class="muted">Consulta el estado de tus reservas</p>
     <?php endif; ?>
@@ -42,7 +43,8 @@ $isOwnerView = current_user_type() === 'owner';
 <?php if (empty($bookings)): ?>
   <div class="card empty">
     <span class="emoji">&#128197;</span>
-    <?= $isOwnerView ? 'Todavía no hay reservas para este local.' : 'Aún no has hecho reservas.' ?>
+    <?= $isPendingBookings ? 'No tienes reservas pendientes por aprobar.'
+       : ($isOwnerView ? 'Todavía no hay reservas para este local.' : 'Aún no has hecho reservas.') ?>
   </div>
 <?php else: ?>
   <div class="table-wrap">

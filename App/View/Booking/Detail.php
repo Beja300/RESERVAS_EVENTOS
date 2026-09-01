@@ -232,7 +232,7 @@ $hasTicket = $ticket !== null;
     <p class="form-hint">Factura generada el día del pago.</p>
   <?php endif; ?>
 
-  <?php if ($isOwner && $ticket !== null && $ticket->getState() === 'pendiente'): ?>
+  <?php if ($isOwner && $ticket !== null && $ticket->getState() === 'pendiente' && $booking->getBookingState() === 'pendiente'): ?>
     <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
 
     <form method="post" action="<?= e(base_url('booking', 'approveTicket')) ?>"

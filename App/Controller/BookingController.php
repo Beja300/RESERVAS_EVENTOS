@@ -443,6 +443,54 @@ class BookingController
   }
 
   // =========================================================
+  // RESERVAS PENDIENTES DEL OWNER (todos sus locales)
+  // Lista solo las reservas 'pendiente' que ya tienen comprobante
+  // subido (ticket pendiente) y esperan aprobación del propietario.
+  // =========================================================
+  public function pendingBookings(): void
+  {
+    session_start();
+    $this->requireOwner();
+
+    $owner = $_SESSION['user'];
+
+    $allPending = $this->bookingRepo->findPendingByOwner($owner->getIdOwner());
+
+    $bookings = [];
+    $venueNames = [];
+    $hasTicket = [];
+    $clientNames = [];
+
+    foreach ($allPending as $b) {
+      $ticket = $this->ticketRepo->findByBooking($b->getIdBooking());
+
+      // Solo las que tienen comprobante por aprobar (ticket pendiente).
+      if ($ticket === null || $ticket->getState() !== 'pendiente') {
+        continue;
+      }
+
+      $bookings[] = $b;
+
+      $venue = $this->venueRepo->findById($b->getIdLocal());
+      $venueNames[$b->getIdBooking()] = $venue !== null
+        ? $venue->getNameVenue()
+        : 'Local #' . $b->getIdLocal();
+
+      $hasTicket[$b->getIdBooking()] = true;
+
+      $client = $this->clientRepo->findByClientPk($b->getIdClient());
+      $clientNames[$b->getIdBooking()] = $client !== null
+        ? $client->getName()
+        : '#' . $b->getIdClient();
+    }
+
+    $pageTitle = 'Reservas pendientes';
+    $isPendingBookings = true;
+
+    require_once __DIR__ . '/../View/Booking/List.php';
+  }
+
+  // =========================================================
   // SUBIR COMPROBANTE DE PAGO (cliente)
   // =========================================================
   public function uploadTicket(): void
