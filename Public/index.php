@@ -107,7 +107,7 @@ $controllers = [
 // Solo se puede ejecutar una acción listada aquí.
 // =========================================================
 $allowedActions = [
-  'auth'          => ['showLogin', 'login', 'showRegister', 'registerClient', 'registerOwner', 'logout'],
+  'auth'          => ['showLogin', 'login', 'showRegister', 'registerClient', 'registerOwner', 'logout', 'cleanDemo'],
   'service'       => ['list', 'showForm', 'create', 'update', 'pending', 'approve', 'reject', 'detail'],
   'venue'         => ['catalog', 'detail', 'showOwner', 'list', 'showForm', 'create', 'update', 'rate', 'rateService', 'updateComment'],
   'booking'       => ['create', 'showForm', 'myBookings', 'detail', 'addLine', 'cancel', 'pay', 'venueBookings', 'uploadTicket', 'approveTicket', 'rejectTicket', 'requestRefund'],

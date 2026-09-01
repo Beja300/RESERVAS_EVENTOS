@@ -104,10 +104,10 @@ if ($owner === null) {
       <div class="form-hint">Ej: 8888-7777</div>
     </div>
 
-    <?php $showPasswordFields = !empty($_POST['currentPassword']) || !empty($_POST['newPassword']); ?>
+    <?php $showPasswordFields = !empty($_POST['changePassword']); ?>
     <h3 class="card-title" style="margin-top:22px;">Cambiar contraseña</h3>
     <label class="checkbox" style="margin-bottom:12px;">
-      <input type="checkbox" id="changePasswordCheck" <?= $showPasswordFields ? 'checked' : '' ?>>
+      <input type="checkbox" id="changePasswordCheck" name="changePassword" value="1" <?= $showPasswordFields ? 'checked' : '' ?>>
       Quiero cambiar mi contraseña
     </label>
 

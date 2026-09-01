@@ -12,6 +12,7 @@ require_once __DIR__ . '/../Repository/VenueRatingRepository.php';
 require_once __DIR__ . '/../Repository/RoleRepository.php';
 require_once __DIR__ . '/../Repository/OwnerRepository.php';
 require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
+require_once __DIR__ . '/../Repository/DetailRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class OwnerController
@@ -27,6 +28,7 @@ class OwnerController
   private OwnerRepository $ownerRepo;
   private OwnerPaymentService $ownerPaymentService;
   private PaymentMethodRepository $paymentMethodRepo;
+  private DetailRepository $detailRepo;
 
   public function __construct()
   {
@@ -43,6 +45,7 @@ class OwnerController
     $this->ownerRepo = new OwnerRepository($connection);
     $this->ownerPaymentService = new OwnerPaymentService($connection);
     $this->paymentMethodRepo = new PaymentMethodRepository($connection);
+    $this->detailRepo = new DetailRepository($connection);
   }
 
   // =========================================================
@@ -62,7 +65,12 @@ class OwnerController
       $bookings[$venue->getIdVenue()] = $this->bookingRepo->findByVenue($venue->getIdVenue());
     }
 
-    $yearMonth = date('Y-m');
+    $yearMonth = trim($_POST['month'] ?? $_GET['month'] ?? date('Y-m'));
+
+    if (!preg_match('/^\d{4}-\d{2}$/', $yearMonth)) {
+      $yearMonth = date('Y-m');
+    }
+
     $earnings = $this->earningRepo->totalsByOwnerForMonth($owner->getIdOwner(), $yearMonth);
     $nextBooking = $this->bookingRepo->nextBookingByOwner($owner->getIdOwner(), date('Y-m-d'));
     $averageRating = $this->venueRatingRepo->findAverageByOwner($owner->getIdOwner());
@@ -82,8 +90,14 @@ class OwnerController
       'reservasMes'   => $this->bookingRepo->countByOwnerForMonth($owner->getIdOwner(), $yearMonth),
       'proximaReserva'=> $nextBooking,
       'rating'        => $averageRating,
-      'monthLabel'    => $monthNames[(int) date('n')] . ' ' . date('Y'),
+      'monthLabel'    => $monthNames[(int) substr($yearMonth, 5, 2)] . ' ' . substr($yearMonth, 0, 4),
     ];
+
+    $topVenue = $this->bookingRepo->topVenuesByOwner($owner->getIdOwner(), $yearMonth, 1);
+    $topServices = $this->detailRepo->topServicesByOwner($owner->getIdOwner(), $yearMonth, 3);
+
+    $prevMonth = date('Y-m', strtotime($yearMonth . '-01 first day of last month'));
+    $nextMonth = date('Y-m', strtotime($yearMonth . '-01 first day of next month'));
 
     require_once __DIR__ . '/../View/Owner/Dashboard.php';
   }

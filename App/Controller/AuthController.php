@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../Service/AuthService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class AuthController
 {
@@ -219,5 +220,53 @@ class AuthController
 
     header('Location: ../../Public/index.php?controller=auth&action=showLogin');
     exit;
+  }
+
+  // =========================================================
+  // LIMPIAR Y RESTAURAR DATOS DE PRUEBA (botón del login)
+  // Vacía TODAS las tablas y re-ejecuta el seed_test_data.sql,
+  // dejando la base en el estado inicial de demostración.
+  // =========================================================
+  public function cleanDemo(): void
+  {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+      exit;
+    }
+
+    try {
+
+      $connection = DataBase::getConnection();
+
+      // Paso 1: vaciar todas las tablas (sin FK, el orden no importa).
+      $tables = $connection->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+
+      $connection->exec('SET FOREIGN_KEY_CHECKS = 0');
+
+      foreach ($tables as $table) {
+        $connection->exec('DELETE FROM ' . $table);
+      }
+
+      $connection->exec('SET FOREIGN_KEY_CHECKS = 1');
+
+      // Paso 2: re-sembrar los datos de prueba.
+      $seedFile = __DIR__ . '/../../DataBase/ScriptsSQL/seed_test_data.sql';
+      $sql = file_get_contents($seedFile);
+
+      if ($sql === false) {
+        throw new \RuntimeException('No se pudo leer el archivo de datos de prueba.');
+      }
+
+      $connection->exec($sql);
+
+      header('Location: ../../Public/index.php?controller=auth&action=showLogin&reset=ok');
+      exit;
+    } catch (\Throwable $e) {
+
+      $errorMsg = 'No se pudo restaurar los datos de prueba.';
+
+      header('Location: ../../Public/index.php?controller=auth&action=showLogin&error=' . urlencode($errorMsg));
+      exit;
+    }
   }
 }

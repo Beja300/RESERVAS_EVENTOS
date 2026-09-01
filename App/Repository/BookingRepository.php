@@ -197,7 +197,7 @@ class BookingRepository
   }
 
   // =========================================================
-  // PRÓXIMA RESERVA DE UN OWNER (fecha más cercana >= hoy)
+  // PRÓXIMA RESERVA CONFIRMADA DE UN OWNER (fecha más cercana >= hoy)
   // =========================================================
   public function nextBookingByOwner(int $idOwner, string $today): ?array
   {
@@ -213,8 +213,7 @@ class BookingRepository
 
             WHERE v.tbvenueownerid = :idOwner
               AND b.tbbookingdate >= :today
-              AND b.tbbookingstate IN ('pendiente', 'confirmado')
-              AND b.tbbookingactive = true
+              AND b.tbbookingstate = 'confirmado'
 
             ORDER BY b.tbbookingdate ASC
 
@@ -258,6 +257,43 @@ class BookingRepository
 
     $stmt = $this->connection->prepare($sql);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+  }
+
+  // =========================================================
+  // LOCALES MÁS SOLICITADOS DE UN OWNER (en un mes dado)
+  // -- para el dashboard del propietario
+  // =========================================================
+  public function topVenuesByOwner(int $idOwner, string $yearMonth, int $limit = 1): array
+  {
+    $sql = "
+            SELECT
+                v.tbvenuename AS name,
+                COUNT(*) AS bookingCount
+
+            FROM tbbooking b
+
+            INNER JOIN tbvenue v
+                ON v.tbvenueid = b.tbbookinglocalid
+
+            WHERE v.tbvenueownerid = :idOwner
+              AND b.tbbookingdate LIKE :yearMonth
+
+            GROUP BY b.tbbookinglocalid, v.tbvenuename
+
+            ORDER BY bookingCount DESC
+
+            LIMIT :limit
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->bindValue(':idOwner',   $idOwner,   PDO::PARAM_INT);
+    $stmt->bindValue(':yearMonth', $yearMonth . '%');
+    $stmt->bindValue(':limit',     $limit,     PDO::PARAM_INT);
+
     $stmt->execute();
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);

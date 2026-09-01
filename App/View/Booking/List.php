@@ -18,6 +18,27 @@ $isOwnerView = current_user_type() === 'owner';
   <div class="alert alert-error"><?= e($error) ?></div>
 <?php endif; ?>
 
+<div class="card" style="margin-bottom:18px;padding:16px;">
+  <div class="actions" style="flex-wrap:wrap">
+    <input class="form-control" type="search" id="booking-search"
+           placeholder="Buscar por <?= $isOwnerView ? 'cliente, ' : '' ?>local o fecha..."
+           style="max-width:340px;flex:1 1 240px;">
+    <select class="form-control" id="booking-state" style="max-width:150px;">
+      <option value="">Estado: todos</option>
+      <option value="pendiente">Pendiente</option>
+      <option value="confirmado">Confirmado</option>
+      <option value="cancelado">Cancelado</option>
+      <option value="rechazado">Rechazado</option>
+    </select>
+    <select class="form-control" id="booking-ticket" style="max-width:190px;">
+      <option value="">Comprobante: todos</option>
+      <option value="sí">Con comprobante</option>
+      <option value="no">Sin comprobante</option>
+    </select>
+    <button class="btn btn-ghost" type="button" id="booking-clear">Limpiar filtros</button>
+  </div>
+</div>
+
 <?php if (empty($bookings)): ?>
   <div class="card empty">
     <span class="emoji">&#128197;</span>
@@ -25,7 +46,7 @@ $isOwnerView = current_user_type() === 'owner';
   </div>
 <?php else: ?>
   <div class="table-wrap">
-    <table class="table">
+    <table class="table booking-table">
       <thead>
         <tr>
           <?php if ($isOwnerView): ?><th>Cliente</th><?php endif; ?>
@@ -63,5 +84,53 @@ $isOwnerView = current_user_type() === 'owner';
     </table>
   </div>
 <?php endif; ?>
+
+<script>
+  (function () {
+    var table = document.querySelector('.booking-table');
+    if (!table) return;
+
+    // Índices de columna (1-based) según el tipo de vista.
+    // Owner: [Cliente][Local][Fecha][Estado][Comprobante]
+    // Client:        [Local][Fecha][Estado][Comprobante]
+    var stateCol = <?= $isOwnerView ? 4 : 3 ?>;
+    var ticketCol = <?= $isOwnerView ? 5 : 4 ?>;
+
+    var search = document.getElementById('booking-search');
+    var state = document.getElementById('booking-state');
+    var ticket = document.getElementById('booking-ticket');
+    var clear = document.getElementById('booking-clear');
+    var rows = table.querySelectorAll('tbody tr');
+
+    function applyFilters() {
+      var term = (search ? search.value : '').toLowerCase().trim();
+      var stateTerm = state ? state.value : '';
+      var ticketTerm = ticket ? ticket.value : '';
+
+      rows.forEach(function (row) {
+        var text = (row.textContent || '').toLowerCase();
+        var stateCell = row.querySelector('td:nth-child(' + stateCol + ')');
+        var rowState = stateCell ? (stateCell.textContent || '').trim().toLowerCase() : '';
+        var ticketCell = row.querySelector('td:nth-child(' + ticketCol + ')');
+        var rowTicket = ticketCell ? (ticketCell.textContent || '').trim().toLowerCase() : '';
+
+        var matchesText = term === '' || text.indexOf(term) !== -1;
+        var matchesState = stateTerm === '' || rowState === stateTerm;
+        var matchesTicket = ticketTerm === '' || rowTicket === ticketTerm;
+        row.style.display = (matchesText && matchesState && matchesTicket) ? '' : 'none';
+      });
+    }
+
+    if (search) search.addEventListener('input', applyFilters);
+    if (state) state.addEventListener('change', applyFilters);
+    if (ticket) ticket.addEventListener('change', applyFilters);
+    if (clear) clear.addEventListener('click', function () {
+      if (search) search.value = '';
+      if (state) state.value = '';
+      if (ticket) ticket.value = '';
+      applyFilters();
+    });
+  })();
+</script>
 
 <?php require_once __DIR__ . '/../_footer.php'; ?>

@@ -43,20 +43,49 @@
     var pForm = document.querySelector('form[data-ajax-owner-profile]');
     if (pForm) {
       pForm.addEventListener('submit', function (e) {
-        var fields = pForm.querySelectorAll('[data-validate]');
-        for (var i = 0; i < fields.length; i++) {
-          if (fields[i].classList.contains('is-invalid')) { return; }
-        }
         e.preventDefault();
+
+        // Valida los campos marcados; nunca deja pasar un formulario incompleto
+        // mediante un envío nativo silencioso.
+        var valid = true;
+        var fs = pForm.querySelectorAll('[data-validate]');
+        for (var i = 0; i < fs.length; i++) {
+          if (window.App && window.App.validateField) {
+            if (!window.App.validateField(fs[i])) valid = false;
+          } else if (fs[i].classList.contains('is-invalid')) {
+            valid = false;
+          }
+        }
+        if (!valid) {
+          var firstInvalid = pForm.querySelector('.is-invalid');
+          if (firstInvalid) firstInvalid.focus();
+          window.App && App.toast('Revisa los campos marcados.', 'error');
+          return;
+        }
+
+        // Si el usuario NO quiere cambiar su contraseña, envía esos campos
+        // vacíos para que el servidor nunca exija completarlos. Así puede
+        // guardar su perfil sin tocar la contraseña.
+        var pwCheck = document.getElementById('changePasswordCheck');
+        if (pwCheck && !pwCheck.checked) {
+          var cur = document.getElementById('currentPassword');
+          var nw = document.getElementById('newPassword');
+          if (cur) cur.value = '';
+          if (nw) nw.value = '';
+        }
+
         fetch(pForm.getAttribute('action'), {
           method: 'POST',
           headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
           body: new FormData(pForm)
-        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
-          .then(function (r) {
-            window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
-            if (r.ok) setTimeout(function () { window.location.reload(); }, 700);
-          });
+        }).then(function (r) {
+          return r.json().then(function (j) { return { ok: r.ok, data: j }; });
+        }).then(function (r) {
+          window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
+          if (r.ok) setTimeout(function () { window.location.reload(); }, 700);
+        }).catch(function () {
+          window.App && App.toast('Ocurrió un error al guardar. Inténtalo de nuevo.', 'error');
+        });
       });
     }
 

@@ -256,6 +256,54 @@ class DetailRepository
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
+  // =========================================================
+  // SERVICIOS MÁS SOLICITADOS DE UN OWNER (todos sus locales,
+  // en un mes dado) -- para el dashboard del propietario
+  // =========================================================
+  public function topServicesByOwner(int $idOwner, string $yearMonth, int $limit = 3): array
+  {
+    $sql = "
+            SELECT
+                s.tbservicename AS name,
+                SUM(d.tbdetailquantity) AS totalQuantity
+
+            FROM tbbookingdetail bd
+
+            INNER JOIN tbdetail d
+                ON d.tbdetailid = bd.tbbookingdetaildetailid
+
+            INNER JOIN tbservice s
+                ON s.tbserviceid = d.tbdetailserviceid
+
+            INNER JOIN tbbooking bk
+                ON bk.tbbookingid = bd.tbbookingdetailbookingid
+
+            INNER JOIN tbvenue v
+                ON v.tbvenueid = bk.tbbookinglocalid
+
+            WHERE v.tbvenueownerid = :idOwner
+              AND bk.tbbookingdate LIKE :yearMonth
+              AND bd.tbbookingdetailactive = true
+              AND d.tbdetailactive = true
+
+            GROUP BY d.tbdetailserviceid, s.tbservicename
+
+            ORDER BY totalQuantity DESC
+
+            LIMIT :limit
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->bindValue(':idOwner',   $idOwner,   PDO::PARAM_INT);
+    $stmt->bindValue(':yearMonth', $yearMonth . '%');
+    $stmt->bindValue(':limit',     $limit,     PDO::PARAM_INT);
+
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+  }
+
 
   // =========================================================
   // MAPEO FILA -> OBJETO
