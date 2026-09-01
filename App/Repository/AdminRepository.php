@@ -198,6 +198,32 @@ class AdminRepository
     }
 
     // =========================================================
+    // ACTUALIZAR PERFIL DEL ADMINISTRADOR (tbadmin)
+    // Recibe un Admin ya actualizado; sincroniza tbadminname
+    // con el nombre base (tbrole) y actualiza su imagen propia.
+    // =========================================================
+    public function updateProfile(Admin $admin): bool
+    {
+        $sql = "
+            UPDATE tbadmin
+            SET
+                tbadminname = :name,
+                tbadminimage = :image
+            WHERE tbadminid = :idAdmin
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+
+        $adminImage = $admin->getImageAdmin();
+
+        return $stmt->execute([
+            ':name'     => $admin->getName(),
+            ':image'    => $adminImage !== '' ? $adminImage : null,
+            ':idAdmin'  => $admin->getIdAdmin(),
+        ]);
+    }
+
+    // =========================================================
     // COMPARTIDO CON CLIENT/OWNER: insertar registro base tbrole
     // =========================================================
     private function insertRole(Admin $admin): int

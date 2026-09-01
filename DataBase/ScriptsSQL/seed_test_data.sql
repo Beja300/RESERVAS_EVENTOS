@@ -69,13 +69,26 @@ INSERT INTO tbvenue (tbvenueownerid, tbvenuelocationid, tbvenuename, tbvenuetype
 (@ownerId, @locAlajuela, 'Salón La Quinta', 'Salón de eventos', 120, 120000.00, NULL, TRUE);
 SET @venueId = LAST_INSERT_ID();
 
+-- Locales extra para probar "Locales cerca de ti" (uno en San José y otro en Heredia)
+INSERT INTO tbvenue (tbvenueownerid, tbvenuelocationid, tbvenuename, tbvenuetype, tbvenuecapacity, tbvenueprice, tbvenueimage, tbvenueactive) VALUES
+(@ownerId, @locSanRafael, 'Jardín El Roble', 'Jardín para eventos', 80, 95000.00, NULL, TRUE);
+SET @venue2Id = LAST_INSERT_ID();
+
+INSERT INTO tbvenue (tbvenueownerid, tbvenuelocationid, tbvenuename, tbvenuetype, tbvenuecapacity, tbvenueprice, tbvenueimage, tbvenueactive) VALUES
+(@ownerId, @locHeredia, 'Centro de Eventos La Y', 'Salón de eventos', 150, 180000.00, NULL, TRUE);
+SET @venue3Id = LAST_INSERT_ID();
+
 -- =========================================================
 -- 5) SERVICIOS (estado 'aprobado' para poder reservarse)
 -- =========================================================
 INSERT INTO tbservice (tbservicelocalid, tbservicename, tbservicetype, tbserviceprice, tbservicestate, tbserviceapprovedby, tbserviceapprovedon, tbserviceactive) VALUES
 (@venueId, 'Decoración floral',          'Decoración', 150000.00, 'aprobado', @adminRoleId, NOW(), TRUE),
 (@venueId, 'Servicio de banquetes',      'Catering',   250000.00, 'aprobado', @adminRoleId, NOW(), TRUE),
-(@venueId, 'Sonido y luces',             'Producción',  80000.00, 'aprobado', @adminRoleId, NOW(), TRUE);
+(@venueId, 'Sonido y luces',             'Producción',  80000.00, 'aprobado', @adminRoleId, NOW(), TRUE),
+(@venue2Id, 'Decoración con jardín',     'Decoración',  90000.00, 'aprobado', @adminRoleId, NOW(), TRUE),
+(@venue2Id, 'Mobiliario rústico',        'Mobiliario',  60000.00, 'aprobado', @adminRoleId, NOW(), TRUE),
+(@venue3Id, 'Banquetes gourmet',         'Catering',    220000.00, 'aprobado', @adminRoleId, NOW(), TRUE),
+(@venue3Id, 'Sonido profesional',        'Producción',   75000.00, 'aprobado', @adminRoleId, NOW(), TRUE);
 SET @service1 = 1;
 SET @service2 = 2;
 SET @service3 = 3;

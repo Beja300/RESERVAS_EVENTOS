@@ -82,6 +82,41 @@ class HistoryRepository
     }
 
     /**
+     * Historial global de TODOS los usuarios (panel del Admin), con el
+     * nombre del responsable y el nombre legible de la entidad
+     * (local/servicio/ubicación) resuelto según el tipo de acción.
+     */
+    public function listAll(): array
+    {
+        $sql = "
+            SELECT
+                h.tbuserhistoryid,
+                h.tbuserhistoryroleid,
+                r.tbrolename AS responsibleName,
+                h.tbuserhistoryaction,
+                h.tbuserhistoryentity,
+                h.tbuserhistoryentityid,
+                v.tbvenuename         AS venueName,
+                l.tblocationprovince  AS locationProvince,
+                l.tblocationcanton    AS locationCanton,
+                l.tblocationdistrict  AS locationDistrict,
+                s.tbservicename       AS serviceName,
+                h.tbuserhistorydate
+            FROM tbuserhistory h
+            LEFT JOIN tbrole r ON r.tbroleid = h.tbuserhistoryroleid
+            LEFT JOIN tbvenue v ON h.tbuserhistoryentity = 'Venue' AND v.tbvenueid = h.tbuserhistoryentityid
+            LEFT JOIN tblocation l ON h.tbuserhistoryentity = 'Venue' AND l.tblocationid = h.tbuserhistoryentityid
+            LEFT JOIN tbservice s ON h.tbuserhistoryentity = 'Service' AND s.tbserviceid = h.tbuserhistoryentityid
+            ORDER BY h.tbuserhistorydate DESC, h.tbuserhistoryid DESC
+        ";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    /**
      * Devuelve los ids de entidad (ej. venuePk) MÁS interactuados,
      * ordenados de mayor a menor, filtrando por tipo de entidad y por
      * cuáles acciones cuentan como "interacción" -- es la base del

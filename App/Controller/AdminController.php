@@ -10,6 +10,7 @@ require_once __DIR__ . '/../Service/NotificationService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/BookingHistoryRepository.php';
+require_once __DIR__ . '/../Repository/HistoryRepository.php';
 require_once __DIR__ . '/../Repository/BookingRefundRepository.php';
 require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
 require_once __DIR__ . '/../Repository/DetailRepository.php';
@@ -182,6 +183,255 @@ class AdminController
     $nextMonth = date('Y-m', strtotime($yearMonth . '-01 first day of next month'));
 
     require_once __DIR__ . '/../View/Admin/List.php';
+  }
+
+  // =========================================================
+  // HISTORIAL GLOBAL DE ACCIONES DE USUARIOS
+  // (tbuserhistory: VIEW, SEARCH, BOOKING, PURCHASE, APPROVE...)
+  // =========================================================
+  public function userHistory(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    $historyRepo = new HistoryRepository();
+    $history = $historyRepo->listAll();
+
+    require_once __DIR__ . '/../View/Admin/UserHistory.php';
+  }
+
+  // =========================================================
+  // MI PERFIL (admin autenticado)
+  // =========================================================
+  public function profile(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    require_once __DIR__ . '/../View/Admin/Profile.php';
+  }
+
+  // =========================================================
+  // ACTUALIZAR MI PERFIL (datos base, foto y contraseña)
+  // =========================================================
+  public function updateProfile(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->profile();
+      return;
+    }
+
+    $admin = $_SESSION['user'];
+
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $phoneNumber = trim($_POST['phoneNumber'] ?? '');
+    $currentPassword = $_POST['currentPassword'] ?? '';
+    $newPassword = $_POST['newPassword'] ?? '';
+
+    if ($phoneNumber === '') {
+      $phoneNumber = null;
+    }
+
+    try {
+
+      if ($name === '') {
+        throw new BusinessRuleException('El nombre es obligatorio.');
+      }
+
+      if (strtolower($email) !== strtolower($admin->getEmail())) {
+        $this->authService->validateEmailIsUnique($email);
+      }
+
+      $this->authService->validatePhoneFormat($phoneNumber);
+
+      // Cambio de contraseña: solo con confirmación de la actual.
+      $hasCurrent = trim($currentPassword) !== '';
+      $hasNew = trim($newPassword) !== '';
+
+      if ($hasCurrent || $hasNew) {
+        if (!$hasCurrent || !$hasNew) {
+          throw new BusinessRuleException('Para cambiar tu contraseña debes escribir la contraseña actual y la nueva.');
+        }
+
+        if (!password_verify($currentPassword, $admin->getPassword())) {
+          throw new BusinessRuleException('La contraseña actual no es correcta.');
+        }
+
+        $this->authService->validatePasswordStrength($newPassword);
+      }
+
+      $admin->setName($name);
+      $admin->setEmail($email);
+      $admin->setPhoneNumber($phoneNumber);
+
+      $this->resolveAdminProfileImage($admin);
+
+      $this->roleRepo->update($admin);
+      $this->adminRepo->updateProfile($admin);
+
+      if ($hasCurrent && $hasNew) {
+        $this->roleRepo->updatePassword($admin->getIdRol(), $newPassword);
+      }
+
+      $_SESSION['user'] = $admin;
+
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Perfil actualizado correctamente.']);
+      }
+
+      header('Location: ../../Public/index.php?controller=admin&action=profile&updated=1');
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
+
+      require_once __DIR__ . '/../View/Admin/Profile.php';
+    }
+  }
+
+  // =========================================================
+  // ELIMINAR MI FOTO DE PERFIL
+  // =========================================================
+  public function removePhoto(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->profile();
+      return;
+    }
+
+    $admin = $_SESSION['user'];
+
+    $this->deleteAdminImageFile($admin->getImageAdmin());
+    $admin->setImageAdmin('');
+
+    $this->adminRepo->updateProfile($admin);
+
+    $_SESSION['user'] = $admin;
+
+    if (is_ajax()) {
+      respond_json(['ok' => true, 'message' => 'Foto de perfil eliminada.']);
+    }
+
+    header('Location: ../../Public/index.php?controller=admin&action=profile&removed=1');
+    exit;
+  }
+
+  // =========================================================
+  // DESACTIVAR MI CUENTA (último admin activo protegido)
+  // =========================================================
+  public function deactivateAccount(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->profile();
+      return;
+    }
+
+    $admin = $_SESSION['user'];
+
+    try {
+
+      $this->adminService->desactivate($admin->getIdRol(), 'admin');
+
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Tu cuenta fue desactivada.']);
+      }
+
+    } catch (BusinessRuleException $e) {
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $e->getMessage()], 422);
+      }
+
+      $error = $e->getMessage();
+      require_once __DIR__ . '/../View/Admin/Profile.php';
+      return;
+    }
+
+    session_unset();
+    session_destroy();
+
+    header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+    exit;
+  }
+
+  // =========================================================
+  // FOTO DE PERFIL: prioriza archivo, luego URL.
+  // =========================================================
+  private const ADMIN_IMAGE_DIR = 'resource/admins/';
+
+  private function resolveAdminProfileImage(Admin $admin): void
+  {
+    $current = $admin->getImageAdmin();
+    $newImage = $current;
+
+    if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+      $file = $_FILES['image'];
+      $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+      $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
+      if (!in_array($extension, $allowed, true)) {
+        throw new BusinessRuleException("Formato de imagen no válido (usa jpg, png, webp o gif).");
+      }
+
+      if ($file['size'] > 2 * 1024 * 1024) {
+        throw new BusinessRuleException("La imagen no puede superar los 2 MB.");
+      }
+
+      $dir = __DIR__ . '/../../Public/resource/admins/';
+      if (!is_dir($dir)) {
+        mkdir($dir, 0777, true);
+      }
+
+      $filename = 'admin_' . $admin->getIdAdmin() . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+
+      if (!move_uploaded_file($file['tmp_name'], $dir . $filename)) {
+        throw new BusinessRuleException("No se pudo guardar la imagen.");
+      }
+
+      $newImage = self::ADMIN_IMAGE_DIR . $filename;
+    } else {
+      $url = trim($_POST['imageUrl'] ?? '');
+
+      if ($url !== '') {
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+          throw new BusinessRuleException("URL de imagen no válida.");
+        }
+
+        $newImage = $url;
+      }
+    }
+
+    if ($newImage !== $current) {
+      $this->deleteAdminImageFile($current);
+      $admin->setImageAdmin($newImage);
+    }
+  }
+
+  // =========================================================
+  // BORRAR EL ARCHIVO LOCAL (nunca URLs externas)
+  // =========================================================
+  private function deleteAdminImageFile(string $storedPath): void
+  {
+    if (str_starts_with($storedPath, self::ADMIN_IMAGE_DIR)) {
+      $file = __DIR__ . '/../../Public/' . $storedPath;
+      if (is_file($file)) {
+        @unlink($file);
+      }
+    }
   }
 
   // =========================================================

@@ -112,6 +112,30 @@ class LocationRepository
         return $id !== false ? (int) $id : null;
     }
 
+    // =========================================================
+    // BUSCAR ID SOLO POR PROVINCIA/CANTÓN (para ubicación detectada)
+    // =========================================================
+    public function findIdByCanton(string $province, string $canton): ?int
+    {
+        $sql = "
+            SELECT tblocationid
+            FROM tblocation
+            WHERE tblocationprovince = :province
+              AND tblocationcanton = :canton
+            LIMIT 1
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute([
+            ':province' => $province,
+            ':canton'   => $canton,
+        ]);
+
+        $id = $stmt->fetchColumn();
+
+        return $id !== false ? (int) $id : null;
+    }
+
     private function mapRow(array $row): Location
     {
         return new Location(

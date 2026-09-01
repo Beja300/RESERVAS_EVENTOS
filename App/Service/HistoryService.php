@@ -109,6 +109,62 @@ class HistoryService
     return $this->historyRepo->listByRole($roleId);
   }
 
+  // =========================================================
+  // RECOMENDAR LOCALES CERCA DE LA UBICACIÓN ACTUAL DEL CLIENTE
+  // Misma provincia que la ubicación del rol; mismo cantón primero.
+  // Devuelve [] si no hay ubicación o si no hay locales cercanos.
+  // =========================================================
+  public function recommendVenuesByLocation(
+    ?int $locationId,
+    int $limit = 5
+  ): array {
+
+    if ($locationId === null || $limit <= 0) {
+      return [];
+    }
+
+    $clientLocation = $this->locationRepo->findById($locationId);
+
+    if ($clientLocation === null) {
+      return [];
+    }
+
+    $province = $clientLocation->getProvinceLocation();
+    $canton = $clientLocation->getCantonLocation();
+
+    $matches = [];
+    $suggested = [];
+
+    foreach ($this->venueService->findActive() as $venue) {
+
+      $venueLocation = $this->locationRepo->findById($venue->getIdLocation());
+
+      if ($venueLocation === null || $venueLocation->getProvinceLocation() !== $province) {
+        continue;
+      }
+
+      if ($venueLocation->getCantonLocation() === $canton) {
+        $matches[] = $venue;
+
+        if (count($matches) >= $limit) {
+          break;
+        }
+      } else {
+        $suggested[] = $venue;
+      }
+    }
+
+    foreach ($suggested as $venue) {
+      $matches[] = $venue;
+
+      if (count($matches) >= $limit) {
+        break;
+      }
+    }
+
+    return $matches;
+  }
+
   public function recommendVenues(
     int $roleId,
     int $limit = 5

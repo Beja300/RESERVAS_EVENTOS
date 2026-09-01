@@ -30,6 +30,40 @@ $client = $_SESSION['user'] ?? null;
   </div>
 <?php endif; ?>
 
+<div id="geo-module"
+     data-has-location="<?= $hasLocation ? '1' : '0' ?>"
+     data-geo-url="<?= e(base_url('api', 'geolocate')) ?>"
+     data-save-url="<?= e(base_url('client', 'updateLocation')) ?>"
+     data-csrf="<?= e(csrf_token()) ?>">
+
+  <h2 style="font-size:1.15rem;color:var(--neutral-700);margin:28px 0 14px;">Locales cerca de ti</h2>
+  <?php if ($hasLocation && !empty($nearbyVenues)): ?>
+    <div class="grid">
+      <?php foreach ($nearbyVenues as $v): ?>
+        <div class="card" style="display:flex;flex-direction:column;justify-content:space-between;">
+          <div>
+            <h3 style="color:var(--neutral-900);margin-bottom:6px;"><?= e($v->getNameVenue()) ?></h3>
+            <p class="muted">Capacidad: <?= (int) $v->getCapacityVenue() ?></p>
+          </div>
+          <a class="btn btn-sm btn-outline" style="margin-top:12px;" href="<?= e(base_url('venue', 'detail', ['id' => $v->getIdVenue()])) ?>">Ver local</a>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php elseif (!$hasLocation): ?>
+    <div class="card empty">
+      <span class="emoji">&#128205;</span>
+      Configura tu ubicación en
+      <a href="<?= e(base_url('client', 'profile')) ?>">Mi perfil</a>
+      (o permítenos detectarla) para ver locales cerca de ti.
+    </div>
+  <?php else: ?>
+    <div class="card empty">
+      <span class="emoji">&#128205;</span>
+      No hay locales en tu provincia por ahora.
+    </div>
+  <?php endif; ?>
+</div>
+
 <div class="page-head" style="margin-top:28px;">
   <h2 style="font-size:1.15rem;color:var(--neutral-700);">Mis reservas</h2>
   <a href="<?= e(base_url('booking', 'myBookings')) ?>">Ver todas &rarr;</a>
@@ -55,4 +89,5 @@ $client = $_SESSION['user'] ?? null;
   </div>
 <?php endif; ?>
 
+<script src="<?= e(js_url('client/dashboard')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

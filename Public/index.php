@@ -111,15 +111,15 @@ $allowedActions = [
   'service'       => ['list', 'showForm', 'create', 'update', 'pending', 'approve', 'reject', 'detail'],
   'venue'         => ['catalog', 'detail', 'showOwner', 'list', 'showForm', 'create', 'update', 'rate', 'rateService', 'updateComment'],
   'booking'       => ['create', 'showForm', 'myBookings', 'detail', 'addLine', 'cancel', 'pay', 'venueBookings', 'pendingBookings', 'uploadTicket', 'approveTicket', 'rejectTicket', 'requestRefund'],
-  'admin'         => ['dashboard', 'users', 'activateUser', 'deactivateUser', 'bookings', 'approvePayment', 'rejectPayment', 'cleanTestData', 'showAdminForm', 'createAdmin', 'showClientForm', 'createClient', 'showOwnerForm', 'createOwner', 'showEditForm', 'updateUser', 'bookingDetail', 'cancelBooking', 'rescheduleBooking', 'changeBookingVenue', 'refundBooking', 'rejectRefundBooking'],
-  'client'        => ['dashboard', 'profile', 'updateProfile', 'deactivateAccount'],
+  'admin'         => ['dashboard', 'users', 'activateUser', 'deactivateUser', 'bookings', 'userHistory', 'profile', 'updateProfile', 'removePhoto', 'deactivateAccount', 'approvePayment', 'rejectPayment', 'cleanTestData', 'showAdminForm', 'createAdmin', 'showClientForm', 'createClient', 'showOwnerForm', 'createOwner', 'showEditForm', 'updateUser', 'bookingDetail', 'cancelBooking', 'rescheduleBooking', 'changeBookingVenue', 'refundBooking', 'rejectRefundBooking'],
+  'client'        => ['dashboard', 'profile', 'updateProfile', 'updateLocation', 'deactivateAccount'],
   'owner'         => ['dashboard', 'profile', 'updateProfile', 'removePhoto', 'deactivateAccount', 'paymentData', 'savePayment', 'removePayment'],
   'invoice'       => ['showForm', 'generate', 'detail', 'list'],
   'paymentmethod' => ['list', 'showForm', 'create', 'edit', 'update', 'delete'],
   'location'      => ['list', 'showForm', 'create'],
   'notification'  => ['list', 'markAsRead', 'markAllAsRead', 'open'],
   'promotion'     => ['list', 'showForm', 'create', 'addService'],
-  'api'           => ['locations', 'venueComments', 'serviceComments'],
+  'api'           => ['locations', 'geolocate', 'venueComments', 'serviceComments'],
 ];
 
 // Ruta por defecto (acceso a /Public/index.php sin parámetros)

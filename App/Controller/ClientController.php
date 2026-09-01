@@ -51,6 +51,13 @@ class ClientController
       5
     );
 
+    $hasLocation = $client->getLocationId() !== null;
+
+    $nearbyVenues = $this->historyService->recommendVenuesByLocation(
+      $client->getLocationId(),
+      5
+    );
+
     $bookings = $this->bookingRepo->findByClient($client->getIdClient());
 
     require_once __DIR__ . '/../View/Client/Dashboard.php';
@@ -169,6 +176,74 @@ class ClientController
       }
 
       require_once __DIR__ . '/../View/Client/Profile.php';
+    }
+  }
+
+  // =========================================================
+  // GUARDAR UBICACIÓN DETECTADA AL INICIAR SESIÓN
+  // Solo la aplica si el cliente aún no tiene una configurada.
+  // =========================================================
+  public function updateLocation(): void
+  {
+    session_start();
+    $this->requireClient();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      respond_json(['ok' => false, 'message' => 'Método no permitido.'], 405);
+      return;
+    }
+
+    $client = $_SESSION['user'];
+
+    $province = trim($_POST['province'] ?? '');
+    $canton = trim($_POST['canton'] ?? '');
+    $district = trim($_POST['district'] ?? '');
+
+    try {
+
+      if ($province === '' || $canton === '' || $district === '') {
+        throw new BusinessRuleException('Datos de ubicación incompletos.');
+      }
+
+      if ($client->getLocationId() !== null) {
+        respond_json([
+          'ok'      => true,
+          'saved'   => false,
+          'message' => 'Ya tienes una ubicación configurada en tu perfil.',
+        ]);
+        return;
+      }
+
+      // Reutiliza una ubicación existente (por partes o solo por cantón)
+      // para no duplicar filas; solo crea si no existe ninguna.
+      $locationId = $this->locationRepo->findIdByParts($province, $canton, $district);
+
+      if ($locationId === null) {
+        $locationId = $this->locationRepo->findIdByCanton($province, $canton);
+      }
+
+      if ($locationId === null) {
+        $locationId = $this->locationService->validateAndCreate($province, $canton, $district);
+      }
+
+      $this->clientRepo->updateProfile($client->getIdClient(), $client->getImageClient(), $locationId);
+      $client->setLocationId($locationId);
+
+      $_SESSION['user'] = $client;
+
+      respond_json([
+        'ok'       => true,
+        'saved'    => true,
+        'message'  => 'Ubicación detectada: ' . $canton . ', ' . $province,
+        'location' => [
+          'province' => $province,
+          'canton'   => $canton,
+          'district' => $district,
+        ],
+      ]);
+    } catch (BusinessRuleException $e) {
+
+      respond_json(['ok' => false, 'message' => $e->getMessage()], 422);
     }
   }
 

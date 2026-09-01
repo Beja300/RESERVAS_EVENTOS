@@ -114,6 +114,10 @@ class VenueController
     session_start();
     $loggedRolePk = isset($_SESSION['user']) ? (int) $_SESSION['user']->getIdRol() : 0;
 
+    if ($loggedRolePk > 0 && ($_SESSION['type'] ?? null) === 'client') {
+      $this->historyService->logVenueView($loggedRolePk, $idVenue);
+    }
+
     $myRatingByService = [];
     if ($loggedRolePk > 0) {
       foreach ($services as $s) {

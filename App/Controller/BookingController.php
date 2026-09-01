@@ -9,6 +9,7 @@ require_once __DIR__ . '/../Service/OwnerService.php';
 require_once __DIR__ . '/../Service/OwnerPaymentService.php';
 require_once __DIR__ . '/../Service/BookingTicketService.php';
 require_once __DIR__ . '/../Service/NotificationService.php';
+require_once __DIR__ . '/../Service/HistoryService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/DetailRepository.php';
@@ -40,6 +41,7 @@ class BookingController
   private OwnerPaymentRepository $ownerPaymentRepo;
   private OwnerPaymentService $ownerPaymentService;
   private NotificationService $notificationService;
+  private HistoryService $historyService;
 
   public function __construct()
   {
@@ -63,6 +65,7 @@ class BookingController
     $this->ownerPaymentService = new OwnerPaymentService($connection);
     $this->bookingTicketService = new BookingTicketService($connection);
     $this->notificationService = new NotificationService(new NotificationRepository($connection));
+    $this->historyService = new HistoryService($connection);
   }
 
   // =========================================================
@@ -93,6 +96,8 @@ class BookingController
         $date,
         $eventType
       );
+
+      $this->historyService->logVenueBooking((int) $client->getIdRol(), $idVenue);
 
       $venue = $this->venueRepo->findById($idVenue);
       if ($venue !== null) {
@@ -389,6 +394,11 @@ class BookingController
 
       $this->invoiceService->generate($idBooking, $idPaymentMethod, date('Y-m-d'));
 
+      $paidBooking = $this->bookingRepo->findById($idBooking);
+      if ($paidBooking !== null) {
+        $this->historyService->logVenuePurchase((int) $client->getIdRol(), (int) $paidBooking->getIdLocal());
+      }
+
       header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
       exit;
     } catch (BusinessRuleException $e) {
@@ -534,6 +544,8 @@ class BookingController
 
       $ticketBooking = $this->bookingRepo->findById($idBooking);
       if ($ticketBooking !== null) {
+        $this->historyService->logVenuePurchase((int) $client->getIdRol(), (int) $ticketBooking->getIdLocal());
+
         $ticketVenue = $this->venueRepo->findById($ticketBooking->getIdLocal());
         if ($ticketVenue !== null) {
           $this->notificationService->notifyOwnerPaymentVerification(
