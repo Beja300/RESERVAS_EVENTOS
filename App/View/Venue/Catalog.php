@@ -68,14 +68,24 @@ $filters = $filters ?? [
     <?php foreach ($venues as $v): ?>
       <div class="card venue-card" style="display:flex;flex-direction:column;justify-content:space-between;">
         <div>
-          <div style="height:150px;border-radius:8px;background:linear-gradient(135deg,var(--primary-light),var(--neutral-100));display:flex;align-items:center;justify-content:center;font-size:3rem;margin-bottom:14px;">
-            <?= $v->getImageVenue() !== '' ? htmlspecialchars($v->getImageVenue()) : '&#127968;' ?>
+          <div style="height:150px;border-radius:8px;background:linear-gradient(135deg,var(--primary-light),var(--neutral-100));display:flex;align-items:center;justify-content:center;font-size:3rem;margin-bottom:14px;overflow:hidden;">
+            <?php if ($v->getImageVenue() !== ''): ?>
+              <img src="<?= e(image_url($v->getImageVenue())) ?>" alt="Foto de <?= e($v->getNameVenue()) ?>"
+                style="width:100%;height:150px;object-fit:cover;">
+            <?php else: ?>
+              <span>&#127968;</span>
+            <?php endif; ?>
           </div>
           <h3 style="margin-bottom:6px;color:var(--neutral-900);"><?= e($v->getNameVenue()) ?></h3>
           <p style="color:var(--neutral-500);font-size:0.92rem;">
             <?= $v->getTypeVenue() !== '' ? e($v->getTypeVenue()) : 'General' ?>
             &nbsp;·&nbsp; Capacidad: <?= (int) $v->getCapacityVenue() ?>
           </p>
+          <?php if (isset($locationByVenue[$v->getIdVenue()])): $loc = $locationByVenue[$v->getIdVenue()]; ?>
+            <p style="color:var(--neutral-500);font-size:0.85rem;margin-top:4px;">
+              &#128205; <?= e($loc->getProvinceLocation()) ?> &middot; <?= e($loc->getCantonLocation()) ?> &middot; <?= e($loc->getDistrictLocation()) ?>
+            </p>
+          <?php endif; ?>
           <p style="color:var(--neutral-900);font-weight:700;margin-top:6px;">
             &#8353; <?= number_format($v->getPriceVenue(), 2) ?>
             <span class="muted" style="font-weight:400;">por evento</span>

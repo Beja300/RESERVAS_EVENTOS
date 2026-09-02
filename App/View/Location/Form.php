@@ -1,4 +1,7 @@
-<?php require_once __DIR__ . '/../_header.php'; ?>
+<?php require_once __DIR__ . '/../_header.php';
+
+$pageJs = ['venue/location'];
+?>
 
 <div class="page-head">
   <div>
@@ -17,18 +20,24 @@
     <div class="grid grid-3">
       <div class="form-group">
         <label for="province">Provincia *</label>
-        <input class="form-control" type="text" id="province" name="province" required
-               value="<?= e($_POST['province'] ?? '') ?>">
+        <select class="form-control" id="province" name="province" data-level="province" required
+                data-value="<?= e($_POST['province'] ?? '') ?>">
+          <option value="">— Selecciona —</option>
+        </select>
       </div>
       <div class="form-group">
         <label for="canton">Cantón *</label>
-        <input class="form-control" type="text" id="canton" name="canton" required
-               value="<?= e($_POST['canton'] ?? '') ?>">
+        <select class="form-control" id="canton" name="canton" data-level="canton" disabled required
+                data-value="<?= e($_POST['canton'] ?? '') ?>">
+          <option value="">— Selecciona —</option>
+        </select>
       </div>
       <div class="form-group">
         <label for="district">Distrito *</label>
-        <input class="form-control" type="text" id="district" name="district" required
-               value="<?= e($_POST['district'] ?? '') ?>">
+        <select class="form-control" id="district" name="district" data-level="district" disabled required
+                data-value="<?= e($_POST['district'] ?? '') ?>">
+          <option value="">— Selecciona —</option>
+        </select>
       </div>
     </div>
 

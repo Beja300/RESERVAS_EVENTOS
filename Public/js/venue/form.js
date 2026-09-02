@@ -12,6 +12,9 @@
         .then(function (r) {
           window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
           if (r.ok) setTimeout(function () { window.location.href = base() + '/index.php?controller=venue&action=list'; }, 700);
+        })
+        .catch(function (err) {
+          window.App && App.toast(err && err.message ? err.message : 'No se pudo crear el local.', 'error');
         });
     });
   }

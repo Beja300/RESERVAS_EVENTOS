@@ -1,3 +1,4 @@
+/*
 :root {
   --primary: #4f46e5;
   --primary-dark: #4338ca;
@@ -20,6 +21,41 @@
   --radius: 12px;
   --shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(15, 23, 42, 0.05);
   --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.12);
+}
+*/
+:root {
+  /* ===== Marca: verde esmeralda + teal + dorado ===== */
+  --primary: #1b4332;         /* verde esmeralda — botones, enlaces, foco */
+  --primary-dark: #081c15;    /* verde muy oscuro — hover fuerte, header */
+  --primary-light: #e3ece6;   /* verde muy claro — fondos suaves */
+
+  --accent: #036666;          /* teal — acciones secundarias */
+  --accent-dark: #024f4f;     /* teal oscuro — hover de accent */
+  --accent-light: #dcf0ef;    /* teal claro — fondos suaves */
+
+  --gold: #fbb02d;            /* dorado — estrellas, detalles premium */
+  --gold-dark: #d9930f;
+  --gold-light: #fff3dc;
+
+  --success: #16a34a;
+  --success-light: #dcfce7;
+  --danger: #dc2626;
+  --danger-light: #fee2e2;
+  --warning: #d97706;
+  --warning-light: #fef3c7;
+
+  --neutral-50: #ebf2fa;       /* fondo general — crema/blanco azulado */
+  --neutral-100: #eef3f1;
+  --neutral-200: #dbe4e0;
+  --neutral-300: #c2d0cb;
+  --neutral-500: #5b6b65;
+  --neutral-700: #33413c;
+  --neutral-800: #1c2723;
+  --neutral-900: #0f1713;
+
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(8, 28, 21, 0.08), 0 4px 12px rgba(8, 28, 21, 0.05);
+  --shadow-lg: 0 10px 30px rgba(8, 28, 21, 0.14);
 }
 
 * {
@@ -58,15 +94,23 @@ a:hover {
 }
 
 /* ============ Barra superior ============ */
+/* ============ Barra superior ============ */
 .topbar {
-  background: #fff;
-  border-bottom: 1px solid var(--neutral-200);
+  background: linear-gradient(180deg, #081c15, #1b4332);
+  border-bottom: 1px solid transparent;
   padding: 14px 0;
   box-shadow: var(--shadow);
   position: sticky;
   top: 0;
   z-index: 10;
 }
+
+.topbar .brand { color: #ffffff; }        /* logo → blanco (o #d4af37 dorado) */
+.topbar .nav a { color: #f1f5f9; }        /* enlaces → blanco suave */
+.topbar .nav a:hover,
+.topbar .nav a.active { color: #d4af37; background: rgba(255,255,255,0.12); }
+.topbar .btn-ghost { color: #f1f5f9; }
+.topbar .btn-ghost:hover { color: #ffffff; background: rgba(255,255,255,0.12); }
 
 .topbar .container {
   display: flex;
@@ -153,7 +197,10 @@ a:hover {
 .btn-primary:hover { background: var(--primary-dark); }
 
 .btn-accent { background: var(--accent); color: #fff; }
+/*
 .btn-accent:hover { background: #0284c7; }
+*/
+.btn-accent:hover { background: var(--accent-dark); }
 
 .btn-success { background: var(--success); color: #fff; }
 .btn-success:hover { background: #15803d; }
@@ -286,6 +333,88 @@ a:hover {
 }
 
 textarea.form-control { min-height: 90px; resize: vertical; }
+
+/* ============ Combo con búsqueda (provincia → cantón → distrito) ============ */
+.combo {
+  position: relative;
+}
+
+.combo-input {
+  padding-right: 34px;
+  cursor: pointer;
+}
+
+.combo::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  width: 8px;
+  height: 8px;
+  margin-top: -5px;
+  border-right: 2px solid var(--neutral-500);
+  border-bottom: 2px solid var(--neutral-500);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.combo.is-open::after {
+  margin-top: -1px;
+  transform: rotate(225deg);
+}
+
+.combo-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 5px;
+  background: #fff;
+  border: 1px solid var(--neutral-300);
+  border-radius: 9px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+  display: none;
+}
+
+.combo.is-open .combo-menu {
+  display: block;
+}
+
+.combo-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.92rem;
+  color: var(--neutral-800);
+  cursor: pointer;
+}
+
+.combo-item:hover,
+.combo-item.is-active {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.combo-item.is-empty {
+  cursor: default;
+  color: var(--neutral-500);
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.combo.is-disabled .combo-input {
+  background: var(--neutral-200);
+  cursor: not-allowed;
+  color: var(--neutral-500);
+}
+
+.combo.is-disabled::after {
+  border-color: var(--neutral-300);
+}
 
 .form-hint {
   font-size: 0.8rem;
@@ -624,7 +753,8 @@ table.table {
 
 .star-widget .star.is-hover,
 .star-widget .star.is-active {
-  color: var(--warning);
+  /* color: var(--warning); */
+  color: var(--gold);
 }
 
 .star-widget.is-sm {
@@ -633,7 +763,7 @@ table.table {
 }
 
 .rating-stars {
-  color: var(--warning);
+  color: var(--gold);
   letter-spacing: 1px;
   white-space: nowrap;
 }

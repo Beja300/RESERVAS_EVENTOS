@@ -51,14 +51,31 @@ class ClientController
       5
     );
 
-    $hasLocation = $client->getLocationId() !== null;
+    $clientLocationId = $client->getLocationId();
 
-    $nearbyVenues = $this->historyService->recommendVenuesByLocation(
-      $client->getLocationId(),
-      5
-    );
+    $hasValidLocation = $clientLocationId !== null
+      && $this->locationRepo->findById($clientLocationId) !== null;
+
+    $nearbyVenues = $hasValidLocation
+      ? $this->historyService->recommendVenuesByLocation($clientLocationId, 5)
+      : [];
+
+    $hasLocation = $hasValidLocation;
 
     $bookings = $this->bookingRepo->findByClient($client->getIdClient());
+
+    $allVenues = array_merge($recommendations, $nearbyVenues);
+    $locationByVenue = [];
+    $locationCache = [];
+    foreach ($allVenues as $v) {
+      $locId = $v->getIdLocation();
+      if ($locId > 0) {
+        if (!isset($locationCache[$locId])) {
+          $locationCache[$locId] = $this->locationRepo->findById($locId);
+        }
+        $locationByVenue[$v->getIdVenue()] = $locationCache[$locId];
+      }
+    }
 
     require_once __DIR__ . '/../View/Client/Dashboard.php';
   }
@@ -205,7 +222,11 @@ class ClientController
         throw new BusinessRuleException('Datos de ubicación incompletos.');
       }
 
-      if ($client->getLocationId() !== null) {
+      $currentLocationId = $client->getLocationId();
+      $hasValidLocation = $currentLocationId !== null
+        && $this->locationRepo->findById($currentLocationId) !== null;
+
+      if ($hasValidLocation) {
         respond_json([
           'ok'      => true,
           'saved'   => false,

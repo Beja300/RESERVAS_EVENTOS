@@ -25,18 +25,6 @@ class LocationService
             throw new BusinessRuleException("Provincia, cantón y distrito son obligatorios.");
         }
 
-        foreach ($this->locationRepo->findAll() as $existing) {
-            if (
-                $existing->getProvinceLocation() === $province &&
-                $existing->getCantonLocation() === $canton &&
-                $existing->getDistrictLocation() === $district &&
-                $existing->getTownLocation() === $town &&
-                $existing->getDescriptionLocation() === $description
-            ) {
-                throw new BusinessRuleException("Ya existe una ubicación idéntica registrada.");
-            }
-        }
-
         $newLocation = new Location(
             idLocation: 0,
             provinceLocation: $province,
@@ -47,5 +35,10 @@ class LocationService
         );
 
         return $this->locationRepo->save($newLocation);
+    }
+
+    public function findById(int $idLocation): ?Location
+    {
+        return $this->locationRepo->findById($idLocation);
     }
 }

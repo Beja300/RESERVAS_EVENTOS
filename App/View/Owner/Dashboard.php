@@ -12,7 +12,7 @@ $m = function (float $v): string {
 };
 $next = $stats['proximaReserva'] ?? null;
 ?>
-
+<!--
 <div class="page-head">
   <div>
     <h1>Bienvenid@, <?= e($owner ? $owner->getName() : 'propietario') ?></h1>
@@ -20,7 +20,7 @@ $next = $stats['proximaReserva'] ?? null;
   </div>
   <a class="btn btn-primary" href="<?= e(base_url('venue', 'showForm')) ?>">+ Nuevo local</a>
 </div>
-
+-->
 <div class="card" style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
     <a class="btn btn-sm" href="<?= e(base_url('owner', 'dashboard', ['month' => $prevMonth])) ?>">&larr; Mes anterior</a>
@@ -34,7 +34,7 @@ $next = $stats['proximaReserva'] ?? null;
   </div>
 </div>
 
-<div style="margin-bottom:24px; background-color:white;padding:16px;border-radius:6px;">
+<div style="margin-bottom:24px; background:linear-gradient(135deg, #081c15 0%, #1b4332 40%, #036666 70%, #fbb02d 100%); padding:16px; border-radius:6px;">
   <p class="muted" style="margin-bottom:12px;">Resumen de <?= e($monthLabel) ?></p>
   <div class="grid grid-3" style="margin-bottom:16px;">
     <div class="stat"><div class="value"><?= $m((float) ($stats['comision'] ?? 0)) ?></div><div class="label">Comisión al admin</div></div>
@@ -68,7 +68,7 @@ $next = $stats['proximaReserva'] ?? null;
       <?php endif; ?>
     </div>
   </div>
-</div>
+
 
 <div class="grid grid-2" style="margin-top:24px;">
   <div class="card">
@@ -81,7 +81,7 @@ $next = $stats['proximaReserva'] ?? null;
       <span class="badge info" style="margin-left:6px;"><?= (int) $tv['bookingCount'] ?> reservas</span>
     <?php endif; ?>
   </div>
-
+</div>
   <div class="card">
     <h3 class="card-title">Servicios más agregados</h3>
     <?php if (empty($topServices)): ?>

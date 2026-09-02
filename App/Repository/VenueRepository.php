@@ -230,6 +230,7 @@ class VenueRepository
                 tbvenuecapacity = :capacityVenue,
                 tbvenueprice = :priceVenue,
                 tbvenueimage = :imageVenue,
+                tbvenuelocationid = :idLocation,
                 tbvenueactive = :isActive
             WHERE tbvenueid = :idVenue
         ";
@@ -242,6 +243,7 @@ class VenueRepository
       ':capacityVenue' => $venue->getCapacityVenue(),
       ':priceVenue'    => $venue->getPriceVenue(),
       ':imageVenue'    => $venue->getImageVenue(),
+      ':idLocation'    => $venue->getIdLocation(),
       ':isActive'      => $this->toDb($venue->getIsActive()),
       ':idVenue'       => $venue->getIdVenue()
     ]);

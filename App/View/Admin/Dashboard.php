@@ -1,15 +1,16 @@
 <?php require_once __DIR__ . '/../_header.php'; ?>
-
+<!--
 <div class="page-head">
   <div>
     <h1>Panel de administración</h1>
-    <p class="muted">Resumen del mes de <?= date('F Y', strtotime($yearMonth . '-01')) ?></p>
+
   </div>
 </div>
 
 <?php if (isset($_GET['cleaned'])): ?>
   <div class="alert alert-success">Los datos de prueba fueron eliminados correctamente.</div>
 <?php endif; ?>
+-->
 
 <div class="card" style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
@@ -24,7 +25,11 @@
   </div>
 </div>
 
-<div class="grid grid-4" style="margin-bottom:20px;">
+<div style="margin-bottom:24px; background:linear-gradient(135deg, #081c15 0%, #1b4332 40%, #036666 70%, #fbb02d 100%); padding:16px; border-radius:6px;">
+
+<p class="muted">Resumen del mes de <?= date('F Y', strtotime($yearMonth . '-01')) ?></p>
+
+<div class="grid grid-4" style="margin-bottom:20px; ">
   <div class="stat"><div class="value">&#8353; <?= number_format($monthStats['ingreso_bruto'], 2) ?></div><div class="label">Ingreso bruto del mes</div></div>
   <div class="stat"><div class="value">&#8353; <?= number_format($monthStats['comision'], 2) ?></div><div class="label">Ganancia mensual (comisi&oacute;n 5%)</div></div>
   <div class="stat"><div class="value">&#8353; <?= number_format($monthStats['iva'], 2) ?></div><div class="label">IVA retenido</div></div>
@@ -37,6 +42,7 @@
   <div class="stat"><div class="value"><?= count($topServices) ?></div><div class="label">Servicios top</div></div>
 </div>
 
+</div>
 <h3 class="card-title" style="margin-bottom:12px;">Estad&iacute;sticas operativas</h3>
 
 <div class="grid grid-4" style="margin-bottom:20px;">

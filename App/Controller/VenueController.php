@@ -11,6 +11,7 @@ require_once __DIR__ . '/../Repository/ServiceHistoryRepository.php';
 require_once __DIR__ . '/../Repository/OwnerRepository.php';
 require_once __DIR__ . '/../Service/PromotionService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
+require_once __DIR__ . '/../Service/LocationService.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class VenueController
@@ -23,6 +24,7 @@ class VenueController
   private PromotionService $promotionService;
   private HistoryService $historyService;
   private OwnerRepository $ownerRepository;
+  private LocationService $locationService;
 
   public function __construct()
   {
@@ -36,6 +38,7 @@ class VenueController
     $this->promotionService = new PromotionService($connection);
     $this->historyService = new HistoryService($connection);
     $this->ownerRepository = new OwnerRepository($connection);
+    $this->locationService = new LocationService(new LocationRepository($connection));
   }
 
   // =========================================================
@@ -67,7 +70,9 @@ class VenueController
 
     $ratingsByVenue = [];
     $promosByVenue = [];
+    $locationByVenue = [];
 
+    $locationCache = [];
     foreach ($venues as $v) {
       $avg = $this->venueRatingService->getAverage($v->getIdVenue());
       if ($avg !== null) {
@@ -78,6 +83,14 @@ class VenueController
       if (!empty($promos)) {
         $names = array_map(fn($p) => $p->getLabel(), $promos);
         $promosByVenue[$v->getIdVenue()] = $names;
+      }
+
+      $locId = $v->getIdLocation();
+      if ($locId > 0) {
+        if (!isset($locationCache[$locId])) {
+          $locationCache[$locId] = $this->locationService->findById($locId);
+        }
+        $locationByVenue[$v->getIdVenue()] = $locationCache[$locId];
       }
     }
 
@@ -132,6 +145,11 @@ class VenueController
     $serviceComments = [];
     foreach ($services as $s) {
       $serviceComments[$s->getIdService()] = $this->serviceRatingService->getPublicComments($s->getIdService());
+    }
+
+    $location = null;
+    if ($venue->getIdLocation() > 0) {
+      $location = $this->locationService->findById($venue->getIdLocation());
     }
 
     require_once __DIR__ . '/../View/Venue/Detail.php';
@@ -356,6 +374,10 @@ class VenueController
 
     $idVenue = (int) ($_GET['id'] ?? 0);
     $venue = $idVenue > 0 ? $this->venueService->findById($idVenue) : null;
+    $location = null;
+    if ($venue !== null && $venue->getIdLocation() > 0) {
+      $location = $this->locationService->findById($venue->getIdLocation());
+    }
 
     require_once __DIR__ . '/../View/Venue/Form.php';
   }
@@ -384,9 +406,14 @@ class VenueController
     $type = trim($_POST['type'] ?? '') ?: null;
     $capacity = isset($_POST['capacity']) && $_POST['capacity'] !== '' ? (int) $_POST['capacity'] : null;
     $price = isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : 0.0;
-    $image = trim($_POST['image'] ?? '') ?: null;
 
     try {
+
+      $image = $this->resolveVenueImage($owner->getIdOwner(), '');
+
+      if ($image === '') {
+        throw new BusinessRuleException("Debes subir al menos una foto del local.");
+      }
 
       $this->venueService->validateAndCreate(
         $owner->getIdOwner(),
@@ -442,8 +469,13 @@ class VenueController
     $type = trim($_POST['type'] ?? '') ?: null;
     $capacity = isset($_POST['capacity']) && $_POST['capacity'] !== '' ? (int) $_POST['capacity'] : null;
     $price = isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : 0.0;
-    $image = trim($_POST['image'] ?? '') ?: null;
     $active = isset($_POST['active']);
+
+    $province = trim($_POST['province'] ?? '');
+    $canton = trim($_POST['canton'] ?? '');
+    $district = trim($_POST['district'] ?? '');
+    $town = trim($_POST['town'] ?? '') ?: null;
+    $description = trim($_POST['description'] ?? '') ?: null;
 
     try {
 
@@ -455,6 +487,10 @@ class VenueController
 
       $this->ownerService->assertOwnsVenue($owner->getIdOwner(), $idVenue);
 
+      $image = $this->resolveVenueImage($owner->getIdOwner(), $venue->getImageVenue());
+
+      $idLocation = $this->locationService->validateAndCreate($province, $canton, $district, $town, $description);
+
       $this->venueService->validateAndUpdate(
         $venue,
         $name,
@@ -462,7 +498,8 @@ class VenueController
         $capacity,
         $price,
         $image,
-        $active
+        $active,
+        $idLocation
       );
 
       if (is_ajax()) {
@@ -479,8 +516,48 @@ class VenueController
         respond_json(['ok' => false, 'message' => $error], 422);
       }
 
+      $location = null;
+      if ($venue !== null && $venue->getIdLocation() > 0) {
+        $location = $this->locationService->findById($venue->getIdLocation());
+      }
+
       require_once __DIR__ . '/../View/Venue/Form.php';
     }
+  }
+
+  // =========================================================
+  // FOTO DEL LOCAL: prioriza el archivo subido, si no conserva la actual.
+  // =========================================================
+  private function resolveVenueImage(int $ownerId, string $current): string
+  {
+    if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+      $file = $_FILES['image'];
+      $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+      $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
+      if (!in_array($extension, $allowed, true)) {
+        throw new BusinessRuleException("Formato de imagen no válido (usa jpg, png, webp o gif).");
+      }
+
+      if ($file['size'] > 2 * 1024 * 1024) {
+        throw new BusinessRuleException("La imagen no puede superar los 2 MB.");
+      }
+
+      $dir = __DIR__ . '/../../Public/resource/venues/';
+      if (!is_dir($dir)) {
+        mkdir($dir, 0777, true);
+      }
+
+      $filename = 'venue_' . $ownerId . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+
+      if (move_uploaded_file($file['tmp_name'], $dir . $filename)) {
+        return 'resource/venues/' . $filename;
+      }
+
+      throw new BusinessRuleException("No se pudo guardar la imagen.");
+    }
+
+    return $current;
   }
 
   // =========================================================

@@ -72,7 +72,8 @@ class VenueService
         ?int $capacity,
         float $price,
         ?string $image,
-        bool $active
+        bool $active,
+        int $idLocation
     ): void {
         if ($capacity !== null && $capacity <= 0) {
             throw new BusinessRuleException("La capacidad del local debe ser mayor a 0.");
@@ -87,6 +88,7 @@ class VenueService
         $venue->setCapacityVenue($capacity ?? $venue->getCapacityVenue());
         $venue->setPriceVenue($price);
         $venue->setImageVenue($image ?? $venue->getImageVenue());
+        $venue->setIdLocation($idLocation);
         $venue->setIsActive($active);
 
         $this->venueRepo->update($venue);

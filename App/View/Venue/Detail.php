@@ -13,12 +13,19 @@ if ($venue === null) {
   </div>
 </div>
 
+<?php if ($venue->getImageVenue() !== ''): ?>
+  <div style="border-radius:10px;overflow:hidden;margin-bottom:18px;box-shadow:0 4px 14px rgba(0,0,0,.12);">
+    <img src="<?= e(image_url($venue->getImageVenue())) ?>" alt="Foto de <?= e($venue->getNameVenue()) ?>"
+      style="width:100%;max-height:340px;object-fit:cover;display:block;">
+  </div>
+<?php endif; ?>
+
 <div class="card">
   <div class="detail-grid">
     <div class="detail-item"><div class="k">Tipo</div><div class="v"><?= $venue->getTypeVenue() !== '' ? e($venue->getTypeVenue()) : 'General' ?></div></div>
     <div class="detail-item"><div class="k">Capacidad</div><div class="v"><?= (int) $venue->getCapacityVenue() ?> personas</div></div>
     <div class="detail-item"><div class="k">Precio de renta</div><div class="v">&#8353; <?= number_format($venue->getPriceVenue(), 2) ?> <span class="muted">por evento</span></div></div>
-    <div class="detail-item"><div class="k">Ubicación</div><div class="v">Local #<?= (int) $venue->getIdLocation() ?></div></div>
+
     <div class="detail-item"><div class="k">Estado</div><div class="v"><span class="badge success">Disponible</span></div></div>
     <div class="detail-item"><div class="k">Calificación</div>
       <div class="v" id="venueAvgRating">
@@ -30,7 +37,24 @@ if ($venue === null) {
         <?php endif; ?>
       </div>
     </div>
+
   </div>
+
+  <div class="detail-item"><div class="k">Ubicación</div>
+      <div class="v">
+        <?php if ($location !== null): ?>
+          <div><?= e($location->getProvinceLocation()) ?>, <?= e($location->getCantonLocation()) ?>, <?= e($location->getDistrictLocation()) ?></div>
+          <?php if ($location->getTownLocation() !== null && $location->getTownLocation() !== ''): ?>
+            <div class="muted">Pueblo: <?= e($location->getTownLocation()) ?></div>
+          <?php endif; ?>
+          <?php if ($location->getDescriptionLocation() !== null && $location->getDescriptionLocation() !== ''): ?>
+            <div class="muted">Señas: <?= e($location->getDescriptionLocation()) ?></div>
+          <?php endif; ?>
+        <?php else: ?>
+          <span class="muted">Sin ubicación registrada</span>
+        <?php endif; ?>
+      </div>
+    </div>
 
   <?php if (!empty($promotions)): ?>
     <div style="margin:16px 0 0;">
