@@ -38,5 +38,7 @@ if ($client === null) {
       <button class="btn btn-primary btn-block" type="submit">Guardar</button>
     </form>
   </div>
+  <script src="<?= e(js_url()) ?>"></script>
+  <script>document.addEventListener('DOMContentLoaded', App.init);</script>
 </body>
 </html>

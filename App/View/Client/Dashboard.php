@@ -1,3 +1,4 @@
+<?php $pageJs = ['client/dashboard']; ?>
 <?php require_once __DIR__ . '/../_header.php';
 $client = $_SESSION['user'] ?? null;
 ?>
@@ -89,5 +90,4 @@ $client = $_SESSION['user'] ?? null;
   </div>
 <?php endif; ?>
 
-<script src="<?= e(js_url('client/dashboard')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

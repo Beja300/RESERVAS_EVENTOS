@@ -1,5 +1,7 @@
 <?php
 $pageTitle = 'Nuevo administrador';
+$pageCss = 'admin/password-toggle';
+$pageJs = ['admin/password-toggle'];
 require_once __DIR__ . '/../_header.php';
 ?>
 
@@ -8,17 +10,6 @@ require_once __DIR__ . '/../_header.php';
     <h1>Nuevo administrador</h1>
   </div>
 </div>
-
-<style>
-  .password-wrapper { position: relative; }
-  .password-wrapper .form-control { padding-right: 44px; }
-  .password-toggle {
-    position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
-    border: none; background: none; cursor: pointer; color: var(--neutral-500);
-    font-size: 0.85rem; font-weight: 600; padding: 4px 8px; font-family: inherit;
-  }
-  .password-toggle:hover { color: var(--primary); }
-</style>
 
 <?php if (!empty($error)): ?>
   <div class="alert alert-error"><?= e($error) ?></div>
@@ -58,18 +49,4 @@ require_once __DIR__ . '/../_header.php';
   </form>
 </div>
 
-<script>
-  (function () {
-    var input = document.getElementById('password');
-    var toggle = document.getElementById('passwordToggle');
-
-    toggle.addEventListener('click', function () {
-      var show = input.type === 'password';
-      input.type = show ? 'text' : 'password';
-      toggle.textContent = show ? 'Ocultar' : 'Mostrar';
-      toggle.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
-      input.focus();
-    });
-  })();
-</script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

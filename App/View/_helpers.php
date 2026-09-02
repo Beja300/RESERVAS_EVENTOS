@@ -9,13 +9,16 @@
 
 if (!function_exists('css_url')) {
     /**
-     * Devuelve la URL absoluta hacia el CSS de la aplicación,
-     * calculada a partir de la ubicación del front controller (Public/).
+     * Devuelve la URL absoluta hacia un CSS de la aplicación.
+     *
+     * Sin argumentos devuelve el núcleo común (app.css). Con un nombre,
+     * devuelve la hoja específica de una vista (Public/css/{name}.css).
      */
-    function css_url(): string
+    function css_url(?string $name = null): string
     {
-        $base = dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php');
-        return rtrim($base, '/') . '/css/app.css';
+        $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'), '/');
+        $file = ($name === null || $name === '') ? 'app' : $name;
+        return $base . '/css/' . $file . '.css';
     }
 }
 

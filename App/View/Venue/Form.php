@@ -2,6 +2,7 @@
 
 $isEdit = $venue !== null;
 $action = $isEdit ? base_url('venue', 'update') : base_url('venue', 'create');
+$pageJs = $isEdit ? ['venue/form'] : ['venue/form', 'venue/location'];
 ?>
 
 <div class="page-head">
@@ -103,30 +104,5 @@ $action = $isEdit ? base_url('venue', 'update') : base_url('venue', 'create');
     <button class="btn btn-primary" type="submit"><?= $isEdit ? 'Guardar cambios' : 'Crear local' ?></button>
   </form>
 </div>
-
-<?php if (!$isEdit): ?>
-  <script src="<?= e(js_url('location')) ?>"></script>
-<?php endif; ?>
-
-<script>
-  (function () {
-    function base() { var p=(window.location.pathname||'').split('/'); p.pop(); return p.join('/'); }
-    var form = document.querySelector('form[data-ajax-venue-form]');
-    if (form) {
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        fetch(form.getAttribute('action'), {
-          method: 'POST',
-          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-          body: new FormData(form)
-        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
-          .then(function (r) {
-            window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
-            if (r.ok) setTimeout(function () { window.location.href = base() + '/index.php?controller=venue&action=list'; }, 700);
-          });
-      });
-    }
-  })();
-</script>
 
 <?php require_once __DIR__ . '/../_footer.php'; ?>

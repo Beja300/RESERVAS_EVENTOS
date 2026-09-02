@@ -1,3 +1,4 @@
+<?php $pageJs = ['admin/list']; ?>
 <?php require_once __DIR__ . '/../_header.php'; ?>
 
 <?php if (!empty($error)): ?>
@@ -252,5 +253,4 @@
   <?php endforeach; ?>
 <?php endif; ?>
 
-<script src="<?= e(js_url('admin-list')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

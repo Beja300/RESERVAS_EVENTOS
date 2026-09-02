@@ -1,3 +1,5 @@
+<?php $pageCss = 'owner/form';
+      $pageJs = ['owner/form']; ?>
 <?php require_once __DIR__ . '/../_header.php';
 
 $owner = $owner ?? ($_SESSION['user'] ?? null);
@@ -156,5 +158,4 @@ if ($owner === null) {
   </form>
 </div>
 
-<script src="<?= e(js_url('owner/form')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

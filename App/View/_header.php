@@ -34,6 +34,9 @@ if ($userType !== null && isset($_SESSION['user']) && is_object($_SESSION['user'
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= isset($pageTitle) ? e($pageTitle) : 'Reservas de Eventos' ?></title>
   <link rel="stylesheet" href="<?= e(css_url()) ?>">
+  <?php if (!empty($pageCss)): ?>
+    <link rel="stylesheet" href="<?= e(css_url($pageCss)) ?>">
+  <?php endif; ?>
 </head>
 <body>
 <header class="topbar">

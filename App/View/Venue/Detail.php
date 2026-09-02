@@ -1,3 +1,4 @@
+<?php $pageJs = ['venue/stars', 'venue/venue-comments']; ?>
 <?php require_once __DIR__ . '/../_header.php';
 if ($venue === null) {
   echo '<div class="alert alert-error">Local no encontrado.</div>';
@@ -190,6 +191,4 @@ if ($venue === null) {
   </div>
 </div>
 
-<script src="<?= e(js_url('stars')) ?>"></script>
-<script src="<?= e(js_url('venue-comments')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

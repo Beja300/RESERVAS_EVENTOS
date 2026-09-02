@@ -6,16 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Iniciar sesión · Reservas de Eventos</title>
   <link rel="stylesheet" href="<?= e(css_url()) ?>">
-  <style>
-    .password-wrapper { position: relative; }
-    .password-wrapper .form-control { padding-right: 44px; }
-    .password-toggle {
-      position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
-      border: none; background: none; cursor: pointer; color: var(--neutral-500);
-      font-size: 0.85rem; font-weight: 600; padding: 4px 8px; font-family: inherit;
-    }
-    .password-toggle:hover { color: var(--primary); }
-  </style>
+  <link rel="stylesheet" href="<?= e(css_url('auth/login')) ?>">
 </head>
 <body class="auth-page">
   <div class="auth-card container-narrow" style="position:relative;">
@@ -67,19 +58,6 @@
     </div>
   </div>
 
-  <script>
-    (function () {
-      var input = document.getElementById('password');
-      var toggle = document.getElementById('passwordToggle');
-
-      toggle.addEventListener('click', function () {
-        var show = input.type === 'password';
-        input.type = show ? 'text' : 'password';
-        toggle.textContent = show ? 'Ocultar' : 'Mostrar';
-        toggle.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
-        input.focus();
-      });
-    })();
-  </script>
+  <script src="<?= e(js_url('auth/login')) ?>"></script>
 </body>
 </html>

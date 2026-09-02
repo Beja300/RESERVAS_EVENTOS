@@ -1,3 +1,4 @@
+<?php $pageJs = ['booking/detail']; ?>
 <?php require_once __DIR__ . '/../_header.php';
 if ($booking === null) {
   echo '<div class="alert alert-error">Reserva no encontrada.</div>';
@@ -252,5 +253,4 @@ $hasTicket = $ticket !== null;
   <?php endif; ?>
 </div>
 
-<script src="<?= e(js_url('booking-detail')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

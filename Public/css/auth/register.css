@@ -1,0 +1,17 @@
+.tabs { display: flex; gap: 8px; margin-bottom: 22px; }
+.tabs button {
+  flex: 1; padding: 10px; border: 1.5px solid var(--neutral-300);
+  background: #fff; border-radius: 9px; font-weight: 600; cursor: pointer;
+  color: var(--neutral-500); font-family: inherit;
+}
+.tabs button.active { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.password-wrapper { position: relative; }
+.password-wrapper .form-control { padding-right: 44px; }
+.password-toggle {
+  position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+  border: none; background: none; cursor: pointer; color: var(--neutral-500);
+  font-size: 0.85rem; font-weight: 600; padding: 4px 8px; font-family: inherit;
+}
+.password-toggle:hover { color: var(--primary); }

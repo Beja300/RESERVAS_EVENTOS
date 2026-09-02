@@ -1,3 +1,5 @@
+<?php $pageCss = 'admin/profile';
+      $pageJs = ['admin/profile']; ?>
 <?php require_once __DIR__ . '/../_header.php';
 
 $admin = $_SESSION['user'] ?? null;
@@ -19,17 +21,6 @@ if ($admin === null) {
 <?php elseif (isset($_GET['removed'])): ?>
   <div class="alert alert-success">Foto de perfil eliminada.</div>
 <?php endif; ?>
-
-<style>
-  .password-wrapper { position: relative; }
-  .password-wrapper .form-control { padding-right: 44px; }
-  .password-toggle {
-    position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
-    border: none; background: none; cursor: pointer; color: var(--neutral-500);
-    font-size: 0.85rem; font-weight: 600; padding: 4px 8px; font-family: inherit;
-  }
-  .password-toggle:hover { color: var(--primary); }
-</style>
 
 <div class="card form-card" style="max-width:560px;margin-bottom:16px;">
   <h3 class="card-title">Foto de perfil</h3>
@@ -135,5 +126,4 @@ if ($admin === null) {
   </form>
 </div>
 
-<script src="<?= e(js_url('admin/profile')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

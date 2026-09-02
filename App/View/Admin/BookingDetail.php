@@ -1,3 +1,4 @@
+<?php $pageJs = ['admin/booking-detail']; ?>
 <?php require_once __DIR__ . '/../_header.php'; ?>
 
 <?php if (isset($_GET['msg'])): ?>
@@ -176,7 +177,8 @@
                  value="<?= e($booking->getBookingDate()) ?>"
                  min="<?= e(date('Y-m-d')) ?>"
                  required
-                 data-booked-dates='<?= e(json_encode($bookedDates)) ?>'>
+                 data-booked-dates='<?= e(json_encode($bookedDates)) ?>'
+                 data-current-date="<?= e($booking->getBookingDate()) ?>">
           <p class="form-hint">No se puede elegir una fecha ya ocupada por otra reserva.</p>
         </div>
         <div class="form-group" style="max-width:300px;">
@@ -249,24 +251,4 @@
 <?php endif; ?>
 
 <?php require_once __DIR__ . '/../_footer.php'; ?>
-
-<script>
-(function () {
-  var input = document.querySelector('input[type="date"][data-booked-dates]');
-  if (!input) { return; }
-  var current = <?= json_encode($booking->getBookingDate()) ?>;
-  var booked = (input.getAttribute('data-booked-dates') || '').trim();
-  var dates = booked ? JSON.parse(booked) : [];
-  var blocked = dates.filter(function (d) { return d !== current; });
-
-  input.addEventListener('input', function () {
-    var val = input.value;
-    if (blocked.indexOf(val) !== -1) {
-      input.setCustomValidity('Esa fecha ya está ocupada por otra reserva. Elige otra fecha.');
-    } else {
-      input.setCustomValidity('');
-    }
-  });
-})();
-</script>
 

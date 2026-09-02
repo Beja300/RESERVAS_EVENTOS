@@ -1,3 +1,4 @@
+<?php $pageJs = ['booking/list']; ?>
 <?php require_once __DIR__ . '/../_header.php';
 $isOwnerView = current_user_type() === 'owner';
 $isPendingBookings = $isPendingBookings ?? false;
@@ -48,7 +49,7 @@ $isPendingBookings = $isPendingBookings ?? false;
   </div>
 <?php else: ?>
   <div class="table-wrap">
-    <table class="table booking-table">
+    <table class="table booking-table" data-state-col="<?= $isOwnerView ? 4 : 3 ?>" data-ticket-col="<?= $isOwnerView ? 5 : 4 ?>">
       <thead>
         <tr>
           <?php if ($isOwnerView): ?><th>Cliente</th><?php endif; ?>
@@ -86,53 +87,5 @@ $isPendingBookings = $isPendingBookings ?? false;
     </table>
   </div>
 <?php endif; ?>
-
-<script>
-  (function () {
-    var table = document.querySelector('.booking-table');
-    if (!table) return;
-
-    // Índices de columna (1-based) según el tipo de vista.
-    // Owner: [Cliente][Local][Fecha][Estado][Comprobante]
-    // Client:        [Local][Fecha][Estado][Comprobante]
-    var stateCol = <?= $isOwnerView ? 4 : 3 ?>;
-    var ticketCol = <?= $isOwnerView ? 5 : 4 ?>;
-
-    var search = document.getElementById('booking-search');
-    var state = document.getElementById('booking-state');
-    var ticket = document.getElementById('booking-ticket');
-    var clear = document.getElementById('booking-clear');
-    var rows = table.querySelectorAll('tbody tr');
-
-    function applyFilters() {
-      var term = (search ? search.value : '').toLowerCase().trim();
-      var stateTerm = state ? state.value : '';
-      var ticketTerm = ticket ? ticket.value : '';
-
-      rows.forEach(function (row) {
-        var text = (row.textContent || '').toLowerCase();
-        var stateCell = row.querySelector('td:nth-child(' + stateCol + ')');
-        var rowState = stateCell ? (stateCell.textContent || '').trim().toLowerCase() : '';
-        var ticketCell = row.querySelector('td:nth-child(' + ticketCol + ')');
-        var rowTicket = ticketCell ? (ticketCell.textContent || '').trim().toLowerCase() : '';
-
-        var matchesText = term === '' || text.indexOf(term) !== -1;
-        var matchesState = stateTerm === '' || rowState === stateTerm;
-        var matchesTicket = ticketTerm === '' || rowTicket === ticketTerm;
-        row.style.display = (matchesText && matchesState && matchesTicket) ? '' : 'none';
-      });
-    }
-
-    if (search) search.addEventListener('input', applyFilters);
-    if (state) state.addEventListener('change', applyFilters);
-    if (ticket) ticket.addEventListener('change', applyFilters);
-    if (clear) clear.addEventListener('click', function () {
-      if (search) search.value = '';
-      if (state) state.value = '';
-      if (ticket) ticket.value = '';
-      applyFilters();
-    });
-  })();
-</script>
 
 <?php require_once __DIR__ . '/../_footer.php'; ?>

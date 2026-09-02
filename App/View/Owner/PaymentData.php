@@ -1,3 +1,4 @@
+<?php $pageJs = ['owner/paymentData']; ?>
 <?php require_once __DIR__ . '/../_header.php';
 
 $ownerPayments = $ownerPayments ?? [];
@@ -126,5 +127,4 @@ $paymentMethods = $paymentMethods ?? [];
   <?php endif; ?>
 </div>
 
-<script src="<?= e(js_url('owner/paymentData')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

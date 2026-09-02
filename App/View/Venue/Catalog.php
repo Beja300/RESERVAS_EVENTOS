@@ -1,5 +1,7 @@
 <?php require_once __DIR__ . '/../_header.php';
 
+$pageJs = ['venue/location', 'venue/catalog'];
+
 $filters = $filters ?? [
   'province' => '',
   'canton'   => '',
@@ -97,6 +99,4 @@ $filters = $filters ?? [
   </div>
 <?php endif; ?>
 
-<script src="<?= e(js_url('location')) ?>"></script>
-<script src="<?= e(js_url('catalog')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>
