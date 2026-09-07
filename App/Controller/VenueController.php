@@ -94,7 +94,71 @@ class VenueController
       }
     }
 
+    // Ubicación válida del cliente (si la tiene) para ordenar por cercanía.
+    $clientLocation = null;
+    if (isset($_SESSION['user'], $_SESSION['type']) && $_SESSION['type'] === 'client') {
+      $clientLocationId = (int) $_SESSION['user']->getLocationId();
+      if ($clientLocationId > 0) {
+        $clientLocation = $this->locationService->findById($clientLocationId);
+      }
+    }
+
+    // Orden: más cercanos → más populares (rating) → el resto.
+    $venues = $this->sortCatalogVenues($venues, $clientLocation, $ratingsByVenue, $locationByVenue);
+
     require_once __DIR__ . '/../View/Venue/Catalog.php';
+  }
+
+  // =========================================================
+  // ORDENAR CATÁLOGO POR CERCANÍA Y POPULARIDAD (rating)
+  // =========================================================
+  private function sortCatalogVenues(
+    array $venues,
+    ?Location $clientLocation,
+    array $ratingsByVenue,
+    array $locationByVenue
+  ): array
+  {
+    $nearTier = static function (Venue $v) use ($clientLocation, $locationByVenue): int {
+      if ($clientLocation === null) {
+        return 3;
+      }
+
+      $loc = $locationByVenue[$v->getIdVenue()] ?? null;
+      if ($loc === null) {
+        return 3;
+      }
+
+      if ($loc->getProvinceLocation() !== $clientLocation->getProvinceLocation()) {
+        return 3;
+      }
+
+      if ($loc->getCantonLocation() === $clientLocation->getCantonLocation()) {
+        if ($loc->getDistrictLocation() === $clientLocation->getDistrictLocation()) {
+          return 0;
+        }
+        return 1;
+      }
+
+      return 2;
+    };
+
+    usort($venues, static function (Venue $a, Venue $b) use ($nearTier, $ratingsByVenue): int {
+      $tierDiff = $nearTier($a) <=> $nearTier($b);
+      if ($tierDiff !== 0) {
+        return $tierDiff;
+      }
+
+      $ratingA = $ratingsByVenue[$a->getIdVenue()] ?? -1.0;
+      $ratingB = $ratingsByVenue[$b->getIdVenue()] ?? -1.0;
+      if ($ratingA !== $ratingB) {
+        return $ratingB <=> $ratingA;
+      }
+
+      return strcasecmp($a->getNameVenue(), $b->getNameVenue());
+    });
+
+    return $venues;
   }
 
   // =========================================================
