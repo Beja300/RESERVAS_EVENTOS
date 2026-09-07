@@ -9,5 +9,5 @@
     </div>
   <?php endforeach; ?>
 <?php else: ?>
-  <p class="muted">Aún no hay comentarios.</p>
+  <p class="muted">Aún no hay reservas.</p>
 <?php endif; ?>

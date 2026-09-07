@@ -1,13 +1,13 @@
 /**
- * venue-comments.js — Comentarios de un local (App/View/Venue/Detail.php)
+ * venue-comments.js — Reserva (opinión) de un local (App/View/Venue/Detail.php)
  *
- * - Publica comentarios con AJAX: solo se refresca el contenedor de
- *   comentarios, no la página completa.
- * - Cada usuario puede publicar varios comentarios: tras guardar, el
- *   formulario queda listo y el botón "Nuevo comentario" vuelve a dejarlo
- *   en modo de alta.
- * - "Editar" carga SOLO el comentario elegido (por su id) en el formulario
- *   y lo actualiza por AJAX.
+ * - Publica/actualiza la reserva con AJAX: solo se refresca el contenedor de
+ *   comentarios y el promedio, no la página completa.
+ * - Cada cliente solo puede tener UNA reserva por local. Si ya existe, el
+ *   formulario llega prellenado con la misma (modo edición); al guardar, se
+ *   conserva el mismo texto para que el cliente pueda editarlo después.
+ * - "Cancelar edición" restaura la reserva guardada.
+ * - "Editar" dentro de la lista carga la reserva elegida en el formulario.
  */
 (function (window, document) {
   'use strict';
@@ -21,8 +21,12 @@
   var textarea = document.getElementById('comment');
   var submitBtn = document.getElementById('submitComment');
   var cancelBtn = document.getElementById('cancelEdit');
-  var newBtn = document.getElementById('newComment');
   var commentIdInput = form.querySelector('input[name="commentId"]');
+
+  // Snapshot de la reserva guardada (para "Cancelar edición").
+  var savedCommentId = '';
+  var savedStars = 0;
+  var savedText = '';
 
   function currentStars() {
     if (!widget) return 0;
@@ -40,22 +44,38 @@
     });
   }
 
-  function resetForm() {
-    commentIdInput.value = '';
-    setStars(0);
-    if (textarea) textarea.value = '';
-    if (submitBtn) submitBtn.textContent = 'Publicar comentario';
+  function labelFor(hasRating) {
+    return hasRating ? 'Actualizar reserva' : 'Publicar reserva';
+  }
+
+  function captureSaved() {
+    savedCommentId = commentIdInput.value || '';
+    savedStars = currentStars();
+    savedText = textarea ? textarea.value : '';
+  }
+
+  function initSaved() {
+    savedCommentId = commentIdInput.value || '';
+    // Al cargar, stars.js aún no ha pintado el widget; usamos data-value como respaldo.
+    var widgetValue = widget ? (parseInt(widget.getAttribute('data-value') || '0', 10) || 0) : 0;
+    savedStars = currentStars() || widgetValue;
+    savedText = textarea ? textarea.value : '';
+  }
+
+  function restoreSaved() {
+    commentIdInput.value = savedCommentId;
+    setStars(savedStars);
+    if (textarea) textarea.value = savedText;
+    if (submitBtn) submitBtn.textContent = labelFor(savedCommentId !== '');
     if (cancelBtn) cancelBtn.style.display = 'none';
-    if (newBtn) newBtn.style.display = 'none';
   }
 
   function enterEditMode(commentId, starValue, text) {
     commentIdInput.value = String(commentId);
     setStars(starValue);
     if (textarea) textarea.value = text || '';
-    if (submitBtn) submitBtn.textContent = 'Actualizar comentario';
+    if (submitBtn) submitBtn.textContent = labelFor(true);
     if (cancelBtn) cancelBtn.style.display = '';
-    if (newBtn) newBtn.style.display = '';
     if (box) {
       box.scrollIntoView({ behavior: 'smooth', block: 'center' });
       if (textarea) textarea.focus();
@@ -110,12 +130,8 @@
     });
   }
 
-  if (newBtn) {
-    newBtn.addEventListener('click', resetForm);
-  }
-
   if (cancelBtn) {
-    cancelBtn.addEventListener('click', resetForm);
+    cancelBtn.addEventListener('click', restoreSaved);
   }
 
   form.addEventListener('submit', function (e) {
@@ -152,20 +168,35 @@
       })
       .then(function (payload) {
         if (!payload.ok) {
-          throw new Error(payload.message || 'No se pudo guardar el comentario.');
+          throw new Error(payload.message || 'No se pudo guardar la reserva.');
         }
+
+        // Si fue una creación, ahora el cliente YA tiene una reserva para el
+        // local: se queda con el mismo texto para que pueda editarlo.
+        if (!editing && payload.commentId) {
+          commentIdInput.value = String(payload.commentId);
+          if (submitBtn) submitBtn.textContent = labelFor(true);
+        }
+
         renderAverage(payload.avg);
         return refreshComments().then(function () {
-          App.toast(payload.message || 'Comentario guardado.', 'success');
+          App.toast(payload.message || 'Reserva guardada.', 'success');
         });
       })
-      .then(resetForm)
+      .then(function () {
+        captureSaved();
+      })
       .catch(function (err) {
-        App.toast(err.message || 'Ocurrió un error al guardar el comentario.', 'error');
+        App.toast(err.message || 'Ocurrió un error al guardar la reserva.', 'error');
       })
       .then(function () {
         submitBtn.disabled = false;
-        submitBtn.textContent = original;
+        if (submitBtn.textContent === 'Guardando...' || submitBtn.textContent === 'Publicando...') {
+          submitBtn.textContent = original;
+        }
       });
   });
+
+  // Inicialización: snapshot de la reserva guardada (si viene prellenada).
+  initSaved();
 })(window, document);
