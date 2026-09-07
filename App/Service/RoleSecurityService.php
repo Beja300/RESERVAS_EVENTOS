@@ -4,6 +4,9 @@ require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/AuthService.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../Repository/RoleRepository.php';
+require_once __DIR__ . '/../Repository/ClientRepository.php';
+require_once __DIR__ . '/../Repository/OwnerRepository.php';
+require_once __DIR__ . '/../Repository/AdminRepository.php';
 require_once __DIR__ . '/../Repository/RolePasswordHistoricalRepository.php';
 require_once __DIR__ . '/../Repository/RolePhoneHistoricalRepository.php';
 require_once __DIR__ . '/../Repository/RoleEmailHistoricalRepository.php';
@@ -41,6 +44,9 @@ class RoleSecurityService
   private const EMAIL_MIN_INTERVAL_DAYS = 30;
 
   private RoleRepository $roleRepo;
+  private ClientRepository $clientRepo;
+  private OwnerRepository $ownerRepo;
+  private AdminRepository $adminRepo;
   private RolePasswordHistoricalRepository $passwordRepo;
   private RolePhoneHistoricalRepository $phoneRepo;
   private RoleEmailHistoricalRepository $emailRepo;
@@ -52,6 +58,9 @@ class RoleSecurityService
     $connection = DataBase::getConnection();
 
     $this->roleRepo = new RoleRepository($connection);
+    $this->clientRepo = new ClientRepository($connection);
+    $this->ownerRepo = new OwnerRepository($connection);
+    $this->adminRepo = new AdminRepository($connection);
     $this->passwordRepo = new RolePasswordHistoricalRepository($connection);
     $this->phoneRepo = new RolePhoneHistoricalRepository($connection);
     $this->emailRepo = new RoleEmailHistoricalRepository($connection);
@@ -196,6 +205,25 @@ class RoleSecurityService
   }
 
   // =========================================================
+  // CONTADOR DE CAMBIOS SOSPECHOSOS (los que superan el umbral)
+  // Devuelve, por cada credencial, cuántos cambios excedieron la
+  // frecuencia permitida dentro de su ventana. No expone el detalle
+  // (hashes/valores) del historial, solo la cantidad de excesos.
+  // =========================================================
+  public function getSuspiciousCounts(int $roleId): array
+  {
+    $passwordExcess = $this->passwordRepo->countInLastDays($roleId, 30) - self::PASSWORD_MAX_PER_30_DAYS;
+    $phoneExcess    = $this->phoneRepo->countInLastDays($roleId, 180)  - self::PHONE_MAX_PER_180_DAYS;
+    $emailExcess    = $this->emailRepo->countInLastDays($roleId, 30)   - 1;
+
+    return [
+      'password' => max(0, $passwordExcess),
+      'phone'    => max(0, $phoneExcess),
+      'email'    => max(0, $emailExcess),
+    ];
+  }
+
+  // =========================================================
   // PRIVADOS
   // =========================================================
   private function persistPasswordChange(int $roleId, string $newPassword, string $actualHash): void
@@ -216,16 +244,55 @@ class RoleSecurityService
     $this->notify(
       $roleId,
       'Actividad sospechosa en tu cuenta: ' . $detail . ' Revisa tu historial.',
-      'index.php?controller=client&action=profile'
+      'index.php?controller=' . $this->typeFor($roleId) . '&action=profile'
     );
+
+    $identity = $this->identityLabel($roleId);
 
     foreach ($this->notificationRepo->findAdminRoleIds() as $adminRoleId) {
       $this->notify(
         $adminRoleId,
-        'ALERTA de seguridad: el rol #' . $roleId . ' registró ' . $detail,
-        'index.php?controller=admin&action=users'
+        'ALERTA de seguridad: ' . $identity . ' registró ' . $detail,
+        'index.php?controller=admin&action=showEditForm&id=' . $roleId . '&type=' . $this->typeFor($roleId)
       );
     }
+  }
+
+  // =========================================================
+  // ETIQUETA DEL USUARIO AFECTADO (tipo + nombre) para que el
+  // admin sepa de quién se trata en la notificación.
+  // =========================================================
+  private function identityLabel(int $roleId): string
+  {
+    $type = $this->typeFor($roleId);
+    $name = '';
+
+    $role = $this->roleRepo->findById($roleId);
+    if ($role !== null) {
+      $name = $role->getName();
+    }
+
+    return 'el ' . ($type !== '' ? $type : 'usuario') . ' ' . ($name !== '' ? "'" . $name . "' (#" . $roleId . ")" : '(#' . $roleId . ')');
+  }
+
+  // =========================================================
+  // RESUELVE EL TIPO DE ROL (client | owner | admin | '')
+  // =========================================================
+  private function typeFor(int $roleId): string
+  {
+    if ($this->clientRepo->findByRoleId($roleId) !== null) {
+      return 'client';
+    }
+
+    if ($this->ownerRepo->findByRoleId($roleId) !== null) {
+      return 'owner';
+    }
+
+    if ($this->adminRepo->findByRoleId($roleId) !== null) {
+      return 'admin';
+    }
+
+    return '';
   }
 
   private function notify(int $roleId, string $message, string $link): void

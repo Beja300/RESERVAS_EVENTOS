@@ -93,6 +93,8 @@ class ClientController
 
     $client = $_SESSION['user'];
 
+    $suspicious = $this->roleSecurityService->getSuspiciousCounts($client->getIdRol());
+
     $location = null;
     if ($client->getLocationId() !== null) {
       $location = $this->locationRepo->findById($client->getLocationId());
@@ -122,6 +124,8 @@ class ClientController
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $phoneNumber = trim($_POST['phoneNumber'] ?? '');
+    $currentPassword = $_POST['currentPassword'] ?? '';
+    $newPassword = $_POST['newPassword'] ?? '';
 
     if ($phoneNumber === '') {
       $phoneNumber = null;
@@ -134,6 +138,22 @@ class ClientController
       }
 
       $this->authService->validatePhoneFormat($phoneNumber);
+
+      // Cambio de contraseña: solo con confirmación de la contraseña actual.
+      $hasCurrent = trim($currentPassword) !== '';
+      $hasNew = trim($newPassword) !== '';
+
+      if ($hasCurrent || $hasNew) {
+        if (!$hasCurrent || !$hasNew) {
+          throw new BusinessRuleException('Para cambiar tu contraseña debes escribir la contraseña actual y la nueva.');
+        }
+
+        if (!password_verify($currentPassword, $client->getPassword())) {
+          throw new BusinessRuleException('La contraseña actual no es correcta.');
+        }
+
+        $this->roleSecurityService->changePassword($client->getIdRol(), $newPassword);
+      }
 
       $client->setName($name);
       $client->setEmail($email);
@@ -334,6 +354,51 @@ class ClientController
     if (($_SESSION['type'] ?? null) !== 'client') {
       header('Location: ../../Public/index.php?controller=auth&action=showLogin');
       exit;
+    }
+  }
+
+  // =========================================================
+  // ELIMINAR FOTO DE PERFIL
+  // =========================================================
+  public function removePhoto(): void
+  {
+    session_start();
+    $this->requireClient();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->profile();
+      return;
+    }
+
+    $client = $_SESSION['user'];
+
+    $this->deleteClientImageFile($client->getImageClient());
+    $client->setImageClient('');
+
+    $this->clientRepo->updateProfile($client->getIdClient(), '', $client->getLocationId());
+
+    $_SESSION['user'] = $client;
+
+    if (is_ajax()) {
+      respond_json(['ok' => true, 'message' => 'Foto de perfil eliminada.']);
+    }
+
+    header('Location: ../../Public/index.php?controller=client&action=profile&removed=1');
+    exit;
+  }
+
+  // =========================================================
+  // BORRAR EL ARCHIVO LOCAL (nunca URLs externas)
+  // =========================================================
+  private const CLIENT_IMAGE_DIR = 'resource/clients/';
+
+  private function deleteClientImageFile(string $storedPath): void
+  {
+    if (str_starts_with($storedPath, self::CLIENT_IMAGE_DIR)) {
+      $file = __DIR__ . '/../../Public/' . $storedPath;
+      if (is_file($file)) {
+        @unlink($file);
+      }
     }
   }
 
