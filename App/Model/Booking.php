@@ -9,8 +9,11 @@ class Booking
   private int $idClient;
   private int $idLocal;
   private string $bookingDate;
+  private ?string $bookingEndDate;
   private string $bookingState;
   private bool $isBookingActive;
+  private ?string $eventType;
+  private ?string $eventDescription;
 
   public function __construct(
     int $idBooking,
@@ -18,14 +21,20 @@ class Booking
     int $idLocal,
     string $bookingDate,
     string $bookingState,
-    bool $isBookingActive
+    bool $isBookingActive,
+    ?string $bookingEndDate = null,
+    ?string $eventType = null,
+    ?string $eventDescription = null
   ) {
     $this->idBooking = $idBooking;
     $this->idClient = $idClient;
     $this->idLocal = $idLocal;
     $this->bookingDate = $bookingDate;
+    $this->bookingEndDate = $bookingEndDate;
     $this->bookingState = $bookingState;
     $this->isBookingActive = $isBookingActive;
+    $this->eventType = $eventType;
+    $this->eventDescription = $eventDescription;
   }
 
   // Getters
@@ -49,6 +58,11 @@ class Booking
     return $this->bookingDate;
   }
 
+  public function getBookingEndDate(): ?string
+  {
+    return $this->bookingEndDate;
+  }
+
   public function getBookingState(): string
   {
     return $this->bookingState;
@@ -57,6 +71,16 @@ class Booking
   public function getIsBookingActive(): bool
   {
     return $this->isBookingActive;
+  }
+
+  public function getEventType(): ?string
+  {
+    return $this->eventType;
+  }
+
+  public function getEventDescription(): ?string
+  {
+    return $this->eventDescription;
   }
 
   // Setters
@@ -80,6 +104,11 @@ class Booking
     $this->bookingDate = $bookingDate;
   }
 
+  public function setBookingEndDate(?string $bookingEndDate): void
+  {
+    $this->bookingEndDate = $bookingEndDate;
+  }
+
   public function setBookingState(string $bookingState): void
   {
     $this->bookingState = $bookingState;
@@ -88,5 +117,15 @@ class Booking
   public function setIsBookingActive(bool $isBookingActive): void
   {
     $this->isBookingActive = $isBookingActive;
+  }
+
+  public function setEventType(?string $eventType): void
+  {
+    $this->eventType = $eventType;
+  }
+
+  public function setEventDescription(?string $eventDescription): void
+  {
+    $this->eventDescription = $eventDescription;
   }
 }

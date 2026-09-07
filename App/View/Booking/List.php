@@ -65,7 +65,15 @@ $isPendingBookings = $isPendingBookings ?? false;
           <tr>
             <?php if ($isOwnerView): ?><td><?= e($clientNames[$b->getIdBooking()] ?? '#' . (int) $b->getIdClient()) ?></td><?php endif; ?>
             <td><strong><?= e($venueNames[$b->getIdBooking()] ?? 'Local #' . (int) $b->getIdLocal()) ?></strong></td>
-            <td><?= e(date('d/m/Y', strtotime($b->getBookingDate()))) ?></td>
+            <td>
+              <?php
+                $dateCell = date('d/m/Y', strtotime($b->getBookingDate()));
+                if ($b->getBookingEndDate() !== null) {
+                  $dateCell .= ' — ' . date('d/m/Y', strtotime($b->getBookingEndDate()));
+                }
+              ?>
+              <?= e($dateCell) ?>
+            </td>
             <td>
               <?php
                 $badge = [

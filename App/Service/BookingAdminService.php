@@ -59,7 +59,7 @@ class BookingAdminService
   }
 
   // =========================================================
-  // REPROGRAMAR (cambiar la fecha)
+  // REPROGRAMAR (cambiar el rango de fechas preservando la duración)
   // =========================================================
   public function reschedule(int $bookingPk, int $adminRoleId, string $newDate, ?string $note = null): void
   {
@@ -70,25 +70,41 @@ class BookingAdminService
     }
 
     if ($newDate < date('Y-m-d')) {
-      throw new BusinessRuleException('La fecha de la reserva no puede ser anterior a hoy.');
+      throw new BusinessRuleException('La fecha de inicio no puede ser anterior a hoy.');
     }
 
     if ($newDate === $booking->getBookingDate()) {
       throw new BusinessRuleException('La nueva fecha es la misma que la actual.');
     }
 
-    if ($this->bookingRepo->hasActiveBookingOnDate($booking->getIdLocal(), $newDate, $bookingPk)) {
-      throw new BusinessRuleException('El local ya tiene una reserva para esa fecha. Elige otra fecha.');
+    $durationDays = 1;
+    if ($booking->getBookingEndDate() !== null) {
+      $durationDays = (int) ((strtotime($booking->getBookingEndDate()) - strtotime($booking->getBookingDate())) / 86400) + 1;
+    }
+
+    $newEndDate = date('Y-m-d', strtotime($newDate . ' + ' . ($durationDays - 1) . ' days'));
+
+    if (
+      $this->bookingRepo->hasActiveRangeConflict(
+        $booking->getIdLocal(),
+        $newDate,
+        $newEndDate,
+        $bookingPk
+      )
+    ) {
+      throw new BusinessRuleException('El local ya tiene una reserva que se cruza con ese rango de fechas. Elige otro rango.');
     }
 
     $oldDate = $booking->getBookingDate();
-    $this->bookingRepo->reschedule($bookingPk, $newDate);
+    $oldEndDate = $booking->getBookingEndDate();
+    $this->bookingRepo->reschedule($bookingPk, $newDate, $newEndDate);
 
     $this->log(
       $bookingPk,
       $adminRoleId,
       'REPROGRAMAR',
-      'Fecha anterior: ' . $oldDate . ' -> nueva fecha: ' . $newDate
+      'Rango anterior: ' . $oldDate . ' - ' . ($oldEndDate ?? $oldDate)
+      . ' -> nuevo rango: ' . $newDate . ' - ' . $newEndDate
       . ($this->text($note) ? ' | ' . $note : '')
     );
   }
@@ -118,8 +134,17 @@ class BookingAdminService
       throw new BusinessRuleException('El local seleccionado no tiene un precio de renta configurado.');
     }
 
-    if ($this->bookingRepo->hasActiveBookingOnDate($newVenueId, $booking->getBookingDate(), $bookingPk)) {
-      throw new BusinessRuleException('El local seleccionado ya tiene una reserva para esa fecha.');
+    $rangeEnd = $booking->getBookingEndDate() ?? $booking->getBookingDate();
+
+    if (
+      $this->bookingRepo->hasActiveRangeConflict(
+        $newVenueId,
+        $booking->getBookingDate(),
+        $rangeEnd,
+        $bookingPk
+      )
+    ) {
+      throw new BusinessRuleException('El local seleccionado ya tiene una reserva que se cruza con ese rango de fechas.');
     }
 
     $this->bookingRepo->changeVenue($bookingPk, $newVenueId);

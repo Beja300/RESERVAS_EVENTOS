@@ -16,7 +16,15 @@ if ($booking === null) {
 <div class="card form-card" style="max-width:560px;">
   <div class="detail-grid" style="margin-bottom:20px;">
     <div class="detail-item"><div class="k">Reserva</div><div class="v">#<?= (int) $booking->getIdBooking() ?></div></div>
-    <div class="detail-item"><div class="k">Fecha</div><div class="v"><?= e(date('d/m/Y', strtotime($booking->getBookingDate()))) ?></div></div>
+    <div class="detail-item"><div class="k">Fechas</div><div class="v">
+      <?php
+        $startLabel = date('d/m/Y', strtotime($booking->getBookingDate()));
+        $endLabel = $booking->getBookingEndDate() !== null
+          ? ' — ' . date('d/m/Y', strtotime($booking->getBookingEndDate()))
+          : '';
+      ?>
+      <?= e($startLabel . $endLabel) ?>
+    </div></div>
     <div class="detail-item"><div class="k">Subtotal</div><div class="v">&#8353; <?= number_format($totals['subtotal'], 2) ?></div></div>
     <div class="detail-item"><div class="k">IVA (<?= e(number_format($totals['taxPct'] ?? 0, 2)) ?>%)</div><div class="v">&#8353; <?= number_format($totals['tax'], 2) ?></div></div>
     <div class="detail-item"><div class="k">Total a pagar</div><div class="v"><strong>&#8353; <?= number_format($total, 2) ?></strong></div></div>

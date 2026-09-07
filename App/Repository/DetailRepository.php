@@ -38,16 +38,17 @@ class DetailRepository
 
   // =========================================================
   // INSERTAR LA RENTA DEL LOCAL como línea base de la reserva.
+  // $quantity = número de días rentados (precio se acumula por día).
   // Sin transacción propia: el llamador (BookingService) la envuelve.
   // =========================================================
-  public function addVenueLine(int $bookingPk, Venue $venue): int
+  public function addVenueLine(int $bookingPk, Venue $venue, int $quantity = 1): int
   {
     $detail = new Detail(
       idDetail: 0,
       idClientBooking: $bookingPk,
       idLocalService: 0,
       idVenue: $venue->getIdVenue(),
-      quantityDetail: 1,
+      quantityDetail: $quantity,
       unitPrice: $venue->getPriceVenue(),
       discount: 0.0,
       isActiveDetail: true

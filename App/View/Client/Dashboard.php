@@ -99,7 +99,15 @@ $client = $_SESSION['user'] ?? null;
         <div class="list-item" style="margin-bottom:0;box-shadow:none;border:none;padding:0;">
           <div>
             <div class="title">Local #<?= (int) $b->getIdLocal() ?></div>
-            <div class="desc"><?= e(date('d/m/Y', strtotime($b->getBookingDate()))) ?></div>
+            <div class="desc">
+              <?php
+                $dateCell = date('d/m/Y', strtotime($b->getBookingDate()));
+                if ($b->getBookingEndDate() !== null) {
+                  $dateCell .= ' — ' . date('d/m/Y', strtotime($b->getBookingEndDate()));
+                }
+              ?>
+              <?= e($dateCell) ?>
+            </div>
           </div>
           <span class="badge warning"><?= e($b->getBookingState()) ?></span>
         </div>

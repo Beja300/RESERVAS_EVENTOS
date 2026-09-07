@@ -27,11 +27,14 @@ if ($venue === null) {
     <input type="hidden" name="venueId" value="<?= (int) $venue->getIdVenue() ?>">
 
     <div class="form-group">
-      <label for="date">Fecha del evento *</label>
+      <label for="date">Rango de fechas *</label>
       <input class="form-control" type="date" id="date" name="date" required min="<?= date('Y-m-d') ?>"
-             value="<?= e($_POST['date'] ?? '') ?>"
+             value="<?= e(trim($_POST['date'] ?? '')) ?>"
              data-booked-dates='<?= e(json_encode($bookedDates ?? [])) ?>'>
+      <input class="form-control" type="date" id="endDate" name="endDate" required
+             value="<?= e(trim($_POST['endDate'] ?? '')) ?>" data-end-date>
     </div>
+    <p class="form-hint">Elige el día de inicio y luego el día final. El precio se acumula por día.</p>
 
     <div class="form-group">
       <label for="eventType">Tipo de evento</label>
@@ -44,14 +47,25 @@ if ($venue === null) {
       </select>
     </div>
 
+    <div class="form-group" id="eventDetailGroup" style="display:<?= ($_POST['eventType'] ?? '') === 'otro' ? '' : 'none' ?>;">
+      <label for="eventDetail">¿De qué trata tu evento? *</label>
+      <textarea class="form-control" id="eventDetail" name="eventDetail" rows="3" maxlength="255"
+                placeholder="Cuéntale al propietario de qué trata tu evento..."><?= e($_POST['eventDetail'] ?? '') ?></textarea>
+      <small class="muted">Esta descripción la verá el propietario del local.</small>
+    </div>
+
     <?php if (!empty($services)): ?>
       <p style="font-weight:700;color:var(--neutral-800);margin-bottom:8px;">Servicios disponibles</p>
       <p class="form-hint" style="margin-bottom:14px;">Podrás añadir servicios después de crear la reserva.</p>
     <?php endif; ?>
 
     <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--neutral-200);">
-      <p style="font-weight:700;color:var(--neutral-900);">Precio del local: &#8353; <?= number_format($venue->getPriceVenue(), 2) ?></p>
-      <p class="form-hint">Se incluye en la reserva; el total mostrará este precio más los servicios que agregues.</p>
+      <p style="font-weight:700;color:var(--neutral-900);" data-venue-price="<?= e($venue->getPriceVenue()) ?>">
+        Precio por día: &#8353; <?= number_format($venue->getPriceVenue(), 2) ?>
+      </p>
+      <p class="form-hint" id="bookingPriceSummary">
+        El precio se acumula por día (del 10 al 12 = 3 días). El total mostrará el precio × días más los servicios que agregues.
+      </p>
     </div>
 
     <button class="btn btn-primary btn-block" type="submit">Crear reserva</button>

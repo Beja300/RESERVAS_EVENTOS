@@ -22,7 +22,39 @@ $hasTicket = $ticket !== null;
 <div class="card">
   <div class="detail-grid">
     <div class="detail-item"><div class="k">Local</div><div class="v">#<?= (int) $booking->getIdLocal() ?> <?= $venue !== null ? '— ' . e($venue->getNameVenue()) : '' ?></div></div>
-    <div class="detail-item"><div class="k">Fecha</div><div class="v"><?= e(date('d/m/Y', strtotime($booking->getBookingDate()))) ?></div></div>
+    <div class="detail-item"><div class="k">Fechas</div>
+      <div class="v">
+        <?php
+          $startLabel = date('d/m/Y', strtotime($booking->getBookingDate()));
+          $endLabel = $booking->getBookingEndDate() !== null
+            ? ' — ' . date('d/m/Y', strtotime($booking->getBookingEndDate()))
+            : '';
+        ?>
+        <?= e($startLabel . $endLabel) ?>
+      </div>
+    </div>
+    <?php if ($booking->getEventType() !== null): ?>
+      <div class="detail-item">
+        <div class="k">Tipo de evento</div>
+        <div class="v">
+          <?php
+            $eventTypeLabel = [
+              'boda' => 'Boda',
+              'cumpleanos' => 'Cumpleaños',
+              'empresarial' => 'Empresarial',
+              'otro' => 'Otro',
+            ][$booking->getEventType()] ?? $booking->getEventType();
+          ?>
+          <?= e($eventTypeLabel) ?>
+        </div>
+      </div>
+    <?php endif; ?>
+    <?php if ($booking->getEventDescription() !== null && $booking->getEventDescription() !== ''): ?>
+      <div class="detail-item">
+        <div class="k">Detalle del evento</div>
+        <div class="v"><?= e($booking->getEventDescription()) ?></div>
+      </div>
+    <?php endif; ?>
     <div class="detail-item"><div class="k">Estado</div>
       <div class="v" style="margin-top:6px;">
         <?php
@@ -58,6 +90,7 @@ $hasTicket = $ticket !== null;
               <td>
                 <?php if ($d->getIdVenue() > 0): ?>
                   Renta del local — <?= e($venue !== null ? $venue->getNameVenue() : ('Local #' . $d->getIdVenue())) ?>
+                  <?php if ($d->getQuantityDetail() > 1): ?> <span class="muted">(<?= (int) $d->getQuantityDetail() ?> día<?= $d->getQuantityDetail() > 1 ? 's' : '' ?>)</span><?php endif; ?>
                 <?php else: ?>
                   Servicio #<?= (int) $d->getIdLocalService() ?>
                 <?php endif; ?>

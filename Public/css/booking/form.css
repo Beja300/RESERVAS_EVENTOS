@@ -146,6 +146,18 @@
   color: #fff;
 }
 
+/* Días dentro del rango ya confirmado */
+.datepicker-day.is-in-range {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+/* Previsualización en vivo mientras se elige la fecha final */
+.datepicker-day.is-hover-range {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
 .datepicker-error {
   color: var(--danger);
   font-size: 0.8rem;

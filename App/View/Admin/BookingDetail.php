@@ -39,8 +39,16 @@
       <div class="v">#<?= (int) $booking->getIdLocal() ?>
         <?= $venue !== null ? '— ' . e($venue->getNameVenue()) : '' ?></div>
     </div>
-    <div class="detail-item"><div class="k">Fecha</div>
-      <div class="v"><?= e(date('d/m/Y', strtotime($booking->getBookingDate()))) ?></div>
+    <div class="detail-item"><div class="k">Fechas</div>
+      <div class="v">
+        <?php
+          $startLabel = date('d/m/Y', strtotime($booking->getBookingDate()));
+          $endLabel = $booking->getBookingEndDate() !== null
+            ? ' — ' . date('d/m/Y', strtotime($booking->getBookingEndDate()))
+            : '';
+          echo e($startLabel . $endLabel);
+        ?>
+      </div>
     </div>
     <div class="detail-item"><div class="k">Estado</div>
       <div class="v">
@@ -168,18 +176,25 @@
     <h2 style="font-size:1.05rem;margin-bottom:10px;">Acciones del administrador</h2>
 
     <details style="margin-bottom:14px;">
-      <summary class="muted" style="cursor:pointer;">Reprogramar fecha</summary>
+      <summary class="muted" style="cursor:pointer;">Reprogramar fechas</summary>
       <form method="post" action="<?= e(base_url('admin', 'rescheduleBooking')) ?>" style="margin-top:8px;">
         <?= csrf_field() ?>
         <input type="hidden" name="id" value="<?= (int) $booking->getIdBooking() ?>">
+        <?php
+          $durationDays = 1;
+          if ($booking->getBookingEndDate() !== null) {
+            $durationDays = (int) ((strtotime($booking->getBookingEndDate()) - strtotime($booking->getBookingDate())) / 86400) + 1;
+          }
+        ?>
         <div class="form-group" style="max-width:260px;">
+          <label>Nueva fecha de inicio</label>
           <input class="form-control" type="date" name="date"
                  value="<?= e($booking->getBookingDate()) ?>"
                  min="<?= e(date('Y-m-d')) ?>"
                  required
                  data-booked-dates='<?= e(json_encode($bookedDates)) ?>'
                  data-current-date="<?= e($booking->getBookingDate()) ?>">
-          <p class="form-hint">No se puede elegir una fecha ya ocupada por otra reserva.</p>
+          <p class="form-hint">Al reprogramar se mantiene la duración (<?= (int) $durationDays ?> día<?= $durationDays > 1 ? 's' : '' ?>).</p>
         </div>
         <div class="form-group" style="max-width:300px;">
           <input class="form-control" type="text" name="note" placeholder="Nota (opcional)">

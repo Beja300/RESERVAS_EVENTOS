@@ -44,11 +44,33 @@ class BookingService
         int $clientPk,
         int $venuePk,
         string $date,
-        ?string $eventType = null
+        ?string $endDate = null,
+        ?string $eventType = null,
+        ?string $eventDetail = null
     ): int {
         if ($date < date('Y-m-d')) {
             throw new BusinessRuleException(
-                'La fecha de la reserva no puede ser anterior a hoy.'
+                'La fecha de inicio de la reserva no puede ser anterior a hoy.'
+            );
+        }
+
+        if ($endDate === null || $endDate === '') {
+            throw new BusinessRuleException(
+                'Debes indicar la fecha final de la reserva.'
+            );
+        }
+
+        if ($endDate < $date) {
+            throw new BusinessRuleException(
+                'La fecha final no puede ser anterior a la fecha de inicio.'
+            );
+        }
+
+        $days = (int) ((strtotime($endDate) - strtotime($date)) / 86400) + 1;
+
+        if ($days < 1) {
+            throw new BusinessRuleException(
+                'La reserva debe cubrir al menos un día.'
             );
         }
 
@@ -67,13 +89,14 @@ class BookingService
         }
 
         if (
-            $this->bookingRepo->hasActiveBookingOnDate(
+            $this->bookingRepo->hasActiveRangeConflict(
                 $venuePk,
-                $date
+                $date,
+                $endDate
             )
         ) {
             throw new BusinessRuleException(
-                'Este local ya tiene una reserva para esa fecha. Elige otra fecha.'
+                'Este local ya tiene una reserva que se cruza con ese rango de fechas. Elige otro rango.'
             );
         }
 
@@ -83,7 +106,10 @@ class BookingService
             $venuePk,
             $date,
             'pendiente',
-            false
+            false,
+            $endDate,
+            $eventType,
+            $eventDetail
         );
 
         $this->connection->beginTransaction();
@@ -92,8 +118,9 @@ class BookingService
 
             $idBooking = $this->bookingRepo->save($booking);
 
-            // Línea base: renta del local (garantiza factura nunca en 0)
-            $this->detailRepo->addVenueLine($idBooking, $venue);
+            // Línea base: renta del local por el número de días
+            // (garantiza factura nunca en 0 y acumula precio por día)
+            $this->detailRepo->addVenueLine($idBooking, $venue, $days);
 
             $this->connection->commit();
 

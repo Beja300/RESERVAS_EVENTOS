@@ -22,6 +22,9 @@ class BookingRepository
                 tbbookingclientid,
                 tbbookinglocalid,
                 tbbookingdate,
+                tbbookingenddate,
+                tbbookingeventtype,
+                tbbookingeventdetail,
                 tbbookingstate,
                 tbbookingactive
             )
@@ -29,6 +32,9 @@ class BookingRepository
                 :idClient,
                 :idLocal,
                 :bookingDate,
+                :bookingEndDate,
+                :eventType,
+                :eventDetail,
                 :bookingState,
                 :isBookingActive
             )
@@ -40,6 +46,9 @@ class BookingRepository
       ':idClient'         => $booking->getIdClient(),
       ':idLocal'          => $booking->getIdLocal(),
       ':bookingDate'      => $booking->getBookingDate(),
+      ':bookingEndDate'   => $booking->getBookingEndDate() ?: null,
+      ':eventType'        => $booking->getEventType(),
+      ':eventDetail'      => $booking->getEventDescription(),
       ':bookingState'     => $booking->getBookingState(),
       ':isBookingActive'  => $this->toDb($booking->getIsBookingActive())
     ]);
@@ -59,6 +68,9 @@ class BookingRepository
                 tbbookingclientid,
                 tbbookinglocalid,
                 tbbookingdate,
+                tbbookingenddate,
+                tbbookingeventtype,
+                tbbookingeventdetail,
                 tbbookingstate,
                 tbbookingactive
 
@@ -90,6 +102,9 @@ class BookingRepository
                 tbbookingclientid,
                 tbbookinglocalid,
                 tbbookingdate,
+                tbbookingenddate,
+                tbbookingeventtype,
+                tbbookingeventdetail,
                 tbbookingstate,
                 tbbookingactive
 
@@ -121,6 +136,9 @@ class BookingRepository
                 tbbookingclientid,
                 tbbookinglocalid,
                 tbbookingdate,
+                tbbookingenddate,
+                tbbookingeventtype,
+                tbbookingeventdetail,
                 tbbookingstate,
                 tbbookingactive
 
@@ -152,6 +170,9 @@ class BookingRepository
                 tbbookingclientid,
                 tbbookinglocalid,
                 tbbookingdate,
+                tbbookingenddate,
+                tbbookingeventtype,
+                tbbookingeventdetail,
                 tbbookingstate,
                 tbbookingactive
 
@@ -207,6 +228,9 @@ class BookingRepository
                 b.tbbookingclientid,
                 b.tbbookinglocalid,
                 b.tbbookingdate,
+                b.tbbookingenddate,
+                b.tbbookingeventtype,
+                b.tbbookingeventdetail,
                 b.tbbookingstate,
                 b.tbbookingactive
 
@@ -354,21 +378,23 @@ class BookingRepository
   }
 
   // =========================================================
-  // REPROGRAMAR (cambiar la fecha de la reserva)
+  // REPROGRAMAR (cambiar el rango de fechas de la reserva)
   // =========================================================
-  public function reschedule(int $idBooking, string $newDate): bool
+  public function reschedule(int $idBooking, string $newDate, ?string $newEndDate = null): bool
   {
     $sql = "
             UPDATE tbbooking
-            SET tbbookingdate = :newDate
+            SET tbbookingdate = :newDate,
+                tbbookingenddate = :newEndDate
             WHERE tbbookingid = :idBooking
         ";
 
     $stmt = $this->connection->prepare($sql);
 
     return $stmt->execute([
-      ':newDate'   => $newDate,
-      ':idBooking' => $idBooking
+      ':newDate'    => $newDate,
+      ':newEndDate' => $newEndDate ?: null,
+      ':idBooking'  => $idBooking
     ]);
   }
 
@@ -392,12 +418,14 @@ class BookingRepository
   }
 
   // =========================================================
-  // FECHAS OCUPADAS DE UN LOCAL (reservas activas)
+  // FECHAS OCUPADAS DE UN LOCAL (todas las reservas activas)
+  // Expande cada rango [inicio, fin] en fechas individuales para
+  // deshabilitarlas en el calendario del formulario de reserva.
   // =========================================================
   public function bookedDatesByVenue(int $idLocal): array
   {
     $sql = "
-            SELECT tbbookingdate
+            SELECT tbbookingdate, tbbookingenddate
             FROM tbbooking
             WHERE tbbookinglocalid = :idLocal
               AND tbbookingstate IN ('pendiente', 'confirmado')
@@ -408,7 +436,26 @@ class BookingRepository
     $stmt = $this->connection->prepare($sql);
     $stmt->execute([':idLocal' => $idLocal]);
 
-    return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $dates = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+      $start = $row['tbbookingdate'];
+      $end = ($row['tbbookingenddate'] !== null && $row['tbbookingenddate'] !== '')
+        ? $row['tbbookingenddate']
+        : $start;
+
+      if ($end < $start) {
+        $end = $start;
+      }
+
+      $cursor = new DateTime($start);
+      $limit = new DateTime($end);
+      while ($cursor <= $limit) {
+        $dates[] = $cursor->format('Y-m-d');
+        $cursor->modify('+1 day');
+      }
+    }
+
+    return array_values(array_unique($dates));
   }
 
   // =========================================================
@@ -462,20 +509,33 @@ class BookingRepository
 
   // =========================================================
   // VERIFICAR SI YA HAY UNA RESERVA ACTIVA EN ESA FECHA
+  // (compatibilidad: delega a la comprobación de rango)
   // =========================================================
   public function hasActiveBookingOnDate(int $idLocal, string $bookingDate, int $excludeBookingId = 0): bool
+  {
+    return $this->hasActiveRangeConflict($idLocal, $bookingDate, $bookingDate, $excludeBookingId);
+  }
+
+  // =========================================================
+  // VERIFICAR SOLAPAMIENTO DE RANGO [inicio, fin]
+  // Dos reservas chocan si: inicio <= finExistente AND fin >= inicioExistente
+  // =========================================================
+  public function hasActiveRangeConflict(int $idLocal, string $startDate, string $endDate, int $excludeBookingId = 0): bool
   {
     $sql = "
             SELECT COUNT(*)
             FROM tbbooking
             WHERE tbbookinglocalid = :idLocal
-              AND tbbookingdate = :bookingDate
               AND tbbookingstate IN ('pendiente', 'confirmado')
+              AND tbbookingactive = true
+              AND tbbookingdate <= :endDate
+              AND COALESCE(tbbookingenddate, tbbookingdate) >= :startDate
         ";
 
     $params = [
-      ':idLocal'     => $idLocal,
-      ':bookingDate' => $bookingDate
+      ':idLocal'   => $idLocal,
+      ':startDate' => $startDate,
+      ':endDate'   => $endDate
     ];
 
     if ($excludeBookingId > 0) {
@@ -585,7 +645,16 @@ class BookingRepository
       idLocal: (int) $row['tbbookinglocalid'],
       bookingDate: $row['tbbookingdate'],
       bookingState: $row['tbbookingstate'],
-      isBookingActive: $this->toBool($row['tbbookingactive'])
+      isBookingActive: $this->toBool($row['tbbookingactive']),
+      bookingEndDate: ($row['tbbookingenddate'] ?? null) !== null && $row['tbbookingenddate'] !== ''
+        ? $row['tbbookingenddate']
+        : null,
+      eventType: ($row['tbbookingeventtype'] ?? null) !== null && $row['tbbookingeventtype'] !== ''
+        ? $row['tbbookingeventtype']
+        : null,
+      eventDescription: ($row['tbbookingeventdetail'] ?? null) !== null && $row['tbbookingeventdetail'] !== ''
+        ? $row['tbbookingeventdetail']
+        : null
     );
   }
 

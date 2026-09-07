@@ -166,7 +166,9 @@ CREATE TABLE tbbooking (
     tbbookingclientid INT NOT NULL,
     tbbookinglocalid INT NOT NULL,
     tbbookingdate DATE NOT NULL,
+    tbbookingenddate DATE,
     tbbookingeventtype VARCHAR(50),
+    tbbookingeventdetail VARCHAR(255),
     tbbookingstate VARCHAR(30) DEFAULT 'pendiente',
     tbbookingactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;

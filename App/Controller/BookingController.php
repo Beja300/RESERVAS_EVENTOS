@@ -84,9 +84,23 @@ class BookingController
     $client = $_SESSION['user'];
     $idVenue = (int) ($_POST['venueId'] ?? 0);
     $date = trim($_POST['date'] ?? '');
+    $endDate = trim($_POST['endDate'] ?? '') ?: null;
     $eventType = trim($_POST['eventType'] ?? '') ?: null;
+    $eventDetail = trim($_POST['eventDetail'] ?? '') ?: null;
 
     try {
+
+      if ($eventType === 'otro' && ($eventDetail === null || $eventDetail === '')) {
+        throw new BusinessRuleException(
+          'Indica de qué trata tu evento para que el propietario del local lo conozca.'
+        );
+      }
+
+      if ($eventDetail !== null && mb_strlen($eventDetail) > 255) {
+        throw new BusinessRuleException(
+          'La descripción del evento no puede superar los 255 caracteres.'
+        );
+      }
 
       $this->clientService->assertCanBook($client->getIdClient());
 
@@ -94,7 +108,9 @@ class BookingController
         $client->getIdClient(),
         $idVenue,
         $date,
-        $eventType
+        $endDate,
+        $eventType,
+        $eventDetail
       );
 
       $this->historyService->logVenueBooking((int) $client->getIdRol(), $idVenue);
