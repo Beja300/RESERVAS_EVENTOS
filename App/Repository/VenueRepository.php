@@ -19,8 +19,8 @@ class VenueRepository
   {
     $sql = "
             INSERT INTO tbvenue (
-                tbvenueownerid,
-                tbvenuelocationid,
+                tbownerid,
+                tblocationid,
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
@@ -65,8 +65,8 @@ class VenueRepository
     $sql = "
             SELECT
                 tbvenueid,
-                tbvenueownerid,
-                tbvenuelocationid,
+                tbownerid,
+                tblocationid,
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
@@ -99,8 +99,8 @@ class VenueRepository
     $sql = "
             SELECT
                 tbvenueid,
-                tbvenueownerid,
-                tbvenuelocationid,
+                tbownerid,
+                tblocationid,
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
@@ -130,8 +130,8 @@ class VenueRepository
     $sql = "
             SELECT
                 v.tbvenueid,
-                v.tbvenueownerid,
-                v.tbvenuelocationid,
+                v.tbownerid,
+                v.tblocationid,
                 v.tbvenuename,
                 v.tbvenuetype,
                 v.tbvenuecapacity,
@@ -140,7 +140,7 @@ class VenueRepository
                 v.tbvenueactive,
                 l.tblocationprovince
             FROM tbvenue v
-            LEFT JOIN tblocation l ON l.tblocationid = v.tbvenuelocationid
+            LEFT JOIN tblocation l ON l.tblocationid = v.tblocationid
             WHERE v.tbvenueactive = true
         ";
 
@@ -193,8 +193,8 @@ class VenueRepository
     $sql = "
             SELECT
                 tbvenueid,
-                tbvenueownerid,
-                tbvenuelocationid,
+                tbownerid,
+                tblocationid,
                 tbvenuename,
                 tbvenuetype,
                 tbvenuecapacity,
@@ -204,7 +204,7 @@ class VenueRepository
 
             FROM tbvenue
 
-            WHERE tbvenueownerid = :idOwner
+            WHERE tbownerid = :idOwner
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -230,7 +230,7 @@ class VenueRepository
                 tbvenuecapacity = :capacityVenue,
                 tbvenueprice = :priceVenue,
                 tbvenueimage = :imageVenue,
-                tbvenuelocationid = :idLocation,
+                tblocationid = :idLocation,
                 tbvenueactive = :isActive
             WHERE tbvenueid = :idVenue
         ";
@@ -257,8 +257,8 @@ class VenueRepository
   {
     return new Venue(
       idVenue: (int) $row['tbvenueid'],
-      idOwner: (int) $row['tbvenueownerid'],
-      idLocation: (int) $row['tbvenuelocationid'],
+      idOwner: (int) $row['tbownerid'],
+      idLocation: (int) $row['tblocationid'],
       nameVenue: $row['tbvenuename'],
       typeVenue: $row['tbvenuetype'] ?? '',
       capacityVenue: (int) $row['tbvenuecapacity'],

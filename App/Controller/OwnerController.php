@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/../Service/AuthService.php';
+require_once __DIR__ . '/../Service/RoleSecurityService.php';
 require_once __DIR__ . '/../Service/HistoryService.php';
 require_once __DIR__ . '/../Service/OwnerPaymentService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
@@ -18,6 +19,7 @@ require_once __DIR__ . '/../../Configuration/DataBase.php';
 class OwnerController
 {
   private AuthService $authService;
+  private RoleSecurityService $roleSecurityService;
   private HistoryService $historyService;
   private VenueRepository $venueRepo;
   private BookingRepository $bookingRepo;
@@ -35,6 +37,7 @@ class OwnerController
     $connection = DataBase::getConnection();
 
     $this->authService = new AuthService();
+    $this->roleSecurityService = new RoleSecurityService();
     $this->historyService = new HistoryService($connection);
     $this->venueRepo = new VenueRepository($connection);
     $this->bookingRepo = new BookingRepository($connection);
@@ -131,6 +134,9 @@ class OwnerController
 
     $owner = $_SESSION['user'];
 
+    $currentEmail = $owner->getEmail();
+    $currentPhone = $owner->getPhoneNumber();
+
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $phoneNumber = trim($_POST['phoneNumber'] ?? '');
@@ -190,8 +196,12 @@ class OwnerController
       $this->ownerRepo->updateProfile($owner);
 
       if ($hasCurrent && $hasNew) {
-        $this->roleRepo->updatePassword($owner->getIdRol(), $newPassword);
+        $this->roleSecurityService->changePassword($owner->getIdRol(), $newPassword);
       }
+
+      // Seguridad: auditar y alertar ante cambios de credenciales.
+      $this->roleSecurityService->recordPhoneChange($owner->getIdRol(), $currentPhone, $phoneNumber);
+      $this->roleSecurityService->recordEmailChange($owner->getIdRol(), $currentEmail, $email);
 
       $_SESSION['user'] = $owner;
 

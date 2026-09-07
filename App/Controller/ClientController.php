@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../Service/HistoryService.php';
 require_once __DIR__ . '/../Service/AuthService.php';
+require_once __DIR__ . '/../Service/RoleSecurityService.php';
 require_once __DIR__ . '/../Service/LocationService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
@@ -15,6 +16,7 @@ class ClientController
 {
   private HistoryService $historyService;
   private AuthService $authService;
+  private RoleSecurityService $roleSecurityService;
   private BookingRepository $bookingRepo;
   private RoleRepository $roleRepo;
   private ClientRepository $clientRepo;
@@ -28,6 +30,7 @@ class ClientController
 
     $this->historyService = new HistoryService($connection);
     $this->authService = new AuthService();
+    $this->roleSecurityService = new RoleSecurityService();
     $this->bookingRepo = new BookingRepository($connection);
     $this->roleRepo = new RoleRepository($connection);
     $this->clientRepo = new ClientRepository($connection);
@@ -113,6 +116,9 @@ class ClientController
 
     $client = $_SESSION['user'];
 
+    $currentEmail = $client->getEmail();
+    $currentPhone = $client->getPhoneNumber();
+
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $phoneNumber = trim($_POST['phoneNumber'] ?? '');
@@ -134,6 +140,18 @@ class ClientController
       $client->setPhoneNumber($phoneNumber);
 
       $this->roleRepo->update($client);
+
+      // Seguridad: auditar y alertar ante cambios de credenciales.
+      $this->roleSecurityService->recordPhoneChange(
+        $client->getIdRol(),
+        $currentPhone,
+        $phoneNumber
+      );
+      $this->roleSecurityService->recordEmailChange(
+        $client->getIdRol(),
+        $currentEmail,
+        $email
+      );
 
       $image = $this->resolveProfileImage($client->getIdClient(), $client->getImageClient());
 

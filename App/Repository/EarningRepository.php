@@ -19,12 +19,12 @@ class EarningRepository
   {
     $sql = "
       INSERT INTO tbeearning (
-        tbeearningbookingid,
+        tbbookingid,
         tbeearningtotal,
         tbeearningcommission,
         tbeearningtax,
         tbeearningowneramount,
-        tbeearningreviewedbyrole
+        tbroleid
       )
       VALUES (
         :idBooking,
@@ -58,15 +58,15 @@ class EarningRepository
     $sql = "
       SELECT
         tbeearningid,
-        tbeearningbookingid,
+        tbbookingid,
         tbeearningtotal,
         tbeearningcommission,
         tbeearningtax,
         tbeearningowneramount,
-        tbeearningreviewedbyrole,
+        tbroleid,
         tbeearningdate
       FROM tbeearning
-      WHERE tbeearningbookingid = :idBooking
+      WHERE tbbookingid = :idBooking
         AND tbeearningactive = true
       LIMIT 1
     ";
@@ -87,7 +87,7 @@ class EarningRepository
     $sql = "
       UPDATE tbeearning
       SET tbeearningactive = false
-      WHERE tbeearningbookingid = :idBooking
+      WHERE tbbookingid = :idBooking
         AND tbeearningactive = true
     ";
 
@@ -103,12 +103,12 @@ class EarningRepository
     $sql = "
       SELECT
         tbeearningid,
-        tbeearningbookingid,
+        tbbookingid,
         tbeearningtotal,
         tbeearningcommission,
         tbeearningtax,
         tbeearningowneramount,
-        tbeearningreviewedbyrole,
+        tbroleid,
         tbeearningdate
       FROM tbeearning
       WHERE tbeearningactive = true
@@ -169,12 +169,12 @@ class EarningRepository
             FROM tbeearning e
 
             INNER JOIN tbbooking b
-                ON b.tbbookingid = e.tbeearningbookingid
+                ON b.tbbookingid = e.tbbookingid
 
             INNER JOIN tbvenue v
-                ON v.tbvenueid = b.tbbookinglocalid
+                ON v.tbvenueid = b.tbvenueid
 
-            WHERE v.tbvenueownerid = :idOwner
+            WHERE v.tbownerid = :idOwner
               AND e.tbeearningactive = true
               AND e.tbeearningdate LIKE :yearMonth
         ";
@@ -203,12 +203,12 @@ class EarningRepository
   {
     return new Earning(
       idEarning: (int) $row['tbeearningid'],
-      idBooking: (int) $row['tbeearningbookingid'],
+      idBooking: (int) $row['tbbookingid'],
       total: (float) $row['tbeearningtotal'],
       commission: (float) $row['tbeearningcommission'],
       tax: (float) $row['tbeearningtax'],
       ownerAmount: (float) $row['tbeearningowneramount'],
-      reviewedByRole: $row['tbeearningreviewedbyrole'] !== null ? (int) $row['tbeearningreviewedbyrole'] : null,
+      reviewedByRole: $row['tbroleid'] !== null ? (int) $row['tbroleid'] : null,
       earningDate: $row['tbeearningdate']
     );
   }

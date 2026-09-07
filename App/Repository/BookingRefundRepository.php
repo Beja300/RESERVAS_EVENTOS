@@ -19,8 +19,8 @@ class BookingRefundRepository
   {
     $sql = "
             INSERT INTO tbbookingrefund (
-                tbbookingrefundbookingid,
-                tbbookingrefundclientroleid,
+                tbbookingid,
+                tbroleid,
                 tbbookingrefunddetail,
                 tbbookingrefundstate,
                 tbbookingrefundactive
@@ -54,8 +54,8 @@ class BookingRefundRepository
     $sql = "
             SELECT
                 tbbookingrefundid,
-                tbbookingrefundbookingid,
-                tbbookingrefundclientroleid,
+                tbbookingid,
+                tbroleid,
                 tbbookingrefunddetail,
                 tbbookingrefundstate,
                 tbbookingrefunddate
@@ -81,13 +81,13 @@ class BookingRefundRepository
     $sql = "
             SELECT
                 tbbookingrefundid,
-                tbbookingrefundbookingid,
-                tbbookingrefundclientroleid,
+                tbbookingid,
+                tbroleid,
                 tbbookingrefunddetail,
                 tbbookingrefundstate,
                 tbbookingrefunddate
             FROM tbbookingrefund
-            WHERE tbbookingrefundbookingid = :idBooking
+            WHERE tbbookingid = :idBooking
               AND tbbookingrefundactive = true
             ORDER BY tbbookingrefundid DESC
             LIMIT 1
@@ -109,7 +109,7 @@ class BookingRefundRepository
     $sql = "
             SELECT
                 r.tbbookingrefundid,
-                r.tbbookingrefundbookingid,
+                r.tbbookingid,
                 b.tbbookingdate,
                 c.tbclientname AS clientName,
                 v.tbvenuename AS venueName,
@@ -117,9 +117,9 @@ class BookingRefundRepository
                 r.tbbookingrefundstate,
                 r.tbbookingrefunddate
             FROM tbbookingrefund r
-            LEFT JOIN tbbooking b ON b.tbbookingid = r.tbbookingrefundbookingid
-            LEFT JOIN tbclient c ON c.tbclientid = b.tbbookingclientid
-            LEFT JOIN tbvenue v ON v.tbvenueid = b.tbbookinglocalid
+            LEFT JOIN tbbooking b ON b.tbbookingid = r.tbbookingid
+            LEFT JOIN tbclient c ON c.tbclientid = b.tbclientid
+            LEFT JOIN tbvenue v ON v.tbvenueid = b.tbvenueid
             WHERE r.tbbookingrefundstate = 'pendiente'
               AND r.tbbookingrefundactive = true
             ORDER BY r.tbbookingrefunddate DESC, r.tbbookingrefundid DESC
@@ -157,8 +157,8 @@ class BookingRefundRepository
   {
     return new BookingRefund(
       id: (int) $row['tbbookingrefundid'],
-      idBooking: (int) $row['tbbookingrefundbookingid'],
-      clientRoleId: (int) $row['tbbookingrefundclientroleid'],
+      idBooking: (int) $row['tbbookingid'],
+      clientRoleId: (int) $row['tbroleid'],
       detail: $row['tbbookingrefunddetail'],
       state: $row['tbbookingrefundstate'],
       date: $row['tbbookingrefunddate'] ?? null

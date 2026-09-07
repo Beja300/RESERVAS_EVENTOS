@@ -4,7 +4,7 @@
     <div class="comment-item" data-comment-id="<?= (int) $c['tbvenueratingid'] ?>">
       <span class="c-author"><?= e($c['tbrolename']) ?></span>
       <span class="rating-stars"><?= str_repeat('&#9733;', (int) $c['tbvenueratingstars']) . str_repeat('&#9734;', 5 - (int) $c['tbvenueratingstars']) ?></span>
-      <?php if (current_user_type() !== null && $currentRoleId === (int) $c['tbvenueratingroleid']): ?>
+      <?php if (current_user_type() !== null && $currentRoleId === (int) $c['tbroleid']): ?>
         <button type="button" class="btn btn-link btn-sm btn-edit-comment"
                 data-comment-id="<?= (int) $c['tbvenueratingid'] ?>"
                 data-stars="<?= (int) $c['tbvenueratingstars'] ?>"

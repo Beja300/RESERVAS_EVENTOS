@@ -155,9 +155,11 @@ class RoleRepository
 
 
   // =========================================================
-  // ACTUALIZAR CONTRASEÑA (solo si se pide explícitamente)
+  // ACTUALIZAR CONTRASEÑA (guarda el hash que recibe)
+  // Lo usa RoleSecurityService para que el mismo hash quede en
+  // tbrole y en la mini-tabla histórica tbrolpasswordhistorical.
   // =========================================================
-  public function updatePassword(int $idRole, string $password): bool
+  public function updatePasswordHashed(int $idRole, string $hash): bool
   {
     $sql = "
             UPDATE tbrole
@@ -168,8 +170,54 @@ class RoleRepository
     $stmt = $this->connection->prepare($sql);
 
     return $stmt->execute([
-      ':password' => password_hash($password, PASSWORD_DEFAULT),
+      ':password' => $hash,
       ':idRole'   => $idRole
+    ]);
+  }
+
+  // =========================================================
+  // ACTUALIZAR CONTRASEÑA (texto plano -> la hashea internamente)
+  // =========================================================
+  public function updatePassword(int $idRole, string $password): bool
+  {
+    return $this->updatePasswordHashed($idRole, password_hash($password, PASSWORD_DEFAULT));
+  }
+
+  // =========================================================
+  // ACTUALIZAR TELÉFONO (solo el teléfono, sin tocar email/nombre)
+  // =========================================================
+  public function updatePhone(int $idRole, ?string $phoneNumber): bool
+  {
+    $sql = "
+            UPDATE tbrole
+            SET tbrolephone = :phoneNumber
+            WHERE tbroleid = :idRole
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    return $stmt->execute([
+      ':phoneNumber' => $phoneNumber,
+      ':idRole'      => $idRole
+    ]);
+  }
+
+  // =========================================================
+  // ACTUALIZAR CORREO (solo el correo)
+  // =========================================================
+  public function updateEmail(int $idRole, string $email): bool
+  {
+    $sql = "
+            UPDATE tbrole
+            SET tbroleemail = :email
+            WHERE tbroleid = :idRole
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    return $stmt->execute([
+      ':email'  => $email,
+      ':idRole' => $idRole
     ]);
   }
 

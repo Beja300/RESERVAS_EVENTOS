@@ -19,7 +19,7 @@ class PromotionRepository
   {
     $sql = "
       INSERT INTO tbpromotion (
-        tbpromotionvenueid,
+        tbvenueid,
         tbpromotiondescription,
         tbpromotionlabel,
         tbpromotionstart,
@@ -88,7 +88,7 @@ class PromotionRepository
     $sql = "
       SELECT
         tbpromotionid,
-        tbpromotionvenueid,
+        tbvenueid,
         tbpromotiondescription,
         tbpromotionlabel,
         tbpromotionstart,
@@ -116,14 +116,14 @@ class PromotionRepository
     $sql = "
       SELECT
         tbpromotionid,
-        tbpromotionvenueid,
+        tbvenueid,
         tbpromotiondescription,
         tbpromotionlabel,
         tbpromotionstart,
         tbpromotionend,
         tbpromotionminservices
       FROM tbpromotion
-      WHERE tbpromotionvenueid = :idVenue
+      WHERE tbvenueid = :idVenue
         AND tbpromotionactive = true
         AND (tbpromotionstart IS NULL OR tbpromotionstart <= :date)
         AND (tbpromotionend IS NULL OR tbpromotionend >= :date)
@@ -147,14 +147,14 @@ class PromotionRepository
     $sql = "
       SELECT
         tbpromotionid,
-        tbpromotionvenueid,
+        tbvenueid,
         tbpromotiondescription,
         tbpromotionlabel,
         tbpromotionstart,
         tbpromotionend,
         tbpromotionminservices
       FROM tbpromotion
-      WHERE tbpromotionvenueid = :idVenue
+      WHERE tbvenueid = :idVenue
       ORDER BY tbpromotionid DESC
     ";
 
@@ -171,7 +171,7 @@ class PromotionRepository
   {
     return new Promotion(
       idPromotion: (int) $row['tbpromotionid'],
-      idVenue: (int) $row['tbpromotionvenueid'],
+      idVenue: (int) $row['tbvenueid'],
       description: $row['tbpromotiondescription'] ?? '',
       label: $row['tbpromotionlabel'],
       startDate: $row['tbpromotionstart'],

@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../Service/AdminService.php';
 require_once __DIR__ . '/../Service/AuthService.php';
+require_once __DIR__ . '/../Service/RoleSecurityService.php';
 require_once __DIR__ . '/../Service/InvoiceService.php';
 require_once __DIR__ . '/../Service/EarningService.php';
 require_once __DIR__ . '/../Service/BookingService.php';
@@ -29,6 +30,7 @@ class AdminController
 {
   private AdminService $adminService;
   private AuthService $authService;
+  private RoleSecurityService $roleSecurityService;
   private InvoiceService $invoiceService;
   private EarningService $earningService;
   private BookingService $bookingService;
@@ -54,6 +56,7 @@ class AdminController
 
     $this->adminService = new AdminService();
     $this->authService = new AuthService();
+    $this->roleSecurityService = new RoleSecurityService();
     $this->invoiceService = new InvoiceService();
     $this->earningService = new EarningService($connection);
     $this->bookingService = new BookingService();
@@ -235,6 +238,9 @@ class AdminController
 
     $admin = $_SESSION['user'];
 
+    $currentEmail = $admin->getEmail();
+    $currentPhone = $admin->getPhoneNumber();
+
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $phoneNumber = trim($_POST['phoneNumber'] ?? '');
@@ -283,8 +289,12 @@ class AdminController
       $this->adminRepo->updateProfile($admin);
 
       if ($hasCurrent && $hasNew) {
-        $this->roleRepo->updatePassword($admin->getIdRol(), $newPassword);
+        $this->roleSecurityService->changePassword($admin->getIdRol(), $newPassword);
       }
+
+      // Seguridad: auditar y alertar ante cambios de credenciales.
+      $this->roleSecurityService->recordPhoneChange($admin->getIdRol(), $currentPhone, $phoneNumber);
+      $this->roleSecurityService->recordEmailChange($admin->getIdRol(), $currentEmail, $email);
 
       $_SESSION['user'] = $admin;
 
@@ -1016,6 +1026,9 @@ class AdminController
         $this->authService->validatePasswordStrength($password);
       }
 
+      $currentUserEmail = $user->getEmail();
+      $currentUserPhone = $user->getPhoneNumber();
+
       $user->setName($name);
       $user->setEmail($email);
       $user->setPhoneNumber($phoneNumber);
@@ -1037,8 +1050,12 @@ class AdminController
       $this->roleRepo->update($user);
 
       if ($password !== '') {
-        $this->roleRepo->updatePassword($idRole, $password);
+        $this->roleSecurityService->adminResetPassword($idRole, $password);
       }
+
+      // Seguridad: auditar y alertar ante cambios de credenciales.
+      $this->roleSecurityService->recordPhoneChange($idRole, $currentUserPhone, $phoneNumber);
+      $this->roleSecurityService->recordEmailChange($idRole, $currentUserEmail, $email);
 
       if ($type === 'owner') {
         $this->ownerRepo->updateProfile($user);

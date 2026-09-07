@@ -19,8 +19,8 @@ class ServiceRatingRepository
   {
     $sql = "
       INSERT INTO tbservicerating (
-        tbserviceratingserviceid,
-        tbserviceratingroleid,
+        tbserviceid,
+        tbroleid,
         tbserviceratingstars,
         tbserviceratingcomment
       )
@@ -74,13 +74,13 @@ class ServiceRatingRepository
     $sql = "
       SELECT
         tbserviceratingid,
-        tbserviceratingserviceid,
-        tbserviceratingroleid,
+        tbserviceid,
+        tbroleid,
         tbserviceratingstars,
         tbserviceratingcomment
       FROM tbservicerating
-      WHERE tbserviceratingserviceid = :idService
-        AND tbserviceratingroleid = :idRole
+      WHERE tbserviceid = :idService
+        AND tbroleid = :idRole
         AND tbserviceratingactive = true
       LIMIT 1
     ";
@@ -104,12 +104,12 @@ class ServiceRatingRepository
     $sql = "
       SELECT
         tbserviceratingid,
-        tbserviceratingserviceid,
-        tbserviceratingroleid,
+        tbserviceid,
+        tbroleid,
         tbserviceratingstars,
         tbserviceratingcomment
       FROM tbservicerating
-      WHERE tbserviceratingserviceid = :idService
+      WHERE tbserviceid = :idService
         AND tbserviceratingactive = true
       ORDER BY tbserviceratingid DESC
     ";
@@ -127,13 +127,13 @@ class ServiceRatingRepository
   {
     $sql = "
       SELECT
-        sr.tbserviceratingroleid,
+        sr.tbroleid,
         sr.tbserviceratingstars,
         sr.tbserviceratingcomment,
         r.tbrolename
       FROM tbservicerating sr
-      INNER JOIN tbrole r ON r.tbroleid = sr.tbserviceratingroleid
-      WHERE sr.tbserviceratingserviceid = :idService
+      INNER JOIN tbrole r ON r.tbroleid = sr.tbroleid
+      WHERE sr.tbserviceid = :idService
         AND sr.tbserviceratingactive = true
       ORDER BY sr.tbserviceratingid DESC
     ";
@@ -152,7 +152,7 @@ class ServiceRatingRepository
     $sql = "
       SELECT AVG(tbserviceratingstars) AS average
       FROM tbservicerating
-      WHERE tbserviceratingserviceid = :idService
+      WHERE tbserviceid = :idService
         AND tbserviceratingactive = true
     ";
 
@@ -172,7 +172,7 @@ class ServiceRatingRepository
     $sql = "
       SELECT COUNT(*) AS total
       FROM tbservicerating
-      WHERE tbserviceratingserviceid = :idService
+      WHERE tbserviceid = :idService
         AND tbserviceratingactive = true
     ";
 
@@ -227,8 +227,8 @@ class ServiceRatingRepository
   {
     return new ServiceRating(
       idServiceRating: (int) $row['tbserviceratingid'],
-      idService: (int) $row['tbserviceratingserviceid'],
-      idRole: (int) $row['tbserviceratingroleid'],
+      idService: (int) $row['tbserviceid'],
+      idRole: (int) $row['tbroleid'],
       stars: (int) $row['tbserviceratingstars'],
       comment: $row['tbserviceratingcomment'] ?? ''
     );

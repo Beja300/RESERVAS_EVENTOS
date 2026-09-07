@@ -45,8 +45,8 @@ class ClientRepository
 
             $sqlLink = "
                 INSERT INTO tbroleclient (
-                    tbroleclientrolid,
-                    tbroleclientclientid,
+                    tbroleid,
+                    tbclientid,
                     tbroleclientactive
                 )
                 VALUES (
@@ -88,11 +88,11 @@ class ClientRepository
                 r.tbroleactive,
                 p.tbclientid,
                 p.tbclientimage,
-                p.tbclientlocationid,
+                p.tblocationid,
                 p.tbclientactive
             FROM tbrole r
-            INNER JOIN tbroleclient c ON c.tbroleclientrolid = r.tbroleid
-            INNER JOIN tbclient p ON p.tbclientid = c.tbroleclientclientid
+            INNER JOIN tbroleclient c ON c.tbroleid = r.tbroleid
+            INNER JOIN tbclient p ON p.tbclientid = c.tbclientid
             WHERE r.tbroleemail = :email
             LIMIT 1
         ";
@@ -119,11 +119,11 @@ class ClientRepository
                 r.tbroleactive,
                 p.tbclientid,
                 p.tbclientimage,
-                p.tbclientlocationid,
+                p.tblocationid,
                 p.tbclientactive
             FROM tbrole r
-            INNER JOIN tbroleclient c ON c.tbroleclientrolid = r.tbroleid
-            INNER JOIN tbclient p ON p.tbclientid = c.tbroleclientclientid
+            INNER JOIN tbroleclient c ON c.tbroleid = r.tbroleid
+            INNER JOIN tbclient p ON p.tbclientid = c.tbclientid
             WHERE p.tbclientid = :idClient
             LIMIT 1
         ";
@@ -150,11 +150,11 @@ class ClientRepository
                 r.tbroleactive,
                 p.tbclientid,
                 p.tbclientimage,
-                p.tbclientlocationid,
+                p.tblocationid,
                 p.tbclientactive
             FROM tbrole r
-            INNER JOIN tbroleclient c ON c.tbroleclientrolid = r.tbroleid
-            INNER JOIN tbclient p ON p.tbclientid = c.tbroleclientclientid
+            INNER JOIN tbroleclient c ON c.tbroleid = r.tbroleid
+            INNER JOIN tbclient p ON p.tbclientid = c.tbclientid
             WHERE r.tbroleid = :idRole
             LIMIT 1
         ";
@@ -181,11 +181,11 @@ class ClientRepository
                 r.tbroleactive,
                 p.tbclientid,
                 p.tbclientimage,
-                p.tbclientlocationid,
+                p.tblocationid,
                 p.tbclientactive
             FROM tbrole r
-            INNER JOIN tbroleclient c ON c.tbroleclientrolid = r.tbroleid
-            INNER JOIN tbclient p ON p.tbclientid = c.tbroleclientclientid
+            INNER JOIN tbroleclient c ON c.tbroleid = r.tbroleid
+            INNER JOIN tbclient p ON p.tbclientid = c.tbclientid
             ORDER BY p.tbclientid ASC
         ";
 
@@ -208,9 +208,9 @@ class ClientRepository
         $sql = "
             SELECT COUNT(*) AS total
             FROM (
-                SELECT tbbookingclientid
+                SELECT tbclientid
                 FROM tbbooking
-                GROUP BY tbbookingclientid
+                GROUP BY tbclientid
                 HAVING MIN(tbbookingdate) LIKE :yearMonth
             ) AS first_bookings
         ";
@@ -230,10 +230,10 @@ class ClientRepository
         $sql = "
             SELECT COUNT(*) AS total
             FROM (
-                SELECT tbbookingclientid
+                SELECT tbclientid
                 FROM tbbooking
                 WHERE tbbookingdate LIKE :yearMonth
-                GROUP BY tbbookingclientid
+                GROUP BY tbclientid
                 HAVING COUNT(*) > 1
             ) AS recurring
         ";
@@ -255,10 +255,10 @@ class ClientRepository
                 r.tbrolename AS name,
                 COUNT(b.tbbookingid) AS bookingCount
             FROM tbbooking b
-            INNER JOIN tbroleclient c ON c.tbroleclientclientid = b.tbbookingclientid
-            INNER JOIN tbrole r ON r.tbroleid = c.tbroleclientrolid
+            INNER JOIN tbroleclient c ON c.tbclientid = b.tbclientid
+            INNER JOIN tbrole r ON r.tbroleid = c.tbroleid
             WHERE b.tbbookingdate LIKE :yearMonth
-            GROUP BY b.tbbookingclientid, r.tbroleid, r.tbrolename
+            GROUP BY b.tbclientid, r.tbroleid, r.tbrolename
             ORDER BY bookingCount DESC
             LIMIT :limit
         ";
@@ -314,7 +314,7 @@ class ClientRepository
             UPDATE tbclient
             SET
                 tbclientimage = :image,
-                tbclientlocationid = :locationId
+                tblocationid = :locationId
             WHERE tbclientid = :idClient
         ";
 
@@ -343,7 +343,7 @@ class ClientRepository
             idRol: (int) $row['tbroleid'],
             imageClient: $row['tbclientimage'] ?? '',
             phoneNumber: $row['tbrolephone'],
-            locationId: ($row['tbclientlocationid'] ?? null) !== null ? (int) $row['tbclientlocationid'] : null
+            locationId: ($row['tblocationid'] ?? null) !== null ? (int) $row['tblocationid'] : null
         );
     }
 
