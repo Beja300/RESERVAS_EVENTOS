@@ -106,9 +106,9 @@ class BookingTicketService
 
     $this->invoiceService->approve($bookingPk);
 
-    $total = $this->bookingService->calculateTotal($bookingPk);
+    $totals = $this->bookingService->calculateTotals($bookingPk);
 
-    $this->earningService->recordEarning($bookingPk, $total, $reviewedByRole);
+    $this->earningService->recordEarning($bookingPk, $totals, $reviewedByRole);
 
     $this->bookingRepo->updateStatus($bookingPk, 'confirmado');
   }

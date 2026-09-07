@@ -66,6 +66,7 @@ if ($userType !== null && isset($_SESSION['user']) && is_object($_SESSION['user'
         <a href="<?= e(base_url('admin', 'userHistory')) ?>">Historial de usuarios</a>
         <a href="<?= e(base_url('admin', 'bookings')) ?>">Reservas</a>
         <a href="<?= e(base_url('paymentMethod', 'list')) ?>">Métodos de pago</a>
+        <a href="<?= e(base_url('admin', 'commissionConfig')) ?>">Comisión e IVA</a>
         <?= $notificationNav ?>
         <a href="<?= e(base_url('admin', 'profile')) ?>">Perfil</a>
       <?php else: ?>

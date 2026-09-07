@@ -321,6 +321,21 @@ class NotificationService
     }
 
     // =========================================================
+    // NOTIFICAR A TODOS LOS PROPIETARIOS UN CAMBIO DE COMISIÓN/IVA
+    // =========================================================
+    public function notifyCommissionConfigChanged(float $percentage, float $tax): void
+    {
+        $ownerRolePks = $this->notificationRepo->findOwnerRoleIds();
+
+        foreach ($ownerRolePks as $ownerRolePk) {
+            $this->notify(
+                $ownerRolePk,
+                "La plataforma actualizó sus tarifas: comisión {$percentage}% e IVA {$tax}%."
+            );
+        }
+    }
+
+    // =========================================================
     // CONSTRUCCIÓN DE URLS HACIA EL MOTIVO DE LA NOTIFICACIÓN
     // =========================================================
     private function appUrl(string $controller, string $action, array $params = []): string

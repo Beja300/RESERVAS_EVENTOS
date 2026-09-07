@@ -73,12 +73,14 @@ $hasTicket = $ticket !== null;
             <th colspan="3" style="text-align:right;">Subtotal</th>
             <th>&#8353; <?= number_format($totals['subtotal'], 2) ?></th>
           </tr>
+          <?php if ($isOwner): ?>
+            <tr>
+              <th colspan="3" style="text-align:right;">Comisión (<?= e(number_format($totals['commissionPct'] ?? 0, 2)) ?>%)</th>
+              <th>&#8353; <?= number_format($totals['commission'], 2) ?></th>
+            </tr>
+          <?php endif; ?>
           <tr>
-            <th colspan="3" style="text-align:right;">Comisión (5%)</th>
-            <th>&#8353; <?= number_format($totals['commission'], 2) ?></th>
-          </tr>
-          <tr>
-            <th colspan="3" style="text-align:right;">IVA (13%)</th>
+            <th colspan="3" style="text-align:right;">IVA (<?= e(number_format($totals['taxPct'] ?? 0, 2)) ?>%)</th>
             <th>&#8353; <?= number_format($totals['tax'], 2) ?></th>
           </tr>
           <tr>

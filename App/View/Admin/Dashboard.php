@@ -31,7 +31,7 @@
 
 <div class="grid grid-4" style="margin-bottom:20px; ">
   <div class="stat"><div class="value">&#8353; <?= number_format($monthStats['ingreso_bruto'], 2) ?></div><div class="label">Ingreso bruto del mes</div></div>
-  <div class="stat"><div class="value">&#8353; <?= number_format($monthStats['comision'], 2) ?></div><div class="label">Ganancia mensual (comisi&oacute;n 5%)</div></div>
+  <div class="stat"><div class="value">&#8353; <?= number_format($monthStats['comision'], 2) ?></div><div class="label">Ganancia mensual (comisi&oacute;n <?= e(number_format((float) ($commissionPct ?? 0), 2)) ?>%)</div></div>
   <div class="stat"><div class="value">&#8353; <?= number_format($monthStats['iva'], 2) ?></div><div class="label">IVA retenido</div></div>
   <div class="stat"><div class="value">&#8353; <?= number_format($monthStats['propietarios'], 2) ?></div><div class="label">Ingreso propietarios</div></div>
 </div>

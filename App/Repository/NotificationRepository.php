@@ -197,6 +197,22 @@ class NotificationRepository
 
 
   // =========================================================
+  // OBTENER IDS DE ROLES OWNER ACTIVOS
+  // =========================================================
+  public function findOwnerRoleIds(): array
+  {
+    $sql = "
+            SELECT tbroleownerrolid
+            FROM tbroleowner
+            WHERE tbroleowneractive = true
+        ";
+
+    $stmt = $this->connection->query($sql);
+
+    return array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+  }
+
+  // =========================================================
   // OBTENER ROL ID DE UN PROPIETARIO (tbroleowner)
   // =========================================================
   public function findRoleIdByOwner(int $idOwner): ?int

@@ -1,37 +1,30 @@
 <?php
 
 require_once __DIR__ . '/BusinessRuleException.php';
-require_once __DIR__ . '/CommissionConfigService.php';
+require_once __DIR__ . '/BookingService.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../Repository/EarningRepository.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
-require_once __DIR__ . '/../Repository/VenueRepository.php';
-require_once __DIR__ . '/../Repository/CommissionConfigRepository.php';
 require_once __DIR__ . '/../Model/Earning.php';
 
 class EarningService
 {
   private EarningRepository $earningRepo;
   private BookingRepository $bookingRepo;
-  private VenueRepository $venueRepo;
-  private CommissionConfigService $configService;
 
   public function __construct(PDO $connection)
   {
     $this->earningRepo = new EarningRepository($connection);
     $this->bookingRepo = new BookingRepository($connection);
-    $this->venueRepo = new VenueRepository($connection);
-    $this->configService = new CommissionConfigService(
-      new CommissionConfigRepository($connection)
-    );
   }
 
   // =========================================================
   // REGISTRAR REPARTICIÓN DE UNA RESERVA PAGADA
-  // total pagado por el cliente, comisión de la plataforma,
-  // IVA retenido e ingreso neto del propietario.
+  // Recibe el desglose calculado por BookingService::calculateTotals
+  // (fórmula única): total pagado por el cliente, comisión de la
+  // plataforma, IVA retenido e ingreso neto del propietario.
   // =========================================================
-  public function recordEarning(int $bookingPk, float $total, ?int $reviewedByRole = null): Earning
+  public function recordEarning(int $bookingPk, array $totals, ?int $reviewedByRole = null): Earning
   {
     $booking = $this->bookingRepo->findById($bookingPk);
 
@@ -43,10 +36,9 @@ class EarningService
       throw new BusinessRuleException('Esta reserva ya tiene su ganancia registrada.');
     }
 
-    $config = $this->configService->getActive();
-
-    $commission = round($total * ($config->getPercentage() / 100), 2);
-    $tax        = round($commission * ($config->getTax() / 100), 2);
+    $total = $totals['total'];
+    $commission = $totals['commission'];
+    $tax        = $totals['tax'];
     $ownerAmount = round($total - $commission - $tax, 2);
 
     $earning = new Earning(

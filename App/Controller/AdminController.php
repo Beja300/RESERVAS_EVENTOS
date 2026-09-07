@@ -7,6 +7,7 @@ require_once __DIR__ . '/../Service/EarningService.php';
 require_once __DIR__ . '/../Service/BookingService.php';
 require_once __DIR__ . '/../Service/BookingAdminService.php';
 require_once __DIR__ . '/../Service/NotificationService.php';
+require_once __DIR__ . '/../Service/CommissionConfigService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/BookingHistoryRepository.php';
@@ -21,6 +22,7 @@ require_once __DIR__ . '/../Repository/ClientRepository.php';
 require_once __DIR__ . '/../Repository/OwnerRepository.php';
 require_once __DIR__ . '/../Repository/VenueRatingRepository.php';
 require_once __DIR__ . '/../Repository/ServiceRatingRepository.php';
+require_once __DIR__ . '/../Repository/CommissionConfigRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class AdminController
@@ -44,6 +46,7 @@ class AdminController
   private VenueRatingRepository $venueRatingRepo;
   private ServiceRatingRepository $serviceRatingRepo;
   private NotificationService $notificationService;
+  private CommissionConfigService $commissionConfigService;
 
   public function __construct()
   {
@@ -68,6 +71,9 @@ class AdminController
     $this->venueRatingRepo = new VenueRatingRepository($connection);
     $this->serviceRatingRepo = new ServiceRatingRepository($connection);
     $this->notificationService = new NotificationService(new NotificationRepository($connection));
+    $this->commissionConfigService = new CommissionConfigService(
+      new CommissionConfigRepository($connection)
+    );
   }
 
   // =========================================================
@@ -88,6 +94,9 @@ class AdminController
     $topVenues = $this->bookingRepo->topActiveVenues(5);
     $topServices = $this->detailRepo->topRequestedServices(5);
     $monthStats = $this->earningService->summarizeByMonth($yearMonth);
+    $config = $this->commissionConfigService->getActive();
+    $commissionPct = $config->getPercentage();
+    $taxPct = $config->getTax();
     $stateCounts = $this->bookingRepo->countByState($yearMonth);
     $occupancy = $this->bookingRepo->occupancyByVenue($yearMonth);
     $clientStats = [
@@ -448,6 +457,9 @@ class AdminController
 
       $this->invoiceService->approve($idBooking);
 
+      $totals = $this->bookingService->calculateTotals($idBooking);
+      $this->earningService->recordEarning($idBooking, $totals, $this->currentAdminRoleId());
+
       $approvedBooking = $this->bookingRepo->findById($idBooking);
       if ($approvedBooking !== null) {
         $this->notificationService->notifyClientPaymentApproved((int) $approvedBooking->getIdClient(), (int) $idBooking);
@@ -661,6 +673,61 @@ class AdminController
       exit;
     } catch (BusinessRuleException $e) {
       header('Location: ../../Public/index.php?controller=admin&action=bookingDetail&id=' . $idBooking . '&error=' . urlencode($e->getMessage()));
+      exit;
+    }
+  }
+
+  // =========================================================
+  // CONFIGURACIÓN DE COMISIÓN E IVA (solo admin)
+  // =========================================================
+  public function commissionConfig(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    $config = $this->commissionConfigService->getActive();
+
+    require_once __DIR__ . '/../View/Admin/CommissionConfig.php';
+  }
+
+  // =========================================================
+  // GUARDAR COMISIÓN E IVA (solo admin) — AJAX o POST normal
+  // =========================================================
+  public function saveCommissionConfig(): void
+  {
+    session_start();
+    $this->requireAdmin();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      header('Location: ../../Public/index.php?controller=admin&action=commissionConfig');
+      exit;
+    }
+
+    $percentage = (float) trim($_POST['percentage'] ?? '');
+    $tax        = (float) trim($_POST['tax'] ?? '');
+
+    try {
+
+      $this->commissionConfigService->setPercentage($percentage);
+      $this->commissionConfigService->setTax($tax);
+
+      $this->notificationService->notifyCommissionConfigChanged($percentage, $tax);
+
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'message' => 'Comisión e IVA actualizados correctamente.']);
+      }
+
+      header('Location: ../../Public/index.php?controller=admin&action=commissionConfig&saved=1');
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $error], 422);
+      }
+
+      header('Location: ../../Public/index.php?controller=admin&action=commissionConfig&error=' . urlencode($error));
       exit;
     }
   }

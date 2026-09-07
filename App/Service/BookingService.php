@@ -10,6 +10,8 @@ require_once __DIR__ . '/../Repository/BookingRefundRepository.php';
 require_once __DIR__ . '/../Model/Booking.php';
 require_once __DIR__ . '/../Model/BookingHistory.php';
 require_once __DIR__ . '/../Model/BookingRefund.php';
+require_once __DIR__ . '/CommissionConfigService.php';
+require_once __DIR__ . '/../Repository/CommissionConfigRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class BookingService
@@ -21,6 +23,7 @@ class BookingService
     private InvoiceRepository $invoiceRepo;
     private BookingHistoryRepository $historyRepo;
     private BookingRefundRepository $refundRepo;
+    private CommissionConfigService $configService;
 
     public function __construct()
     {
@@ -32,6 +35,9 @@ class BookingService
         $this->invoiceRepo = new InvoiceRepository($this->connection);
         $this->historyRepo = new BookingHistoryRepository($this->connection);
         $this->refundRepo = new BookingRefundRepository($this->connection);
+        $this->configService = new CommissionConfigService(
+            new CommissionConfigRepository($this->connection)
+        );
     }
 
     public function createBooking(
@@ -100,21 +106,14 @@ class BookingService
         }
     }
 
-    // Porcentajes de cobro aplicados al total de la reserva
-    private const COMMISSION_PCT = 0.05; // Comisión de la plataforma: 5%
-    private const TAX_PCT        = 0.13; // Impuesto al valor agregado: 13%
-
-    public function calculateTotal(int $bookingPk): float
-    {
-        return $this->calculateTotals($bookingPk)['total'];
-    }
-
     /**
-     * Calcula el desglose de una reserva:
+     * Desglose de una reserva (fórmula única de la plataforma):
      *   - subtotal   = suma de las líneas (cantidad x precio - descuento)
-     *   - commission = 5% sobre el subtotal
-     *   - tax        = 13% de IVA sobre (subtotal + comisión)
-     *   - total      = subtotal + comisión + IVA
+     *   - commission = comisión de la plataforma sobre el subtotal
+     *   - tax        = IVA que paga el cliente sobre el subtotal
+     *   - total      = lo que paga el cliente (subtotal + IVA)
+     *   - ownerAmount = total - comisión - IVA = subtotal - comisión
+     * Las tasas se leen de la configuración vigente (tbcommissionconfig).
      */
     public function calculateTotals(int $bookingPk): array
     {
@@ -127,15 +126,19 @@ class BookingService
             $subtotal += $line->getSubtotal();
         }
 
-        $commission = round($subtotal * self::COMMISSION_PCT, 2);
-        $tax        = round(($subtotal + $commission) * self::TAX_PCT, 2);
-        $total      = round($subtotal + $commission + $tax, 2);
+        $config = $this->configService->getActive();
+
+        $commission = round($subtotal * ($config->getPercentage() / 100), 2);
+        $tax        = round($subtotal * ($config->getTax() / 100), 2);
+        $total      = round($subtotal + $tax, 2);
 
         return [
-            'subtotal'   => $subtotal,
-            'commission' => $commission,
-            'tax'        => $tax,
-            'total'      => $total,
+            'subtotal'     => $subtotal,
+            'commission'   => $commission,
+            'tax'          => $tax,
+            'total'        => $total,
+            'commissionPct' => $config->getPercentage(),
+            'taxPct'       => $config->getTax(),
         ];
     }
 
