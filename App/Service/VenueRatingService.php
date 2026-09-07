@@ -17,9 +17,9 @@ class VenueRatingService
   }
 
   // =========================================================
-  // COMENTARIO NUEVO (cualquier usuario autenticado)
-  // Permite varios comentarios por usuario sobre el mismo local:
-  // siempre inserta un registro nuevo.
+  // RESERVA (OPINIÓN) SOBRE UN LOCAL (cualquier usuario autenticado)
+  // Un cliente solo puede tener UNA reserva por local: si ya existe,
+  // se actualiza sobre el mismo registro (upsert).
   // =========================================================
   public function rate(int $venuePk, int $rolePk, int $stars, ?string $comment = null): int
   {
@@ -29,6 +29,16 @@ class VenueRatingService
 
     if ($this->venueRepo->findById($venuePk) === null) {
       throw new BusinessRuleException('El local a calificar no existe.');
+    }
+
+    $existing = $this->ratingRepo->findByVenueAndRole($venuePk, $rolePk);
+
+    if ($existing !== null) {
+      $existing->setStars($stars);
+      $existing->setComment($comment ?? '');
+      if ($this->ratingRepo->update($existing)) {
+        return $existing->getIdVenueRating();
+      }
     }
 
     return $this->ratingRepo->save(
@@ -43,7 +53,7 @@ class VenueRatingService
   }
 
   // =========================================================
-  // EDITAR UN COMENTARIO PROPIO (solo el autor puede modificarlo)
+  // EDITAR UNA RESERVA PROPIA (solo el autor puede modificarla)
   // =========================================================
   public function updateComment(int $idVenueRating, int $rolePk, int $stars, ?string $comment = null): void
   {
@@ -54,11 +64,11 @@ class VenueRatingService
     $rating = $this->ratingRepo->findById($idVenueRating);
 
     if ($rating === null) {
-      throw new BusinessRuleException('El comentario que intentas editar no existe.');
+      throw new BusinessRuleException('La reserva que intentas editar no existe.');
     }
 
     if ($rating->getIdRole() !== $rolePk) {
-      throw new BusinessRuleException('No puedes editar el comentario de otro usuario.');
+      throw new BusinessRuleException('No puedes editar la reserva de otro usuario.');
     }
 
     $rating->setStars($stars);
@@ -76,7 +86,8 @@ class VenueRatingService
   }
 
   // =========================================================
-  // CALIFICACIÓN EXISTENTE DE UN ROL SOBRE EL LOCAL
+  // RESERVA EXISTENTE DE UN ROL SOBRE EL LOCAL
+  // (se usa para prellenar el formulario del detalle)
   // =========================================================
   public function getByVenueAndRole(int $venuePk, int $rolePk): ?VenueRating
   {

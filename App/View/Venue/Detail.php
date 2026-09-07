@@ -1,4 +1,7 @@
-<?php $pageJs = ['venue/stars', 'venue/venue-comments']; ?>
+<?php
+$pageCss = 'venue/detail';
+$pageJs = ['venue/stars', 'venue/venue-comments', 'venue/service-review'];
+?>
 <?php require_once __DIR__ . '/../_header.php';
 if ($venue === null) {
   echo '<div class="alert alert-error">Local no encontrado.</div>';
@@ -115,7 +118,7 @@ if ($venue === null) {
             <td><?= e($s->getNameService()) ?></td>
             <td><?= $s->getTypeService() !== null ? e($s->getTypeService()) : '—' ?></td>
             <td>&#8353; <?= number_format($s->getPriceService(), 2) ?></td>
-            <td>
+            <td id="serviceAvg-<?= (int) $s->getIdService() ?>">
               <?php if (isset($ratingByService[$s->getIdService()])): ?>
                 <span class="rating-stars"><?= str_repeat('&#9733;', (int) round($ratingByService[$s->getIdService()])) . str_repeat('&#9734;', 5 - (int) round($ratingByService[$s->getIdService()])) ?></span>
                 <span class="muted"><?= number_format($ratingByService[$s->getIdService()], 1) ?> / 5</span>
@@ -127,7 +130,12 @@ if ($venue === null) {
               <?php if (current_user_type() !== null): ?>
                 <details>
                   <summary class="btn btn-outline btn-sm">Calificar servicio</summary>
-                  <form method="post" action="<?= e(base_url('venue', 'rateService')) ?>" style="margin-top:8px;">
+                  <form method="post" action="<?= e(base_url('venue', 'rateService')) ?>" style="margin-top:8px;"
+                        class="service-rate-form"
+                        data-service-id="<?= (int) $s->getIdService() ?>"
+                        data-avg-id="serviceAvg-<?= (int) $s->getIdService() ?>"
+                        data-comments-id="serviceComments-<?= (int) $s->getIdService() ?>"
+                        data-comments-url="<?= e(base_url('api', 'serviceComments', ['id' => $s->getIdService()])) ?>">
                     <?= csrf_field() ?>
                     <input type="hidden" name="serviceId" value="<?= (int) $s->getIdService() ?>">
                     <input type="hidden" name="venueId" value="<?= (int) $venue->getIdVenue() ?>">
@@ -140,11 +148,12 @@ if ($venue === null) {
                       </div>
                     </div>
                     <div class="form-group">
-                      <input class="form-control" name="comment" placeholder="Comentario (opcional)" value="<?= e(isset($myRatingByService[$s->getIdService()]) ? $myRatingByService[$s->getIdService()]->getComment() : '') ?>">
+                      <input class="form-control" name="comment" placeholder="Reserva (opcional)" value="<?= e(isset($myRatingByService[$s->getIdService()]) ? $myRatingByService[$s->getIdService()]->getComment() : '') ?>">
                     </div>
                     <button class="btn btn-primary btn-sm" type="submit">
                       <?= isset($myRatingByService[$s->getIdService()]) ? 'Actualizar calificación' : 'Publicar calificación' ?>
                     </button>
+                    <span class="service-rate-ok" hidden>Reseña guardada correctamente.</span>
                   </form>
                 </details>
               <?php else: ?>
@@ -152,21 +161,11 @@ if ($venue === null) {
               <?php endif; ?>
             </td>
           </tr>
-          <?php if (!empty($serviceComments[$s->getIdService()])): ?>
-            <tr>
-              <td colspan="5" class="comment-list">
-                <?php foreach ($serviceComments[$s->getIdService()] as $c): ?>
-                  <div class="comment-item">
-                    <span class="c-author"><?= e($c['tbrolename']) ?></span>
-                    <span class="rating-stars"><?= str_repeat('&#9733;', (int) $c['tbserviceratingstars']) . str_repeat('&#9734;', 5 - (int) $c['tbserviceratingstars']) ?></span>
-                    <?php if (!empty($c['tbserviceratingcomment'])): ?>
-                      <div class="c-body"><?= e($c['tbserviceratingcomment']) ?></div>
-                    <?php endif; ?>
-                  </div>
-                <?php endforeach; ?>
-              </td>
-            </tr>
-          <?php endif; ?>
+          <tr>
+            <td colspan="5" class="comment-list" id="serviceComments-<?= (int) $s->getIdService() ?>">
+              <?= render_partial(__DIR__ . '/_serviceComments.php', ['comments' => $serviceComments[$s->getIdService()]]) ?>
+            </td>
+          </tr>
         <?php endforeach; ?>
       </tbody>
     </table>
@@ -175,10 +174,10 @@ if ($venue === null) {
 <?php endif; ?>
 
 <?php if (current_user_type() !== null): ?>
+<?php $hasMyVenueRating = $myVenueRating !== null; ?>
 <div class="card" id="commentCard" style="max-width:520px;margin-top:18px;">
   <div class="page-head" style="margin:0 0 10px;">
-    <h3 style="margin:0;">Tu comentario sobre este local</h3>
-    <button class="btn btn-outline btn-sm" id="newComment" type="button" style="display:none;">&#10133; Nuevo comentario</button>
+    <h3 style="margin:0;">Tu reserva sobre este local</h3>
   </div>
   <form id="commentForm" method="post"
         action="<?= e(base_url('venue', 'rate')) ?>"
@@ -186,10 +185,10 @@ if ($venue === null) {
         data-refresh-url="<?= e(base_url('api', 'venueComments', ['id' => $venue->getIdVenue()])) ?>">
     <?= csrf_field() ?>
     <input type="hidden" name="venueId" value="<?= (int) $venue->getIdVenue() ?>">
-    <input type="hidden" name="commentId" value="">
+    <input type="hidden" name="commentId" value="<?= $hasMyVenueRating ? (int) $myVenueRating->getIdVenueRating() : '' ?>">
     <div class="form-group">
       <label>Calificación</label>
-      <div class="star-widget" id="venueStarWidget" data-value="0">
+      <div class="star-widget" id="venueStarWidget" data-value="<?= $hasMyVenueRating ? (int) $myVenueRating->getStars() : 0 ?>">
         <input type="hidden" name="stars" value="">
         <?php for ($i = 1; $i <= 5; $i++): ?>
           <button type="button" class="star" data-star="<?= $i ?>" aria-label="<?= $i ?> estrellas">&#9733;</button>
@@ -197,11 +196,11 @@ if ($venue === null) {
       </div>
     </div>
     <div class="form-group">
-      <label for="comment">Comentario</label>
-      <textarea class="form-control" id="comment" name="comment" rows="3" placeholder="Escribe tu comentario..."></textarea>
+      <label for="comment">Reserva</label>
+      <textarea class="form-control" id="comment" name="comment" rows="3" placeholder="Escribe tu reserva sobre este local..."><?= $hasMyVenueRating ? e($myVenueRating->getComment()) : '' ?></textarea>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <button class="btn btn-primary" id="submitComment" type="submit">Publicar comentario</button>
+      <button class="btn btn-primary" id="submitComment" type="submit"><?= $hasMyVenueRating ? 'Actualizar reserva' : 'Publicar reserva' ?></button>
       <button class="btn btn-outline" id="cancelEdit" type="button" style="display:none;">Cancelar edición</button>
     </div>
   </form>
@@ -209,7 +208,7 @@ if ($venue === null) {
 <?php endif; ?>
 
 <div class="card" id="venueCommentsCard" style="margin-top:18px;">
-  <h3 style="margin-bottom:10px;">Comentarios del local</h3>
+  <h3 style="margin-bottom:10px;">Reservas del local</h3>
   <div id="venueCommentsList">
     <?= render_partial(__DIR__ . '/_venueComments.php', ['venueComments' => $venueComments]) ?>
   </div>

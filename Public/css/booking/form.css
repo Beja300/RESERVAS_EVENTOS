@@ -1,0 +1,153 @@
+/* =========================================================
+   Formulario de reserva (cliente) — calendario de fechas
+   ========================================================= */
+
+.datepicker-native {
+  /* El input nativo queda solo como respaldo sin JS (oculto por JS al iniciar). */
+  display: none;
+}
+
+.datepicker {
+  position: relative;
+}
+
+.datepicker-display {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--neutral-700);
+  background: #fff;
+  border: 1px solid var(--neutral-300);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.datepicker-display:hover {
+  border-color: var(--neutral-500);
+}
+
+.datepicker-display:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.datepicker-display.has-value {
+  color: var(--neutral-900);
+  font-weight: 600;
+}
+
+.datepicker-calendar {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 280px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--neutral-200);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+}
+
+.datepicker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.datepicker-nav {
+  border: 0;
+  background: transparent;
+  color: var(--neutral-500);
+  font-size: 1.3rem;
+  line-height: 1;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.datepicker-nav:hover {
+  background: var(--neutral-100);
+  color: var(--neutral-900);
+}
+
+.datepicker-month {
+  font-weight: 700;
+  color: var(--neutral-800);
+  font-size: 0.92rem;
+}
+
+.datepicker-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin-bottom: 6px;
+}
+
+.datepicker-weekdays span {
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--neutral-500);
+}
+
+.datepicker-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.datepicker-day {
+  height: 32px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 0.85rem;
+  color: var(--neutral-800);
+  cursor: pointer;
+}
+
+.datepicker-day.is-blank {
+  cursor: default;
+}
+
+.datepicker-day.is-available:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+/* Fechas con reserva activa o pasadas: apagadas */
+.datepicker-day.is-unavailable {
+  color: var(--neutral-300);
+  background: var(--neutral-100);
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+
+.datepicker-day.is-today {
+  color: var(--primary);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--neutral-300);
+}
+
+.datepicker-day.is-selected {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+}
+
+.datepicker-day.is-selected:hover {
+  background: var(--primary);
+  color: #fff;
+}
+
+.datepicker-error {
+  color: var(--danger);
+  font-size: 0.8rem;
+  margin-top: 8px;
+}

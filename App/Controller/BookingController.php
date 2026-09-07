@@ -116,6 +116,7 @@ class BookingController
       $error = $e->getMessage();
       $venue = $this->venueRepo->findById($idVenue);
       $services = $this->serviceService->findAvailableByLocal($idVenue);
+      $bookedDates = $this->bookingRepo->bookedDatesByVenue($idVenue);
 
       require_once __DIR__ . '/../View/Booking/Form.php';
     }
@@ -137,6 +138,7 @@ class BookingController
     }
 
     $services = $this->serviceService->findAvailableByLocal($idVenue);
+    $bookedDates = $this->bookingRepo->bookedDatesByVenue($idVenue);
 
     require_once __DIR__ . '/../View/Booking/Form.php';
   }

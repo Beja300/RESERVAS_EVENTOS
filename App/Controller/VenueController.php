@@ -211,6 +211,11 @@ class VenueController
       $serviceComments[$s->getIdService()] = $this->serviceRatingService->getPublicComments($s->getIdService());
     }
 
+    // Reserva (opinión) propia del cliente sobre ESTE local, para prellenar el formulario.
+    $myVenueRating = $loggedRolePk > 0
+      ? $this->venueRatingService->getByVenueAndRole($idVenue, $loggedRolePk)
+      : null;
+
     $location = null;
     if ($venue->getIdLocation() > 0) {
       $location = $this->locationService->findById($venue->getIdLocation());
@@ -326,12 +331,13 @@ class VenueController
         throw new BusinessRuleException('El local no existe.');
       }
 
-      $this->venueRatingService->rate($idVenue, $rolePk, $stars, $comment);
+      $commentId = $this->venueRatingService->rate($idVenue, $rolePk, $stars, $comment);
 
       if (is_ajax()) {
         respond_json([
           'ok' => true,
-          'message' => 'Comentario publicado.',
+          'message' => 'Reserva publicada.',
+          'commentId' => $commentId,
           'avg' => round((float) ($this->venueRatingService->getAverage($idVenue) ?? 0), 1),
           'html' => $this->venueCommentsHtml($idVenue),
         ]);
@@ -353,7 +359,7 @@ class VenueController
   }
 
   // =========================================================
-  // EDITAR UN COMENTARIO ESPECÍFICO (solo su autor)
+  // EDITAR UNA RESERVA ESPECÍFICA (solo su autor)
   // =========================================================
   public function updateComment(): void
   {
@@ -382,7 +388,7 @@ class VenueController
       if (is_ajax()) {
         respond_json([
           'ok' => true,
-          'message' => 'Comentario actualizado.',
+          'message' => 'Reserva actualizada.',
           'avg' => round((float) ($this->venueRatingService->getAverage($idVenue) ?? 0), 1),
           'html' => $this->venueCommentsHtml($idVenue),
         ]);
