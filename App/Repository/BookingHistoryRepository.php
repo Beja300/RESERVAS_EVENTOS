@@ -19,8 +19,8 @@ class BookingHistoryRepository
   {
     $sql = "
             INSERT INTO tbbookinghistory (
-                tbbookinghistorybookingid,
-                tbbookinghistoryroleid,
+                tbbookingid,
+                tbroleid,
                 tbbookinghistoryaction,
                 tbbookinghistorydetail,
                 tbbookinghistoryactive
@@ -54,15 +54,15 @@ class BookingHistoryRepository
     $sql = "
             SELECT
                 h.tbbookinghistoryid,
-                h.tbbookinghistorybookingid,
-                h.tbbookinghistoryroleid,
+                h.tbbookingid,
+                h.tbroleid,
                 r.tbrolename AS responsibleName,
                 h.tbbookinghistoryaction,
                 h.tbbookinghistorydetail,
                 h.tbbookinghistorydate
             FROM tbbookinghistory h
-            LEFT JOIN tbrole r ON r.tbroleid = h.tbbookinghistoryroleid
-            WHERE h.tbbookinghistorybookingid = :idBooking
+            LEFT JOIN tbrole r ON r.tbroleid = h.tbroleid
+            WHERE h.tbbookingid = :idBooking
               AND h.tbbookinghistoryactive = true
             ORDER BY h.tbbookinghistorydate DESC, h.tbbookinghistoryid DESC
         ";
@@ -82,20 +82,20 @@ class BookingHistoryRepository
     $sql = "
             SELECT
                 h.tbbookinghistoryid,
-                h.tbbookinghistorybookingid,
+                h.tbbookingid,
                 b.tbbookingdate,
                 c.tbclientname AS clientName,
                 v.tbvenuename AS venueName,
-                h.tbbookinghistoryroleid,
+                h.tbroleid,
                 r.tbrolename AS responsibleName,
                 h.tbbookinghistoryaction,
                 h.tbbookinghistorydetail,
                 h.tbbookinghistorydate
             FROM tbbookinghistory h
-            LEFT JOIN tbbooking b ON b.tbbookingid = h.tbbookinghistorybookingid
-            LEFT JOIN tbclient c ON c.tbclientid = b.tbbookingclientid
-            LEFT JOIN tbvenue v ON v.tbvenueid = b.tbbookinglocalid
-            LEFT JOIN tbrole r ON r.tbroleid = h.tbbookinghistoryroleid
+            LEFT JOIN tbbooking b ON b.tbbookingid = h.tbbookingid
+            LEFT JOIN tbclient c ON c.tbclientid = b.tbclientid
+            LEFT JOIN tbvenue v ON v.tbvenueid = b.tbvenueid
+            LEFT JOIN tbrole r ON r.tbroleid = h.tbroleid
             WHERE h.tbbookinghistoryactive = true
             ORDER BY h.tbbookinghistorydate DESC, h.tbbookinghistoryid DESC
         ";

@@ -17,7 +17,7 @@ class HistoryRepository
         $sql = "
             INSERT INTO tbuserhistory
             (
-                tbuserhistoryroleid,
+                tbroleid,
                 tbuserhistoryaction,
                 tbuserhistoryentity,
                 tbuserhistoryentityid
@@ -48,7 +48,7 @@ class HistoryRepository
      */
     public function listByRole(int $roleId): array
     {
-        $sql = "SELECT * FROM tbuserhistory WHERE tbuserhistoryroleid = :roleId ORDER BY tbuserhistorydate DESC";
+        $sql = "SELECT * FROM tbuserhistory WHERE tbroleid = :roleId ORDER BY tbuserhistorydate DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':roleId' => $roleId]);
         return array_map([$this, 'mapearFila'], $stmt->fetchAll());
@@ -62,7 +62,7 @@ class HistoryRepository
     public function listByRoleAndAction(int $roleId, string $action): array
     {
         $sql = "SELECT * FROM tbuserhistory
-                WHERE tbuserhistoryroleid = :roleId AND tbuserhistoryaction = :action
+                WHERE tbroleid = :roleId AND tbuserhistoryaction = :action
                 ORDER BY tbuserhistorydate DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([':roleId' => $roleId, ':action' => $action]);
@@ -72,7 +72,7 @@ class HistoryRepository
     private function mapearFila(array $fila): History
     {
         return new History(
-            roleId: $fila['tbuserhistoryroleid'],
+            roleId: $fila['tbroleid'],
             action: $fila['tbuserhistoryaction'],
             entity: $fila['tbuserhistoryentity'],
             entityId: $fila['tbuserhistoryentityid'],
@@ -91,7 +91,7 @@ class HistoryRepository
         $sql = "
             SELECT
                 h.tbuserhistoryid,
-                h.tbuserhistoryroleid,
+                h.tbroleid,
                 r.tbrolename AS responsibleName,
                 h.tbuserhistoryaction,
                 h.tbuserhistoryentity,
@@ -103,7 +103,7 @@ class HistoryRepository
                 s.tbservicename       AS serviceName,
                 h.tbuserhistorydate
             FROM tbuserhistory h
-            LEFT JOIN tbrole r ON r.tbroleid = h.tbuserhistoryroleid
+            LEFT JOIN tbrole r ON r.tbroleid = h.tbroleid
             LEFT JOIN tbvenue v ON h.tbuserhistoryentity = 'Venue' AND v.tbvenueid = h.tbuserhistoryentityid
             LEFT JOIN tblocation l ON h.tbuserhistoryentity = 'Venue' AND l.tblocationid = h.tbuserhistoryentityid
             LEFT JOIN tbservice s ON h.tbuserhistoryentity = 'Service' AND s.tbserviceid = h.tbuserhistoryentityid

@@ -1,4 +1,7 @@
-<?php require_once __DIR__ . '/../_header.php'; ?>
+<?php require_once __DIR__ . '/../_header.php';
+
+$paymentMethodById = $paymentMethodById ?? [];
+?>
 
 <div class="page-head">
   <div>
@@ -32,7 +35,7 @@
             <td>#<?= (int) $inv->getIdInvoice() ?></td>
             <td>#<?= (int) $inv->getIdClientBooking() ?></td>
             <td><?= e(date('d/m/Y', strtotime($inv->getDateInvoice()))) ?></td>
-            <td>#<?= (int) $inv->getIdPaymentMethod() ?></td>
+            <td><?= isset($paymentMethodById[$inv->getIdPaymentMethod()]) ? e($paymentMethodById[$inv->getIdPaymentMethod()]) : ('#' . (int) $inv->getIdPaymentMethod()) ?></td>
             <td>
               <?php
                 $badge = ['pagada' => 'success', 'pendiente' => 'warning', 'anulada' => 'neutral'][$inv->getStatusInvoice()] ?? 'neutral';

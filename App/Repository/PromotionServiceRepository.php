@@ -19,8 +19,8 @@ class PromotionServiceRepository
   {
     $sql = "
       INSERT INTO tbpromotionservice (
-        tbpromotionservicepromotionid,
-        tbpromotionserviceserviceid
+        tbpromotionid,
+        tbserviceid
       )
       VALUES (
         :idPromotion,
@@ -46,10 +46,10 @@ class PromotionServiceRepository
     $sql = "
       SELECT
         tbpromotionserviceid,
-        tbpromotionservicepromotionid,
-        tbpromotionserviceserviceid
+        tbpromotionid,
+        tbserviceid
       FROM tbpromotionservice
-      WHERE tbpromotionservicepromotionid = :idPromotion
+      WHERE tbpromotionid = :idPromotion
         AND tbpromotionserviceactive = true
     ";
 
@@ -66,8 +66,8 @@ class PromotionServiceRepository
   {
     return new PromotionServiceLink(
       idPromotionService: (int) $row['tbpromotionserviceid'],
-      idPromotion: (int) $row['tbpromotionservicepromotionid'],
-      idService: (int) $row['tbpromotionserviceserviceid']
+      idPromotion: (int) $row['tbpromotionid'],
+      idService: (int) $row['tbserviceid']
     );
   }
 }

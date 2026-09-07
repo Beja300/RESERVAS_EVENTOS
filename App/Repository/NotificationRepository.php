@@ -19,7 +19,7 @@ class NotificationRepository
   {
     $sql = "
             INSERT INTO tbnotification (
-                tbnotificationroleid,
+                tbroleid,
                 tbnotificationmessage,
                 tbnotificationlink,
                 tbnotificationdate,
@@ -59,7 +59,7 @@ class NotificationRepository
     $sql = "
             SELECT
                 tbnotificationid,
-                tbnotificationroleid,
+                tbroleid,
                 tbnotificationmessage,
                 tbnotificationlink,
                 tbnotificationdate,
@@ -68,7 +68,7 @@ class NotificationRepository
 
             FROM tbnotification
 
-            WHERE tbnotificationroleid = :idRol
+            WHERE tbroleid = :idRol
               AND tbnotificationactive = true
 
             ORDER BY tbnotificationdate DESC
@@ -92,7 +92,7 @@ class NotificationRepository
     $sql = "
             SELECT
                 tbnotificationid,
-                tbnotificationroleid,
+                tbroleid,
                 tbnotificationmessage,
                 tbnotificationlink,
                 tbnotificationdate,
@@ -144,7 +144,7 @@ class NotificationRepository
     $sql = "
             UPDATE tbnotification
             SET tbnotificationread = true
-            WHERE tbnotificationroleid = :idRol
+            WHERE tbroleid = :idRol
               AND tbnotificationactive = true
         ";
 
@@ -164,7 +164,7 @@ class NotificationRepository
     $sql = "
             SELECT COUNT(*)
             FROM tbnotification
-            WHERE tbnotificationroleid = :idRol
+            WHERE tbroleid = :idRol
               AND tbnotificationread = false
               AND tbnotificationactive = true
         ";
@@ -185,7 +185,7 @@ class NotificationRepository
   public function findAdminRoleIds(): array
   {
     $sql = "
-            SELECT tbroleadminrolid
+            SELECT tbroleid
             FROM tbroleadmin
             WHERE tbroleadminactive = true
         ";
@@ -202,7 +202,7 @@ class NotificationRepository
   public function findOwnerRoleIds(): array
   {
     $sql = "
-            SELECT tbroleownerrolid
+            SELECT tbroleid
             FROM tbroleowner
             WHERE tbroleowneractive = true
         ";
@@ -218,9 +218,9 @@ class NotificationRepository
   public function findRoleIdByOwner(int $idOwner): ?int
   {
     $sql = "
-            SELECT tbroleownerrolid
+            SELECT tbroleid
             FROM tbroleowner
-            WHERE tbroleownerownerid = :idOwner
+            WHERE tbownerid = :idOwner
               AND tbroleowneractive = true
             LIMIT 1
         ";
@@ -239,9 +239,9 @@ class NotificationRepository
   public function findRoleIdByClient(int $idClient): ?int
   {
     $sql = "
-            SELECT tbroleclientrolid
+            SELECT tbroleid
             FROM tbroleclient
-            WHERE tbroleclientclientid = :idClient
+            WHERE tbclientid = :idClient
               AND tbroleclientactive = true
             LIMIT 1
         ";
@@ -261,7 +261,7 @@ class NotificationRepository
   {
     return new Notification(
       idNotification: (int) $row['tbnotificationid'],
-      idRol: (int) $row['tbnotificationroleid'],
+      idRol: (int) $row['tbroleid'],
       messageNotification: $row['tbnotificationmessage'],
       dateNotification: $row['tbnotificationdate'],
       isActive: $this->toBool($row['tbnotificationactive']),

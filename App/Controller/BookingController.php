@@ -19,6 +19,7 @@ require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
 require_once __DIR__ . '/../Repository/ClientRepository.php';
 require_once __DIR__ . '/../Repository/BookingRefundRepository.php';
 require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
+require_once __DIR__ . '/../Repository/OwnerRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class BookingController
@@ -38,6 +39,7 @@ class BookingController
   private BookingRefundRepository $refundRepo;
   private PaymentMethodRepository $paymentMethodRepo;
   private ClientRepository $clientRepo;
+  private OwnerRepository $ownerRepo;
   private OwnerPaymentRepository $ownerPaymentRepo;
   private OwnerPaymentService $ownerPaymentService;
   private NotificationService $notificationService;
@@ -61,6 +63,7 @@ class BookingController
     $this->refundRepo = new BookingRefundRepository($connection);
     $this->paymentMethodRepo = new PaymentMethodRepository($connection);
     $this->clientRepo = new ClientRepository($connection);
+    $this->ownerRepo = new OwnerRepository($connection);
     $this->ownerPaymentRepo = new OwnerPaymentRepository($connection);
     $this->ownerPaymentService = new OwnerPaymentService($connection);
     $this->bookingTicketService = new BookingTicketService($connection);
@@ -218,8 +221,21 @@ class BookingController
     $totals = $this->bookingService->calculateTotals($idBooking);
     $total = $totals['total'];
     $venue = $this->venueRepo->findById($booking->getIdLocal());
+    $client = $this->clientRepo->findByClientPk($booking->getIdClient());
+    $owner = $venue !== null ? $this->ownerRepo->findByOwnerPk($venue->getIdOwner()) : null;
     $ticket = $this->ticketRepo->findByBooking($idBooking);
     $paymentMethods = $this->paymentMethodRepo->findActive();
+
+    $serviceMap = [];
+    foreach ($details as $d) {
+      if ($d->getIdLocalService() > 0
+          && !isset($serviceMap[$d->getIdLocalService()])) {
+        $service = $this->serviceRepo->findById($d->getIdLocalService());
+        if ($service !== null) {
+          $serviceMap[$d->getIdLocalService()] = $service;
+        }
+      }
+    }
 
     // Métodos de pago configurados por el dueño de ESTE local.
     $ownerPaymentMethods = [];

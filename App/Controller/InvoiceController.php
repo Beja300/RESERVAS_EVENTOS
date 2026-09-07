@@ -3,13 +3,14 @@
 require_once __DIR__ . '/../Service/InvoiceService.php';
 require_once __DIR__ . '/../Service/PaymentMethodService.php';
 require_once __DIR__ . '/../Service/BookingService.php';
-require_once __DIR__ . '/../Service/EarningService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/InvoiceRepository.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
 require_once __DIR__ . '/../Repository/DetailRepository.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
+require_once __DIR__ . '/../Repository/ClientRepository.php';
+require_once __DIR__ . '/../Repository/ServiceRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class InvoiceController
@@ -17,12 +18,13 @@ class InvoiceController
   private InvoiceService $invoiceService;
   private PaymentMethodService $paymentMethodService;
   private BookingService $bookingService;
-  private EarningService $earningService;
   private InvoiceRepository $invoiceRepo;
   private BookingRepository $bookingRepo;
   private PaymentMethodRepository $paymentMethodRepo;
   private DetailRepository $detailRepo;
   private VenueRepository $venueRepo;
+  private ClientRepository $clientRepo;
+  private ServiceRepository $serviceRepo;
 
   public function __construct()
   {
@@ -31,12 +33,13 @@ class InvoiceController
     $this->invoiceService = new InvoiceService();
     $this->paymentMethodService = new PaymentMethodService();
     $this->bookingService = new BookingService();
-    $this->earningService = new EarningService($connection);
     $this->invoiceRepo = new InvoiceRepository($connection);
     $this->bookingRepo = new BookingRepository($connection);
     $this->paymentMethodRepo = new PaymentMethodRepository($connection);
     $this->detailRepo = new DetailRepository($connection);
     $this->venueRepo = new VenueRepository($connection);
+    $this->clientRepo = new ClientRepository($connection);
+    $this->serviceRepo = new ServiceRepository($connection);
   }
 
   // =========================================================
@@ -59,6 +62,7 @@ class InvoiceController
     $totals = $this->bookingService->calculateTotals($idBooking);
     $total = $totals['total'];
     $details = $this->detailRepo->findByBooking($idBooking);
+    $venue = $this->venueRepo->findById($booking->getIdLocal());
 
     require_once __DIR__ . '/../View/Invoice/Form.php';
   }
@@ -100,6 +104,8 @@ class InvoiceController
       $totals = $this->bookingService->calculateTotals($idBooking);
       $total = $totals['total'];
       $details = $this->detailRepo->findByBooking($idBooking);
+      $booking = $this->bookingRepo->findById($idBooking);
+      $venue = $booking !== null ? $this->venueRepo->findById($booking->getIdLocal()) : null;
 
       require_once __DIR__ . '/../View/Invoice/Form.php';
     }
@@ -134,10 +140,19 @@ class InvoiceController
     $total = $totals['total'];
 
     $venue = $booking !== null ? $this->venueRepo->findById($booking->getIdLocal()) : null;
+    $client = $booking !== null ? $this->clientRepo->findByClientPk($booking->getIdClient()) : null;
+    $paymentMethod = $this->paymentMethodRepo->findById($invoice->getIdPaymentMethod());
 
-    $earning = ($type === 'admin' || $type === 'owner')
-      ? $this->earningService->findByBooking($idBooking)
-      : null;
+    $serviceMap = [];
+    foreach ($details as $d) {
+      if ($d->getIdLocalService() > 0
+          && !isset($serviceMap[$d->getIdLocalService()])) {
+        $service = $this->serviceRepo->findById($d->getIdLocalService());
+        if ($service !== null) {
+          $serviceMap[$d->getIdLocalService()] = $service;
+        }
+      }
+    }
 
     require_once __DIR__ . '/../View/Invoice/Detail.php';
   }
@@ -159,6 +174,11 @@ class InvoiceController
       if ($invoice !== null) {
         $invoices[] = $invoice;
       }
+    }
+
+    $paymentMethodById = [];
+    foreach ($this->paymentMethodRepo->findAll() as $pm) {
+      $paymentMethodById[$pm->getIdPaymentMethod()] = $pm->getPaymentMethod();
     }
 
     require_once __DIR__ . '/../View/Invoice/List.php';

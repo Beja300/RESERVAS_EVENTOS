@@ -19,8 +19,8 @@ class BookingRepository
   {
     $sql = "
             INSERT INTO tbbooking (
-                tbbookingclientid,
-                tbbookinglocalid,
+                tbclientid,
+                tbvenueid,
                 tbbookingdate,
                 tbbookingenddate,
                 tbbookingeventtype,
@@ -65,8 +65,8 @@ class BookingRepository
     $sql = "
             SELECT
                 tbbookingid,
-                tbbookingclientid,
-                tbbookinglocalid,
+                tbclientid,
+                tbvenueid,
                 tbbookingdate,
                 tbbookingenddate,
                 tbbookingeventtype,
@@ -99,8 +99,8 @@ class BookingRepository
     $sql = "
             SELECT
                 tbbookingid,
-                tbbookingclientid,
-                tbbookinglocalid,
+                tbclientid,
+                tbvenueid,
                 tbbookingdate,
                 tbbookingenddate,
                 tbbookingeventtype,
@@ -110,7 +110,7 @@ class BookingRepository
 
             FROM tbbooking
 
-            WHERE tbbookingclientid = :idClient
+            WHERE tbclientid = :idClient
 
             ORDER BY tbbookingdate DESC
         ";
@@ -133,8 +133,8 @@ class BookingRepository
     $sql = "
             SELECT
                 tbbookingid,
-                tbbookingclientid,
-                tbbookinglocalid,
+                tbclientid,
+                tbvenueid,
                 tbbookingdate,
                 tbbookingenddate,
                 tbbookingeventtype,
@@ -144,7 +144,7 @@ class BookingRepository
 
             FROM tbbooking
 
-            WHERE tbbookinglocalid = :idLocal
+            WHERE tbvenueid = :idLocal
 
             ORDER BY tbbookingdate DESC
         ";
@@ -167,8 +167,8 @@ class BookingRepository
     $sql = "
             SELECT
                 tbbookingid,
-                tbbookingclientid,
-                tbbookinglocalid,
+                tbclientid,
+                tbvenueid,
                 tbbookingdate,
                 tbbookingenddate,
                 tbbookingeventtype,
@@ -201,9 +201,9 @@ class BookingRepository
             FROM tbbooking b
 
             INNER JOIN tbvenue v
-                ON v.tbvenueid = b.tbbookinglocalid
+                ON v.tbvenueid = b.tbvenueid
 
-            WHERE v.tbvenueownerid = :idOwner
+            WHERE v.tbownerid = :idOwner
               AND b.tbbookingdate LIKE :yearMonth
         ";
 
@@ -225,8 +225,8 @@ class BookingRepository
     $sql = "
             SELECT
                 b.tbbookingid,
-                b.tbbookingclientid,
-                b.tbbookinglocalid,
+                b.tbclientid,
+                b.tbvenueid,
                 b.tbbookingdate,
                 b.tbbookingenddate,
                 b.tbbookingeventtype,
@@ -237,9 +237,9 @@ class BookingRepository
             FROM tbbooking b
 
             INNER JOIN tbvenue v
-                ON v.tbvenueid = b.tbbookinglocalid
+                ON v.tbvenueid = b.tbvenueid
 
-            WHERE v.tbvenueownerid = :idOwner
+            WHERE v.tbownerid = :idOwner
               AND b.tbbookingstate = 'pendiente'
 
             ORDER BY b.tbbookingdate ASC
@@ -267,9 +267,9 @@ class BookingRepository
             FROM tbbooking b
 
             INNER JOIN tbvenue v
-                ON v.tbvenueid = b.tbbookinglocalid
+                ON v.tbvenueid = b.tbvenueid
 
-            WHERE v.tbvenueownerid = :idOwner
+            WHERE v.tbownerid = :idOwner
               AND b.tbbookingdate >= :today
               AND b.tbbookingstate = 'confirmado'
 
@@ -304,9 +304,9 @@ class BookingRepository
             FROM tbbooking b
 
             INNER JOIN tbvenue v
-                ON v.tbvenueid = b.tbbookinglocalid
+                ON v.tbvenueid = b.tbvenueid
 
-            GROUP BY b.tbbookinglocalid, v.tbvenuename
+            GROUP BY b.tbvenueid, v.tbvenuename
 
             ORDER BY bookingCount DESC
 
@@ -334,12 +334,12 @@ class BookingRepository
             FROM tbbooking b
 
             INNER JOIN tbvenue v
-                ON v.tbvenueid = b.tbbookinglocalid
+                ON v.tbvenueid = b.tbvenueid
 
-            WHERE v.tbvenueownerid = :idOwner
+            WHERE v.tbownerid = :idOwner
               AND b.tbbookingdate LIKE :yearMonth
 
-            GROUP BY b.tbbookinglocalid, v.tbvenuename
+            GROUP BY b.tbvenueid, v.tbvenuename
 
             ORDER BY bookingCount DESC
 
@@ -405,7 +405,7 @@ class BookingRepository
   {
     $sql = "
             UPDATE tbbooking
-            SET tbbookinglocalid = :newVenueId
+            SET tbvenueid = :newVenueId
             WHERE tbbookingid = :idBooking
         ";
 
@@ -427,7 +427,7 @@ class BookingRepository
     $sql = "
             SELECT tbbookingdate, tbbookingenddate
             FROM tbbooking
-            WHERE tbbookinglocalid = :idLocal
+            WHERE tbvenueid = :idLocal
               AND tbbookingstate IN ('pendiente', 'confirmado')
               AND tbbookingactive = true
             ORDER BY tbbookingdate
@@ -467,17 +467,17 @@ class BookingRepository
     $sql = "
             SELECT
                 b.tbbookingid,
-                b.tbbookingclientid,
+                b.tbclientid,
                 c.tbclientname AS clientName,
-                b.tbbookinglocalid,
+                b.tbvenueid,
                 v.tbvenuename AS venueName,
                 b.tbbookingdate,
                 b.tbbookingeventtype,
                 b.tbbookingstate,
                 b.tbbookingactive
             FROM tbbooking b
-            LEFT JOIN tbclient c ON c.tbclientid = b.tbbookingclientid
-            LEFT JOIN tbvenue v ON v.tbvenueid = b.tbbookinglocalid
+            LEFT JOIN tbclient c ON c.tbclientid = b.tbclientid
+            LEFT JOIN tbvenue v ON v.tbvenueid = b.tbvenueid
             WHERE b.tbbookingdate LIKE :yearMonth
             ORDER BY b.tbbookingdate DESC, b.tbbookingid DESC
         ";
@@ -525,7 +525,7 @@ class BookingRepository
     $sql = "
             SELECT COUNT(*)
             FROM tbbooking
-            WHERE tbbookinglocalid = :idLocal
+WHERE tbvenueid = :idLocal
               AND tbbookingstate IN ('pendiente', 'confirmado')
               AND tbbookingactive = true
               AND tbbookingdate <= :endDate
@@ -561,8 +561,8 @@ class BookingRepository
             SELECT COUNT(*)
             FROM tbbooking b
             INNER JOIN tbvenue v
-                ON v.tbvenueid = b.tbbookinglocalid
-            WHERE v.tbvenueownerid = :idOwner
+                ON v.tbvenueid = b.tbvenueid
+            WHERE v.tbownerid = :idOwner
               AND b.tbbookingdate >= :today
               AND b.tbbookingstate IN ('pendiente', 'confirmado')
         ";
@@ -616,15 +616,15 @@ class BookingRepository
   {
     $sql = "
             SELECT
-                b.tbbookinglocalid AS idLocal,
+                b.tbvenueid AS idLocal,
                 v.tbvenuename AS name,
                 COUNT(*) AS total,
                 SUM(CASE WHEN b.tbbookingstate = 'confirmado' THEN 1 ELSE 0 END) AS confirmed
             FROM tbbooking b
             INNER JOIN tbvenue v
-                ON v.tbvenueid = b.tbbookinglocalid
+                ON v.tbvenueid = b.tbvenueid
             WHERE b.tbbookingdate LIKE :yearMonth
-            GROUP BY b.tbbookinglocalid, v.tbvenuename
+            GROUP BY b.tbvenueid, v.tbvenuename
             ORDER BY name ASC
         ";
 
@@ -641,8 +641,8 @@ class BookingRepository
   {
     return new Booking(
       idBooking: (int) $row['tbbookingid'],
-      idClient: (int) $row['tbbookingclientid'],
-      idLocal: (int) $row['tbbookinglocalid'],
+      idClient: (int) $row['tbclientid'],
+      idLocal: (int) $row['tbvenueid'],
       bookingDate: $row['tbbookingdate'],
       bookingState: $row['tbbookingstate'],
       isBookingActive: $this->toBool($row['tbbookingactive']),

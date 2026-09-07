@@ -29,10 +29,10 @@ class ServiceRepository
          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbservice' AND COLUMN_NAME = :col"
       );
 
-      foreach (['tbserviceapprovedby', 'tbserviceapprovedon'] as $column) {
+      foreach (['tbroleid', 'tbserviceapprovedon'] as $column) {
         $stmt->execute([':col' => $column]);
         if ((int) $stmt->fetchColumn() === 0) {
-          $type = $column === 'tbserviceapprovedby' ? 'INT NULL' : 'DATETIME NULL';
+          $type = $column === 'tbroleid' ? 'INT NULL' : 'DATETIME NULL';
           $this->connection->exec("ALTER TABLE tbservice ADD COLUMN {$column} {$type}");
         }
       }
@@ -51,7 +51,7 @@ class ServiceRepository
   {
     $sql = "
             INSERT INTO tbservice (
-                tbservicelocalid,
+                tbvenueid,
                 tbservicename,
                 tbservicetype,
                 tbserviceprice,
@@ -91,12 +91,12 @@ class ServiceRepository
     $sql = "
             SELECT
                 tbserviceid,
-                tbservicelocalid,
+                tbvenueid,
                 tbservicename,
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceapprovedby,
+                tbroleid,
                 tbserviceapprovedon,
                 tbserviceactive
 
@@ -126,18 +126,18 @@ class ServiceRepository
     $sql = "
             SELECT
                 tbserviceid,
-                tbservicelocalid,
+                tbvenueid,
                 tbservicename,
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceapprovedby,
+                tbroleid,
                 tbserviceapprovedon,
                 tbserviceactive
 
             FROM tbservice
 
-            WHERE tbservicelocalid = :idLocal
+            WHERE tbvenueid = :idLocal
               AND tbservicestate = 'aprobado'
               AND tbserviceactive = true
         ";
@@ -161,12 +161,12 @@ class ServiceRepository
     $sql = "
             SELECT
                 tbserviceid,
-                tbservicelocalid,
+                tbvenueid,
                 tbservicename,
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceapprovedby,
+                tbroleid,
                 tbserviceapprovedon,
                 tbserviceactive
 
@@ -201,8 +201,8 @@ class ServiceRepository
                 r.tbrolename    AS approvedByName,
                 s.tbserviceapprovedon
             FROM tbservice s
-            LEFT JOIN tbvenue v ON v.tbvenueid = s.tbservicelocalid
-            LEFT JOIN tbrole r ON r.tbroleid = s.tbserviceapprovedby
+            LEFT JOIN tbvenue v ON v.tbvenueid = s.tbvenueid
+            LEFT JOIN tbrole r ON r.tbroleid = s.tbroleid
             WHERE s.tbservicestate IN ('aprobado', 'rechazado')
             ORDER BY s.tbserviceapprovedon DESC, s.tbserviceid DESC
         ";
@@ -223,18 +223,18 @@ class ServiceRepository
     $sql = "
             SELECT
                 tbserviceid,
-                tbservicelocalid,
+                tbvenueid,
                 tbservicename,
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceapprovedby,
+                tbroleid,
                 tbserviceapprovedon,
                 tbserviceactive
 
             FROM tbservice
 
-            WHERE tbservicelocalid = :idLocal
+            WHERE tbvenueid = :idLocal
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -274,7 +274,7 @@ class ServiceRepository
     $sql = "
             UPDATE tbservice
             SET tbservicestate = 'aprobado',
-                tbserviceapprovedby = :approvedByRoleId,
+                tbroleid = :approvedByRoleId,
                 tbserviceapprovedon = NOW()
             WHERE tbserviceid = :idService
         ";
@@ -295,7 +295,7 @@ class ServiceRepository
     $sql = "
             UPDATE tbservice
             SET tbservicestate = 'rechazado',
-                tbserviceapprovedby = :approvedByRoleId,
+                tbroleid = :approvedByRoleId,
                 tbserviceapprovedon = NOW()
             WHERE tbserviceid = :idService
         ";
@@ -343,13 +343,13 @@ class ServiceRepository
   {
     return new Service(
       idService: (int) $row['tbserviceid'],
-      idLocal: (int) $row['tbservicelocalid'],
+      idLocal: (int) $row['tbvenueid'],
       nameService: $row['tbservicename'],
       typeService: $row['tbservicetype'],
       priceService: (float) $row['tbserviceprice'],
       stateService: $row['tbservicestate'],
       isActive: $this->toBool($row['tbserviceactive']),
-      approvedBy: ($row['tbserviceapprovedby'] ?? null) !== null ? (int) $row['tbserviceapprovedby'] : null,
+      approvedBy: ($row['tbroleid'] ?? null) !== null ? (int) $row['tbroleid'] : null,
       approvedOn: $row['tbserviceapprovedon'] ?? null
     );
   }

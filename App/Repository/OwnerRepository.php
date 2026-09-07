@@ -54,8 +54,8 @@ class OwnerRepository
 
             $sqlLink = "
                 INSERT INTO tbroleowner (
-                    tbroleownerrolid,
-                    tbroleownerownerid,
+                    tbroleid,
+                    tbownerid,
                     tbroleowneractive
                 )
                 VALUES (
@@ -135,8 +135,8 @@ class OwnerRepository
                 p.tbownerimage,
                 p.tbowneractive
             FROM tbrole r
-            INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
-            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
+            INNER JOIN tbroleowner o ON o.tbroleid = r.tbroleid
+            INNER JOIN tbowner p ON p.tbownerid = o.tbownerid
             WHERE r.tbroleemail = :email
             LIMIT 1
         ";
@@ -169,8 +169,8 @@ class OwnerRepository
                 p.tbownerimage,
                 p.tbowneractive
             FROM tbrole r
-            INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
-            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
+            INNER JOIN tbroleowner o ON o.tbroleid = r.tbroleid
+            INNER JOIN tbowner p ON p.tbownerid = o.tbownerid
             WHERE p.tbownerid = :idOwner
             LIMIT 1
         ";
@@ -203,8 +203,8 @@ class OwnerRepository
                 p.tbownerimage,
                 p.tbowneractive
             FROM tbrole r
-            INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
-            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
+            INNER JOIN tbroleowner o ON o.tbroleid = r.tbroleid
+            INNER JOIN tbowner p ON p.tbownerid = o.tbownerid
             WHERE r.tbroleid = :idRole
             LIMIT 1
         ";
@@ -237,8 +237,8 @@ class OwnerRepository
                 p.tbownerimage,
                 p.tbowneractive
             FROM tbrole r
-            INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
-            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
+            INNER JOIN tbroleowner o ON o.tbroleid = r.tbroleid
+            INNER JOIN tbowner p ON p.tbownerid = o.tbownerid
             ORDER BY p.tbownerid ASC
         ";
 
@@ -273,8 +273,8 @@ class OwnerRepository
                 p.tbownerimage,
                 p.tbowneractive
             FROM tbrole r
-            INNER JOIN tbroleowner o ON o.tbroleownerrolid = r.tbroleid
-            INNER JOIN tbowner p ON p.tbownerid = o.tbroleownerownerid
+            INNER JOIN tbroleowner o ON o.tbroleid = r.tbroleid
+            INNER JOIN tbowner p ON p.tbownerid = o.tbownerid
             WHERE p.tbowneridentificationnumber = :identificationNumber
             LIMIT 1
         ";

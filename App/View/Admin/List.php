@@ -47,14 +47,14 @@
           <tbody>
             <?php foreach ($refundsPending as $rf): ?>
               <tr>
-                <td>#<?= (int) $rf['tbbookingrefundbookingid'] ?></td>
+                <td>#<?= (int) $rf['tbbookingid'] ?></td>
                 <td><?= e($rf['clientName'] ?? '—') ?></td>
                 <td><?= e($rf['venueName'] ?? '—') ?></td>
                 <td><?= e(date('d/m/Y', strtotime($rf['tbbookingdate']))) ?></td>
                 <td><?= e($rf['tbbookingrefunddetail']) ?></td>
                 <td>
                   <a class="btn btn-sm btn-primary"
-                     href="<?= e(base_url('admin', 'bookingDetail', ['id' => $rf['tbbookingrefundbookingid']])) ?>">Revisar</a>
+                     href="<?= e(base_url('admin', 'bookingDetail', ['id' => $rf['tbbookingid']])) ?>">Revisar</a>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -129,7 +129,7 @@
         <tbody>
           <?php foreach ($history as $h): ?>
             <tr>
-              <td>#<?= (int) $h['tbbookinghistorybookingid'] ?></td>
+              <td>#<?= (int) $h['tbbookingid'] ?></td>
               <td><?= e($h['clientName'] ?? '—') ?></td>
               <td><?= e($h['tbbookingdate'] ? date('d/m/Y', strtotime($h['tbbookingdate'])) : '—') ?></td>
               <td><?= e($h['responsibleName'] ?? '—') ?></td>

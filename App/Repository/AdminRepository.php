@@ -47,8 +47,8 @@ class AdminRepository
             // Tabla intermedia rol <-> admin
             $sqlLink = "
                 INSERT INTO tbroleadmin (
-                    tbroleadminrolid,
-                    tbroleadminadminid,
+                    tbroleid,
+                    tbadminid,
                     tbroleadminactive
                 )
                 VALUES (
@@ -92,8 +92,8 @@ class AdminRepository
                 p.tbadminimage,
                 p.tbadminactive
             FROM tbrole r
-            INNER JOIN tbroleadmin a ON a.tbroleadminrolid = r.tbroleid
-            INNER JOIN tbadmin p ON p.tbadminid = a.tbroleadminadminid
+            INNER JOIN tbroleadmin a ON a.tbroleid = r.tbroleid
+            INNER JOIN tbadmin p ON p.tbadminid = a.tbadminid
             WHERE r.tbroleemail = :email
             LIMIT 1
         ";
@@ -122,8 +122,8 @@ class AdminRepository
                 p.tbadminimage,
                 p.tbadminactive
             FROM tbrole r
-            INNER JOIN tbroleadmin a ON a.tbroleadminrolid = r.tbroleid
-            INNER JOIN tbadmin p ON p.tbadminid = a.tbroleadminadminid
+            INNER JOIN tbroleadmin a ON a.tbroleid = r.tbroleid
+            INNER JOIN tbadmin p ON p.tbadminid = a.tbadminid
             WHERE p.tbadminid = :idAdmin
             LIMIT 1
         ";
@@ -152,8 +152,8 @@ class AdminRepository
                 p.tbadminimage,
                 p.tbadminactive
             FROM tbrole r
-            INNER JOIN tbroleadmin a ON a.tbroleadminrolid = r.tbroleid
-            INNER JOIN tbadmin p ON p.tbadminid = a.tbroleadminadminid
+            INNER JOIN tbroleadmin a ON a.tbroleid = r.tbroleid
+            INNER JOIN tbadmin p ON p.tbadminid = a.tbadminid
             WHERE r.tbroleid = :idRole
             LIMIT 1
         ";
@@ -182,8 +182,8 @@ class AdminRepository
                 p.tbadminimage,
                 p.tbadminactive
             FROM tbrole r
-            INNER JOIN tbroleadmin a ON a.tbroleadminrolid = r.tbroleid
-            INNER JOIN tbadmin p ON p.tbadminid = a.tbroleadminadminid
+            INNER JOIN tbroleadmin a ON a.tbroleid = r.tbroleid
+            INNER JOIN tbadmin p ON p.tbadminid = a.tbadminid
             ORDER BY p.tbadminid ASC
         ";
 

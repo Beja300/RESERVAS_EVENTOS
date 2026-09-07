@@ -19,8 +19,8 @@ class InvoiceRepository
   {
     $sql = "
             INSERT INTO tbinvoice (
-                tbinvoicebookingid,
-                tbinvoicepaymentmethodid,
+                tbbookingid,
+                tbpaymentmethodid,
                 tbinvoicedate,
                 tbinvoicestatus,
                 tbinvoiceactive
@@ -56,15 +56,15 @@ class InvoiceRepository
     $sql = "
             SELECT
                 tbinvoiceid,
-                tbinvoicebookingid,
-                tbinvoicepaymentmethodid,
+                tbbookingid,
+                tbpaymentmethodid,
                 tbinvoicedate,
                 tbinvoicestatus,
                 tbinvoiceactive
 
             FROM tbinvoice
 
-            WHERE tbinvoicebookingid = :idClientBooking
+            WHERE tbbookingid = :idClientBooking
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -106,8 +106,8 @@ class InvoiceRepository
   {
     return new Invoice(
       idInvoice: (int) $row['tbinvoiceid'],
-      idClientBooking: (int) $row['tbinvoicebookingid'],
-      idPaymentMethod: (int) $row['tbinvoicepaymentmethodid'],
+      idClientBooking: (int) $row['tbbookingid'],
+      idPaymentMethod: (int) $row['tbpaymentmethodid'],
       dateInvoice: $row['tbinvoicedate'],
       statusInvoice: $row['tbinvoicestatus'],
       isActiveInvoice: $this->toBool($row['tbinvoiceactive'])

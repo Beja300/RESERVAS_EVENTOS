@@ -19,10 +19,10 @@ class BookingTicketRepository
   {
     $sql = "
       INSERT INTO tbbookingticket (
-        tbbookingticketbookingid,
+        tbbookingid,
         tbbookingticketfile,
         tbbookingtickettype,
-        tbbookingticketpaymentmethodid,
+        tbpaymentmethodid,
         tbbookingticketstate
       )
       VALUES (
@@ -55,10 +55,10 @@ class BookingTicketRepository
     $sql = "
       SELECT
         tbbookingticketid,
-        tbbookingticketbookingid,
+        tbbookingid,
         tbbookingticketfile,
         tbbookingtickettype,
-        tbbookingticketpaymentmethodid,
+        tbpaymentmethodid,
         tbbookingticketstate
       FROM tbbookingticket
       WHERE tbbookingticketid = :idTicket
@@ -82,13 +82,13 @@ class BookingTicketRepository
     $sql = "
       SELECT
         tbbookingticketid,
-        tbbookingticketbookingid,
+        tbbookingid,
         tbbookingticketfile,
         tbbookingtickettype,
-        tbbookingticketpaymentmethodid,
+        tbpaymentmethodid,
         tbbookingticketstate
       FROM tbbookingticket
-      WHERE tbbookingticketbookingid = :idBooking
+      WHERE tbbookingid = :idBooking
         AND tbbookingticketactive = true
       LIMIT 1
     ";
@@ -112,10 +112,10 @@ class BookingTicketRepository
       SELECT COUNT(*)
       FROM tbbooking b
       INNER JOIN tbvenue v
-        ON v.tbvenueid = b.tbbookinglocalid
+        ON v.tbvenueid = b.tbvenueid
       INNER JOIN tbbookingticket t
-        ON t.tbbookingticketbookingid = b.tbbookingid
-      WHERE v.tbvenueownerid = :idOwner
+        ON t.tbbookingid = b.tbbookingid
+      WHERE v.tbownerid = :idOwner
         AND b.tbbookingstate = 'pendiente'
         AND t.tbbookingticketactive = true
     ";
@@ -152,10 +152,10 @@ class BookingTicketRepository
   {
     return new BookingTicket(
       idTicket: (int) $row['tbbookingticketid'],
-      idBooking: (int) $row['tbbookingticketbookingid'],
+      idBooking: (int) $row['tbbookingid'],
       file: $row['tbbookingticketfile'],
       type: $row['tbbookingtickettype'],
-      paymentMethodId: (int) ($row['tbbookingticketpaymentmethodid'] ?? 0),
+      paymentMethodId: (int) ($row['tbpaymentmethodid'] ?? 0),
       state: $row['tbbookingticketstate']
     );
   }

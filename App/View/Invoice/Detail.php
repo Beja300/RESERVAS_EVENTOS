@@ -17,7 +17,7 @@ if ($invoice === null) {
   <div class="detail-grid">
     <div class="detail-item"><div class="k">Reserva</div><div class="v">#<?= (int) $invoice->getIdClientBooking() ?></div></div>
     <div class="detail-item"><div class="k">Fecha de emisión</div><div class="v"><?= e(date('d/m/Y', strtotime($invoice->getDateInvoice()))) ?></div></div>
-    <div class="detail-item"><div class="k">Método de pago</div><div class="v">#<?= (int) $invoice->getIdPaymentMethod() ?></div></div>
+    <div class="detail-item"><div class="k">Método de pago</div><div class="v"><?= $paymentMethod !== null ? e($paymentMethod->getPaymentMethod()) : ('#' . (int) $invoice->getIdPaymentMethod()) ?></div></div>
     <div class="detail-item"><div class="k">Estado</div>
       <div class="v" style="margin-top:6px;">
         <?php
@@ -48,9 +48,9 @@ if ($invoice === null) {
           <tr>
             <td>
               <?php if ($d->getIdVenue() > 0): ?>
-                Renta del local — <?= e($venue !== null ? $venue->getNameVenue() : ('Local #' . $d->getIdVenue())) ?>
+                Renta del local — <?= $venue !== null ? e($venue->getNameVenue()) : ('Local #' . $d->getIdVenue()) ?>
               <?php else: ?>
-                Servicio #<?= (int) $d->getIdLocalService() ?>
+                Servicio — <?= isset($serviceMap[$d->getIdLocalService()]) ? e($serviceMap[$d->getIdLocalService()]->getNameService()) : ('Servicio #' . $d->getIdLocalService()) ?>
               <?php endif; ?>
             </td>
             <td><?= (int) $d->getQuantityDetail() ?></td>
@@ -75,15 +75,31 @@ if ($invoice === null) {
       </tfoot>
     </table>
   </div>
-
-  <?php if ($earning !== null): ?>
-    <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
-    <h3 style="margin:0 0 10px;">Reparto de ganancias</h3>
-    <div class="detail-grid">
-      <div class="detail-item"><div class="k">Total pagado</div><div class="v">&#8353; <?= number_format($earning->getTotal(), 2) ?></div></div>
-      <div class="detail-item"><div class="k">Comisión plataforma</div><div class="v">&#8353; <?= number_format($earning->getCommission(), 2) ?></div></div>
-      <div class="detail-item"><div class="k">IVA retenido</div><div class="v">&#8353; <?= number_format($earning->getTax(), 2) ?></div></div>
-      <div class="detail-item"><div class="k">Ingreso propietario</div><div class="v"><strong>&#8353; <?= number_format($earning->getOwnerAmount(), 2) ?></strong></div></div>
-    </div>
-  <?php endif; ?>
 </div>
+
+<div class="grid grid-2" style="margin-top:20px;">
+  <div class="card">
+    <h3 class="card-title">Cliente</h3>
+    <?php if ($client === null): ?>
+      <p class="muted">Datos del cliente no encontrados.</p>
+    <?php else: ?>
+      <div class="detail-item"><div class="k">Nombre</div><div class="v"><strong><?= e($client->getName()) ?></strong></div></div>
+      <div class="detail-item"><div class="k">Correo</div><div class="v"><?= e($client->getEmail()) ?></div></div>
+      <div class="detail-item"><div class="k">Teléfono</div><div class="v"><?= $client->getPhoneNumber() !== null && $client->getPhoneNumber() !== '' ? e($client->getPhoneNumber()) : '—' ?></div></div>
+    <?php endif; ?>
+  </div>
+
+  <div class="card">
+    <h3 class="card-title">Local</h3>
+    <?php if ($venue === null): ?>
+      <p class="muted">Datos del local no encontrados.</p>
+    <?php else: ?>
+      <div class="detail-item"><div class="k">Nombre</div><div class="v"><strong><?= e($venue->getNameVenue()) ?></strong></div></div>
+      <div class="detail-item"><div class="k">Tipo</div><div class="v"><?= $venue->getTypeVenue() !== '' ? e($venue->getTypeVenue()) : '—' ?></div></div>
+      <div class="detail-item"><div class="k">Capacidad</div><div class="v"><?= (int) $venue->getCapacityVenue() ?> personas</div></div>
+      <div class="detail-item"><div class="k">Precio de renta</div><div class="v">&#8353; <?= number_format($venue->getPriceVenue(), 2) ?></div></div>
+    <?php endif; ?>
+  </div>
+</div>
+
+<?php require_once __DIR__ . '/../_footer.php'; ?>
