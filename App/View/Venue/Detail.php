@@ -177,7 +177,7 @@ if ($venue === null) {
 <?php $hasMyVenueRating = $myVenueRating !== null; ?>
 <div class="card" id="commentCard" style="max-width:520px;margin-top:18px;">
   <div class="page-head" style="margin:0 0 10px;">
-    <h3 style="margin:0;">Tu reserva sobre este local</h3>
+    <h3 style="margin:0;">Tu reseña sobre este local</h3>
   </div>
   <form id="commentForm" method="post"
         action="<?= e(base_url('venue', 'rate')) ?>"
@@ -196,11 +196,11 @@ if ($venue === null) {
       </div>
     </div>
     <div class="form-group">
-      <label for="comment">Reserva</label>
-      <textarea class="form-control" id="comment" name="comment" rows="3" placeholder="Escribe tu reserva sobre este local..."><?= $hasMyVenueRating ? e($myVenueRating->getComment()) : '' ?></textarea>
+      <label for="comment">Reseña</label>
+      <textarea class="form-control" id="comment" name="comment" rows="3" placeholder="Escribe tu reseña sobre este local..."><?= $hasMyVenueRating ? e($myVenueRating->getComment()) : '' ?></textarea>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <button class="btn btn-primary" id="submitComment" type="submit"><?= $hasMyVenueRating ? 'Actualizar reserva' : 'Publicar reserva' ?></button>
+      <button class="btn btn-primary" id="submitComment" type="submit"><?= $hasMyVenueRating ? 'Actualizar reseña' : 'Publicar reseña' ?></button>
       <button class="btn btn-outline" id="cancelEdit" type="button" style="display:none;">Cancelar edición</button>
     </div>
   </form>
@@ -208,7 +208,7 @@ if ($venue === null) {
 <?php endif; ?>
 
 <div class="card" id="venueCommentsCard" style="margin-top:18px;">
-  <h3 style="margin-bottom:10px;">Reservas del local</h3>
+  <h3 style="margin-bottom:10px;">Reseñas del local</h3>
   <div id="venueCommentsList">
     <?= render_partial(__DIR__ . '/_venueComments.php', ['venueComments' => $venueComments]) ?>
   </div>
