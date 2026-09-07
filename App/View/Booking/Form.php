@@ -1,4 +1,8 @@
-<?php require_once __DIR__ . '/../_header.php';
+<?php
+$pageCss = 'booking/form';
+$pageJs = ['booking/form'];
+
+require_once __DIR__ . '/../_header.php';
 if ($venue === null) {
   echo '<div class="alert alert-error">Local no encontrado.</div>';
   require_once __DIR__ . '/../_footer.php';
@@ -25,7 +29,8 @@ if ($venue === null) {
     <div class="form-group">
       <label for="date">Fecha del evento *</label>
       <input class="form-control" type="date" id="date" name="date" required min="<?= date('Y-m-d') ?>"
-             value="<?= e($_POST['date'] ?? '') ?>">
+             value="<?= e($_POST['date'] ?? '') ?>"
+             data-booked-dates='<?= e(json_encode($bookedDates ?? [])) ?>'>
     </div>
 
     <div class="form-group">
