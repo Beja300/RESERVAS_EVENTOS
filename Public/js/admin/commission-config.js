@@ -23,17 +23,9 @@
         return;
       }
 
-      fetch(cForm.getAttribute('action'), {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-        body: new FormData(cForm)
-      }).then(function (r) {
-        return r.json().then(function (j) { return { ok: r.ok, data: j }; });
-      }).then(function (r) {
+      App.ajax(cForm.getAttribute('action'), { body: new FormData(cForm) }).then(function (r) {
         window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
         if (r.ok) setTimeout(function () { window.location.reload(); }, 700);
-      }).catch(function () {
-        window.App && App.toast('Ocurrió un error al guardar. Inténtalo de nuevo.', 'error');
       });
     });
   }

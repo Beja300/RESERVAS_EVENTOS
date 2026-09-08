@@ -24,16 +24,22 @@ class ServiceRepository
   private function ensureApprovalColumns(): void
   {
     try {
+      // Mapa fijo (lista blanca) de columna => definición DDL. Nunca se
+      // interpolan valores externos en el ALTER: solo estas claves.
+      $columns = [
+        'tbroleid'        => 'INT NULL',
+        'tbserviceapprovedon' => 'DATETIME NULL',
+      ];
+
       $stmt = $this->connection->prepare(
         "SELECT COUNT(*) FROM information_schema.COLUMNS
          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbservice' AND COLUMN_NAME = :col"
       );
 
-      foreach (['tbroleid', 'tbserviceapprovedon'] as $column) {
+      foreach (array_keys($columns) as $column) {
         $stmt->execute([':col' => $column]);
         if ((int) $stmt->fetchColumn() === 0) {
-          $type = $column === 'tbroleid' ? 'INT NULL' : 'DATETIME NULL';
-          $this->connection->exec("ALTER TABLE tbservice ADD COLUMN {$column} {$type}");
+          $this->connection->exec("ALTER TABLE tbservice ADD COLUMN {$column} {$columns[$column]}");
         }
       }
     } catch (\Throwable $e) {

@@ -10,6 +10,29 @@
 
   var App = {};
 
+  // ---------- Ruta base ----------
+  // Directorio que contiene el front controller (Public/). Todas las URL
+  // de acción se construyen a partir de aquí, sin duplicar la lógica en
+  // cada script de vista.
+  App.base = function () {
+    if (App._basePath) return App._basePath;
+    var parts = (window.location.pathname || '').split('/');
+    parts.pop();
+    App._basePath = parts.join('/');
+    return App._basePath;
+  };
+
+  // URL hacia una acción del front controller: App.actionUrl('booking','detail',{id:1})
+  App.actionUrl = function (controller, action, params) {
+    var q = 'controller=' + encodeURIComponent(controller) + '&action=' + encodeURIComponent(action);
+    for (var key in params) {
+      if (Object.prototype.hasOwnProperty.call(params, key)) {
+        q += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+      }
+    }
+    return App.base() + '/index.php?' + q;
+  };
+
   // ---------- Utilidades ----------
   App.escape = function (value) {
     return String(value == null ? '' : value)
@@ -28,6 +51,36 @@
     return '\u20A1 ' + Number(amount).toLocaleString('es-CR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
+    });
+  };
+
+  // ---------- AJAX unificado ----------
+  // Wrapper sobre fetch que marca la petición como AJAX (X-Requested-With +
+  // Accept: application/json) y resuelve una promesa con { ok, status, data }.
+  // body puede ser FormData (multipart) o un string. No envía Content-Type
+  // manual para no romper el boundary de FormData.
+  App.ajax = function (url, options) {
+    options = options || {};
+    var config = {
+      method: options.method || 'POST',
+      credentials: 'same-origin'
+    };
+    if (options.body) {
+      config.body = options.body;
+    }
+    config.headers = Object.assign({
+      'X-Requested-With': 'XMLHttpRequest',
+      'Accept': 'application/json'
+    }, options.headers || {});
+
+    return fetch(url, config).then(function (res) {
+      return res.json().then(function (data) {
+        return { ok: res.ok, status: res.status, data: data };
+      }, function () {
+        return { ok: false, status: res.status, data: { message: 'Respuesta inesperada del servidor.' } };
+      });
+    }, function () {
+      return { ok: false, status: 0, data: { message: 'Ocurrió un error de red. Intenta de nuevo.' } };
     });
   };
 
@@ -230,13 +283,47 @@
     }
   };
 
+  // ---------- Mostrar/ocultar contraseña ----------
+  // Botones con data-password-toggle="idDelInput". Autoiniciado al cargar.
+  App.passwordToggle = function (input, toggle) {
+    if (!input || !toggle) return;
+    toggle.addEventListener('click', function () {
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      toggle.textContent = show ? 'Ocultar' : 'Mostrar';
+      toggle.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+      input.focus();
+    });
+  };
+
+  App.initPasswordToggles = function () {
+    var toggles = document.querySelectorAll('[data-password-toggle]');
+    for (var i = 0; i < toggles.length; i++) {
+      (function (toggle) {
+        App.passwordToggle(
+          document.getElementById(toggle.getAttribute('data-password-toggle')),
+          toggle
+        );
+      })(toggles[i]);
+    }
+  };
+
   // ---------- Inicialización global (común a cualquier vista) ----------
   App.init = function () {
     App.initConfirm();
     App.initTableFilter();
     App.initCardFilter();
     App.initValidation();
+    App.initPasswordToggles();
   };
 
   window.App = App;
+
+  // Autoinicialización: el núcleo se aplica a cualquier vista que lo cargue,
+  // sin necesidad de <script> adicionales dentro de cada vista.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', App.init);
+  } else {
+    App.init();
+  }
 })(window, document);

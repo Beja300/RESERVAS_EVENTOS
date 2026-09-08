@@ -1,16 +1,7 @@
 
 (function () {
-  function base() {
-    var p = (window.location.pathname || '').split('/'); p.pop(); return p.join('/');
-  }
   function post(url, data, cb) {
-    fetch(url, {
-      method: 'POST',
-      headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-      body: data
-    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
-      .then(function (r) { cb(r.ok, r.data); })
-      .catch(function () { cb(false, { message: 'Error de red.' }); });
+    App.ajax(url, { body: data }).then(function (r) { cb(r.ok, r.data); });
   }
 
   // Plegar/desplegar el formulario y editar métodos existentes.

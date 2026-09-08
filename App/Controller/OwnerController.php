@@ -1,54 +1,32 @@
 <?php
 
+require_once __DIR__ . '/BaseController.php';
+require_once __DIR__ . '/../Service/OwnerService.php';
+require_once __DIR__ . '/../Service/ProfileImageService.php';
 require_once __DIR__ . '/../Service/AuthService.php';
 require_once __DIR__ . '/../Service/RoleSecurityService.php';
-require_once __DIR__ . '/../Service/HistoryService.php';
 require_once __DIR__ . '/../Service/OwnerPaymentService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
-require_once __DIR__ . '/../Repository/VenueRepository.php';
-require_once __DIR__ . '/../Repository/BookingRepository.php';
-require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
-require_once __DIR__ . '/../Repository/EarningRepository.php';
-require_once __DIR__ . '/../Repository/VenueRatingRepository.php';
-require_once __DIR__ . '/../Repository/RoleRepository.php';
-require_once __DIR__ . '/../Repository/OwnerRepository.php';
-require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
-require_once __DIR__ . '/../Repository/DetailRepository.php';
+require_once __DIR__ . '/../Model/Owner.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
-class OwnerController
+class OwnerController extends BaseController
 {
+  private OwnerService $ownerService;
   private AuthService $authService;
   private RoleSecurityService $roleSecurityService;
-  private HistoryService $historyService;
-  private VenueRepository $venueRepo;
-  private BookingRepository $bookingRepo;
-  private BookingTicketRepository $ticketRepo;
-  private EarningRepository $earningRepo;
-  private VenueRatingRepository $venueRatingRepo;
-  private RoleRepository $roleRepo;
-  private OwnerRepository $ownerRepo;
   private OwnerPaymentService $ownerPaymentService;
-  private PaymentMethodRepository $paymentMethodRepo;
-  private DetailRepository $detailRepo;
+  private ProfileImageService $profileImageService;
 
   public function __construct()
   {
     $connection = DataBase::getConnection();
 
+    $this->ownerService = new OwnerService($connection);
     $this->authService = new AuthService();
     $this->roleSecurityService = new RoleSecurityService();
-    $this->historyService = new HistoryService($connection);
-    $this->venueRepo = new VenueRepository($connection);
-    $this->bookingRepo = new BookingRepository($connection);
-    $this->ticketRepo = new BookingTicketRepository($connection);
-    $this->earningRepo = new EarningRepository($connection);
-    $this->venueRatingRepo = new VenueRatingRepository($connection);
-    $this->roleRepo = new RoleRepository($connection);
-    $this->ownerRepo = new OwnerRepository($connection);
     $this->ownerPaymentService = new OwnerPaymentService($connection);
-    $this->paymentMethodRepo = new PaymentMethodRepository($connection);
-    $this->detailRepo = new DetailRepository($connection);
+    $this->profileImageService = new ProfileImageService();
   }
 
   // =========================================================
@@ -56,17 +34,9 @@ class OwnerController
   // =========================================================
   public function dashboard(): void
   {
-    session_start();
     $this->requireOwner();
 
-    $owner = $_SESSION['user'];
-
-    $venues = $this->venueRepo->findByOwner($owner->getIdOwner());
-
-    $bookings = [];
-    foreach ($venues as $venue) {
-      $bookings[$venue->getIdVenue()] = $this->bookingRepo->findByVenue($venue->getIdVenue());
-    }
+    $owner = $this->currentUser();
 
     $yearMonth = trim($_POST['month'] ?? $_GET['month'] ?? date('Y-m'));
 
@@ -74,30 +44,13 @@ class OwnerController
       $yearMonth = date('Y-m');
     }
 
-    $earnings = $this->earningRepo->totalsByOwnerForMonth($owner->getIdOwner(), $yearMonth);
-    $nextBooking = $this->bookingRepo->nextBookingByOwner($owner->getIdOwner(), date('Y-m-d'));
-    $averageRating = $this->venueRatingRepo->findAverageByOwner($owner->getIdOwner());
+    $summary = $this->ownerService->dashboardSummary($owner->getIdOwner(), $yearMonth);
 
-    $monthNames = [
-      1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
-      5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
-      9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
-    ];
-
-    $stats = [
-      'locales'       => count($venues),
-      'porRevisar'    => $this->ticketRepo->countPendingByOwner($owner->getIdOwner()),
-      'ganancias'     => $earnings['ownerAmount'],
-      'comision'      => $earnings['commission'],
-      'totalBruto'    => $earnings['total'],
-      'reservasMes'   => $this->bookingRepo->countByOwnerForMonth($owner->getIdOwner(), $yearMonth),
-      'proximaReserva'=> $nextBooking,
-      'rating'        => $averageRating,
-      'monthLabel'    => $monthNames[(int) substr($yearMonth, 5, 2)] . ' ' . substr($yearMonth, 0, 4),
-    ];
-
-    $topVenue = $this->bookingRepo->topVenuesByOwner($owner->getIdOwner(), $yearMonth, 1);
-    $topServices = $this->detailRepo->topServicesByOwner($owner->getIdOwner(), $yearMonth, 3);
+    $venues = $summary['venues'];
+    $bookings = $summary['bookings'];
+    $stats = $summary['stats'];
+    $topVenue = $summary['topVenue'];
+    $topServices = $summary['topServices'];
 
     $prevMonth = date('Y-m', strtotime($yearMonth . '-01 first day of last month'));
     $nextMonth = date('Y-m', strtotime($yearMonth . '-01 first day of next month'));
@@ -110,10 +63,9 @@ class OwnerController
   // =========================================================
   public function profile(): void
   {
-    session_start();
     $this->requireOwner();
 
-    $owner = $_SESSION['user'];
+    $owner = $this->currentUser();
 
     require_once __DIR__ . '/../View/Owner/Form.php';
   }
@@ -124,7 +76,6 @@ class OwnerController
   // =========================================================
   public function updateProfile(): void
   {
-    session_start();
     $this->requireOwner();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -132,7 +83,7 @@ class OwnerController
       return;
     }
 
-    $owner = $_SESSION['user'];
+    $owner = $this->currentUser();
 
     $currentEmail = $owner->getEmail();
     $currentPhone = $owner->getPhoneNumber();
@@ -190,10 +141,16 @@ class OwnerController
       $owner->setAliasOwner($ownerAlias);
       $owner->setIdentificationNumberOwner($ownerIdentification);
 
-      $this->resolveOwnerProfileImage($owner);
+      $newImage = $this->profileImageService->resolveAndPersist(
+        $owner->getImageOwner(),
+        $_POST,
+        $_FILES,
+        'resource/owners/',
+        'owner_' . $owner->getIdOwner() . '_'
+      );
+      $owner->setImageOwner($newImage);
 
-      $this->roleRepo->update($owner);
-      $this->ownerRepo->updateProfile($owner);
+      $this->ownerService->saveProfile($owner);
 
       if ($hasCurrent && $hasNew) {
         $this->roleSecurityService->changePassword($owner->getIdRol(), $newPassword);
@@ -209,8 +166,7 @@ class OwnerController
         respond_json(['ok' => true, 'message' => 'Perfil actualizado correctamente.']);
       }
 
-      header('Location: ../../Public/index.php?controller=owner&action=profile&updated=1');
-      exit;
+      $this->redirect('owner', 'profile', ['updated' => 1]);
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
@@ -228,7 +184,6 @@ class OwnerController
   // =========================================================
   public function removePhoto(): void
   {
-    session_start();
     $this->requireOwner();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -236,12 +191,10 @@ class OwnerController
       return;
     }
 
-    $owner = $_SESSION['user'];
+    $owner = $this->currentUser();
 
-    $this->deleteOwnerImageFile($owner->getImageOwner());
-    $owner->setImageOwner('');
-
-    $this->ownerRepo->updateProfile($owner);
+    $this->profileImageService->deleteStoredFile($owner->getImageOwner(), 'resource/owners/');
+    $this->ownerService->removeProfilePhoto($owner);
 
     $_SESSION['user'] = $owner;
 
@@ -249,76 +202,7 @@ class OwnerController
       respond_json(['ok' => true, 'message' => 'Foto de perfil eliminada.']);
     }
 
-    header('Location: ../../Public/index.php?controller=owner&action=profile&removed=1');
-    exit;
-  }
-
-  // =========================================================
-  // FOTO DE PERFIL: prioriza borrar, luego archivo, luego URL.
-  // =========================================================
-  private const OWNER_IMAGE_DIR = 'resource/owners/';
-
-  private function resolveOwnerProfileImage(Owner $owner): void
-  {
-    $current = $owner->getImageOwner();
-    $newImage = $current;
-
-    if (isset($_POST['removePhoto'])) {
-      $newImage = '';
-    } elseif (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-      $file = $_FILES['image'];
-      $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-      $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-
-      if (!in_array($extension, $allowed, true)) {
-        throw new BusinessRuleException("Formato de imagen no válido (usa jpg, png, webp o gif).");
-      }
-
-      if ($file['size'] > 2 * 1024 * 1024) {
-        throw new BusinessRuleException("La imagen no puede superar los 2 MB.");
-      }
-
-      $dir = __DIR__ . '/../../Public/resource/owners/';
-      if (!is_dir($dir)) {
-        mkdir($dir, 0777, true);
-      }
-
-      $filename = 'owner_' . $owner->getIdOwner() . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
-
-      if (!move_uploaded_file($file['tmp_name'], $dir . $filename)) {
-        throw new BusinessRuleException("No se pudo guardar la imagen.");
-      }
-
-      $newImage = self::OWNER_IMAGE_DIR . $filename;
-    } else {
-      $url = trim($_POST['imageUrl'] ?? '');
-
-      if ($url !== '') {
-        if (!filter_var($url, FILTER_VALIDATE_URL)) {
-          throw new BusinessRuleException("URL de imagen no válida.");
-        }
-
-        $newImage = $url;
-      }
-    }
-
-    if ($newImage !== $current) {
-      $this->deleteOwnerImageFile($current);
-      $owner->setImageOwner($newImage);
-    }
-  }
-
-  // =========================================================
-  // BORRAR EL ARCHIVO LOCAL (nunca URLs externas)
-  // =========================================================
-  private function deleteOwnerImageFile(string $storedPath): void
-  {
-    if (str_starts_with($storedPath, self::OWNER_IMAGE_DIR)) {
-      $file = __DIR__ . '/../../Public/' . $storedPath;
-      if (is_file($file)) {
-        @unlink($file);
-      }
-    }
+    $this->redirect('owner', 'profile', ['removed' => 1]);
   }
 
   // =========================================================
@@ -328,7 +212,6 @@ class OwnerController
   // =========================================================
   public function deactivateAccount(): void
   {
-    session_start();
     $this->requireOwner();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -336,17 +219,11 @@ class OwnerController
       return;
     }
 
-    $owner = $_SESSION['user'];
+    $owner = $this->currentUser();
 
     try {
 
-      if ($this->bookingRepo->hasUpcomingActiveByOwner($owner->getIdOwner())) {
-        throw new BusinessRuleException(
-          'No puedes desactivar tu perfil mientras tengas reservas confirmadas o pendientes con fecha de hoy o futura.'
-        );
-      }
-
-      $this->roleRepo->setActive($owner->getIdRol(), false);
+      $this->ownerService->deactivateProfile($owner->getIdOwner(), $owner->getIdRol());
 
       if (is_ajax()) {
         respond_json(['ok' => true, 'message' => 'Tu perfil fue desactivado.']);
@@ -376,13 +253,12 @@ class OwnerController
   // =========================================================
   public function paymentData(): void
   {
-    session_start();
     $this->requireOwner();
 
-    $owner = $_SESSION['user'];
+    $owner = $this->currentUser();
 
     $ownerPayments = $this->ownerPaymentService->findByOwner($owner->getIdOwner());
-    $paymentMethods = $this->paymentMethodRepo->findActive();
+    $paymentMethods = $this->ownerService->getActivePaymentMethods();
 
     require_once __DIR__ . '/../View/Owner/PaymentData.php';
   }
@@ -392,7 +268,6 @@ class OwnerController
   // =========================================================
   public function savePayment(): void
   {
-    session_start();
     $this->requireOwner();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -400,7 +275,7 @@ class OwnerController
       return;
     }
 
-    $owner = $_SESSION['user'];
+    $owner = $this->currentUser();
 
     $idPaymentMethod = (int) ($_POST['paymentMethodId'] ?? 0);
     $ownerPaymentPk = (int) ($_POST['idOwnerPayment'] ?? 0);
@@ -436,8 +311,7 @@ class OwnerController
       return;
     }
 
-    header('Location: ../../Public/index.php?controller=owner&action=paymentData&saved=1');
-    exit;
+    $this->redirect('owner', 'paymentData', ['saved' => 1]);
   }
 
   // =========================================================
@@ -445,7 +319,6 @@ class OwnerController
   // =========================================================
   public function removePayment(): void
   {
-    session_start();
     $this->requireOwner();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -453,7 +326,7 @@ class OwnerController
       return;
     }
 
-    $owner = $_SESSION['user'];
+    $owner = $this->currentUser();
     $idOwnerPayment = (int) ($_POST['idOwnerPayment'] ?? 0);
 
     try {
@@ -475,17 +348,6 @@ class OwnerController
       return;
     }
 
-    header('Location: ../../Public/index.php?controller=owner&action=paymentData&removed=1');
-    exit;
-  }
-
-  // =========================================================
-  // GUARDIA: SOLO OWNER AUTENTICADO
-  // =========================================================
-  private function requireOwner(): void  {
-    if (($_SESSION['type'] ?? null) !== 'owner') {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
-      exit;
-    }
+    $this->redirect('owner', 'paymentData', ['removed' => 1]);
   }
 }

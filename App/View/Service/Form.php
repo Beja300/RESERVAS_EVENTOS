@@ -26,25 +26,26 @@ $action = $isEdit ? base_url('service', 'update') : base_url('service', 'create'
     <div class="form-group">
       <label for="name">Nombre del servicio *</label>
       <input class="form-control" type="text" id="name" name="name" required
-             value="<?= e($isEdit ? $service->getNameService() : ($_POST['name'] ?? '')) ?>">
+             value="<?= e($_POST['name'] ?? ($isEdit ? $service->getNameService() : '')) ?>">
     </div>
 
     <div class="form-group">
       <label for="type">Tipo</label>
       <input class="form-control" type="text" id="type" name="type"
              placeholder="Ej: Catering, DJ, Decoración..."
-             value="<?= e($isEdit && $service->getTypeService() !== '' ? $service->getTypeService() : ($_POST['type'] ?? '')) ?>">
+             value="<?= e(trim($_POST['type'] ?? '') !== '' ? $_POST['type'] : ($isEdit ? $service->getTypeService() : '')) ?>">
     </div>
 
     <div class="form-group">
       <label for="price">Precio *</label>
       <input class="form-control" type="number" id="price" name="price" step="0.01" min="0.01" required
-             value="<?= e($isEdit ? number_format($service->getPriceService(), 2, '.', '') : ($_POST['price'] ?? '')) ?>">
+             value="<?= e($_POST['price'] ?? ($isEdit ? number_format($service->getPriceService(), 2, '.', '') : '')) ?>">
     </div>
 
     <?php if ($isEdit): ?>
       <div class="checkbox-row">
-        <input type="checkbox" id="active" name="active" <?= $service->getIsActive() ? 'checked' : '' ?>>
+        <input type="checkbox" id="active" name="active"
+          <?= !empty($_POST) ? (isset($_POST['active']) ? 'checked' : '') : ($service->getIsActive() ? 'checked' : '') ?>>
         <label for="active">Servicio activo</label>
       </div>
     <?php endif; ?>

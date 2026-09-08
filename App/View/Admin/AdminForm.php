@@ -1,7 +1,7 @@
 <?php
 $pageTitle = 'Nuevo administrador';
 $pageCss = 'admin/password-toggle';
-$pageJs = ['admin/password-toggle'];
+$pageJs = [];
 require_once __DIR__ . '/../_header.php';
 ?>
 
@@ -33,7 +33,7 @@ require_once __DIR__ . '/../_header.php';
       <div class="password-wrapper">
         <input class="form-control" type="password" id="password" name="password"
                minlength="8" required>
-        <button class="password-toggle" type="button" id="passwordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+        <button class="password-toggle" type="button" id="passwordToggle" data-password-toggle="password" aria-label="Mostrar contraseña">Mostrar</button>
       </div>
       <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura1</div>
     </div>

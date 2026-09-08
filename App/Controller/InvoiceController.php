@@ -1,45 +1,23 @@
 <?php
 
+require_once __DIR__ . '/BaseController.php';
 require_once __DIR__ . '/../Service/InvoiceService.php';
 require_once __DIR__ . '/../Service/PaymentMethodService.php';
 require_once __DIR__ . '/../Service/BookingService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
-require_once __DIR__ . '/../Repository/InvoiceRepository.php';
-require_once __DIR__ . '/../Repository/BookingRepository.php';
-require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
-require_once __DIR__ . '/../Repository/DetailRepository.php';
-require_once __DIR__ . '/../Repository/VenueRepository.php';
-require_once __DIR__ . '/../Repository/ClientRepository.php';
-require_once __DIR__ . '/../Repository/ServiceRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
-class InvoiceController
+class InvoiceController extends BaseController
 {
   private InvoiceService $invoiceService;
   private PaymentMethodService $paymentMethodService;
   private BookingService $bookingService;
-  private InvoiceRepository $invoiceRepo;
-  private BookingRepository $bookingRepo;
-  private PaymentMethodRepository $paymentMethodRepo;
-  private DetailRepository $detailRepo;
-  private VenueRepository $venueRepo;
-  private ClientRepository $clientRepo;
-  private ServiceRepository $serviceRepo;
 
   public function __construct()
   {
-    $connection = DataBase::getConnection();
-
     $this->invoiceService = new InvoiceService();
     $this->paymentMethodService = new PaymentMethodService();
     $this->bookingService = new BookingService();
-    $this->invoiceRepo = new InvoiceRepository($connection);
-    $this->bookingRepo = new BookingRepository($connection);
-    $this->paymentMethodRepo = new PaymentMethodRepository($connection);
-    $this->detailRepo = new DetailRepository($connection);
-    $this->venueRepo = new VenueRepository($connection);
-    $this->clientRepo = new ClientRepository($connection);
-    $this->serviceRepo = new ServiceRepository($connection);
   }
 
   // =========================================================
@@ -47,22 +25,20 @@ class InvoiceController
   // =========================================================
   public function showForm(): void
   {
-    session_start();
     $this->requireClient();
 
     $idBooking = (int) ($_GET['bookingId'] ?? 0);
-    $booking = $this->bookingRepo->findById($idBooking);
+    $booking = $this->bookingService->getBooking($idBooking);
 
-    if ($booking === null || $booking->getIdClient() !== $this->currentClient()->getIdClient()) {
-      header('Location: ../../Public/index.php?controller=booking&action=myBookings');
-      exit;
+    if ($booking === null || $booking->getIdClient() !== $this->currentUser()->getIdClient()) {
+      $this->redirect('booking', 'myBookings');
     }
 
-    $paymentMethods = $this->paymentMethodRepo->findActive();
+    $paymentMethods = $this->paymentMethodService->findActive();
     $totals = $this->bookingService->calculateTotals($idBooking);
     $total = $totals['total'];
-    $details = $this->detailRepo->findByBooking($idBooking);
-    $venue = $this->venueRepo->findById($booking->getIdLocal());
+    $details = $this->bookingService->getDetailsForBooking($idBooking);
+    $venue = $this->bookingService->getVenue($booking->getIdLocal());
 
     require_once __DIR__ . '/../View/Invoice/Form.php';
   }
@@ -72,7 +48,6 @@ class InvoiceController
   // =========================================================
   public function generate(): void
   {
-    session_start();
     $this->requireClient();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -80,14 +55,14 @@ class InvoiceController
       return;
     }
 
-    $client = $_SESSION['user'];
+    $client = $this->currentUser();
     $idBooking = (int) ($_POST['bookingId'] ?? 0);
     $idPaymentMethod = (int) ($_POST['paymentMethodId'] ?? 0);
     $date = trim($_POST['date'] ?? date('Y-m-d'));
 
     try {
 
-      $booking = $this->bookingRepo->findById($idBooking);
+      $booking = $this->bookingService->getBooking($idBooking);
 
       if ($booking === null || $booking->getIdClient() !== $client->getIdClient()) {
         throw new BusinessRuleException('No tienes permiso sobre esta reserva.');
@@ -100,12 +75,12 @@ class InvoiceController
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
-      $paymentMethods = $this->paymentMethodRepo->findActive();
+      $paymentMethods = $this->paymentMethodService->findActive();
       $totals = $this->bookingService->calculateTotals($idBooking);
       $total = $totals['total'];
-      $details = $this->detailRepo->findByBooking($idBooking);
-      $booking = $this->bookingRepo->findById($idBooking);
-      $venue = $booking !== null ? $this->venueRepo->findById($booking->getIdLocal()) : null;
+      $details = $this->bookingService->getDetailsForBooking($idBooking);
+      $booking = $this->bookingService->getBooking($idBooking);
+      $venue = $booking !== null ? $this->bookingService->getVenue($booking->getIdLocal()) : null;
 
       require_once __DIR__ . '/../View/Invoice/Form.php';
     }
@@ -116,38 +91,35 @@ class InvoiceController
   // =========================================================
   public function detail(): void
   {
-    session_start();
     $this->requireLogin();
 
     $idBooking = (int) ($_GET['bookingId'] ?? 0);
-    $invoice = $this->invoiceRepo->findByBooking($idBooking);
+    $invoice = $this->invoiceService->findByBooking($idBooking);
 
     if ($invoice === null) {
-      header('Location: ../../Public/index.php?controller=booking&action=myBookings');
-      exit;
+      $this->redirect('booking', 'myBookings');
     }
 
-    $booking = $this->bookingRepo->findById($idBooking);
+    $booking = $this->bookingService->getBooking($idBooking);
     $type = $_SESSION['type'] ?? null;
 
-    if ($type === 'client' && $booking->getIdClient() !== $this->currentClient()->getIdClient()) {
-      header('Location: ../../Public/index.php?controller=booking&action=myBookings');
-      exit;
+    if ($type === 'client' && $booking->getIdClient() !== $this->currentUser()->getIdClient()) {
+      $this->redirect('booking', 'myBookings');
     }
 
-    $details = $this->detailRepo->findByBooking($idBooking);
+    $details = $this->bookingService->getDetailsForBooking($idBooking);
     $totals = $this->bookingService->calculateTotals($idBooking);
     $total = $totals['total'];
 
-    $venue = $booking !== null ? $this->venueRepo->findById($booking->getIdLocal()) : null;
-    $client = $booking !== null ? $this->clientRepo->findByClientPk($booking->getIdClient()) : null;
-    $paymentMethod = $this->paymentMethodRepo->findById($invoice->getIdPaymentMethod());
+    $venue = $booking !== null ? $this->bookingService->getVenue($booking->getIdLocal()) : null;
+    $client = $booking !== null ? $this->bookingService->getClient($booking->getIdClient()) : null;
+    $paymentMethod = $this->paymentMethodService->findById($invoice->getIdPaymentMethod());
 
     $serviceMap = [];
     foreach ($details as $d) {
       if ($d->getIdLocalService() > 0
           && !isset($serviceMap[$d->getIdLocalService()])) {
-        $service = $this->serviceRepo->findById($d->getIdLocalService());
+        $service = $this->bookingService->getService($d->getIdLocalService());
         if ($service !== null) {
           $serviceMap[$d->getIdLocalService()] = $service;
         }
@@ -162,49 +134,24 @@ class InvoiceController
   // =========================================================
   public function list(): void
   {
-    session_start();
     $this->requireClient();
 
-    $client = $_SESSION['user'];
-    $bookings = $this->bookingRepo->findByClient($client->getIdClient());
+    $client = $this->currentUser();
+    $bookings = $this->bookingService->getBookingsByClient($client->getIdClient());
 
     $invoices = [];
     foreach ($bookings as $booking) {
-      $invoice = $this->invoiceRepo->findByBooking($booking->getIdBooking());
+      $invoice = $this->invoiceService->findByBooking($booking->getIdBooking());
       if ($invoice !== null) {
         $invoices[] = $invoice;
       }
     }
 
     $paymentMethodById = [];
-    foreach ($this->paymentMethodRepo->findAll() as $pm) {
+    foreach ($this->paymentMethodService->findAll() as $pm) {
       $paymentMethodById[$pm->getIdPaymentMethod()] = $pm->getPaymentMethod();
     }
 
     require_once __DIR__ . '/../View/Invoice/List.php';
-  }
-
-  // =========================================================
-  // GUARDIAS
-  // =========================================================
-  private function currentClient()
-  {
-    return $_SESSION['user'] ?? null;
-  }
-
-  private function requireLogin(): void
-  {
-    if (($_SESSION['type'] ?? null) === null) {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
-      exit;
-    }
-  }
-
-  private function requireClient(): void
-  {
-    if (($_SESSION['type'] ?? null) !== 'client') {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
-      exit;
-    }
   }
 }

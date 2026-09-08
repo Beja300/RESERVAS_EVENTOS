@@ -14,12 +14,6 @@
 
   var API_URL = 'index.php?controller=api&action=locations';
 
-  function getBasePath() {
-    var parts = (window.location.pathname || '').split('/');
-    parts.pop();
-    return parts.join('/');
-  }
-
   /**
    * Crea el combo (input + lista) alrededor de un <select> nativo opcional.
    * options: { items, placeholder, onSelect(value), onClear }
@@ -411,15 +405,8 @@
 
     var group = new Group(provinceSel, cantonSel, districtSel);
 
-    fetch(getBasePath() + '/' + API_URL)
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        group.data = data;
-        group.provinceCombo.setItems(group.provinces());
-        group.provinceCombo.setNativeOptions(group.provinces());
-        group.applyPreselection();
-      })
-      .catch(function () {
+    App.ajax(App.base() + '/' + API_URL, { method: 'GET' }).then(function (r) {
+      if (!r.ok || !r.data || typeof r.data !== 'object' || Array.isArray(r.data)) {
         // Dataset no disponible: se deja el <select> nativo visible para fallback.
         group.provinceCombo.root.style.display = 'none';
         group.cantonCombo.root.style.display = 'none';
@@ -427,7 +414,14 @@
         group.provinceSel.style.display = '';
         group.cantonSel.style.display = '';
         group.districtSel.style.display = '';
-      });
+        return;
+      }
+      var data = r.data;
+      group.data = data;
+      group.provinceCombo.setItems(group.provinces());
+      group.provinceCombo.setNativeOptions(group.provinces());
+      group.applyPreselection();
+    });
   }
 
   if (document.readyState === 'loading') {

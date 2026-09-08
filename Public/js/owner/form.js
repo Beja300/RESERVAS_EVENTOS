@@ -1,6 +1,4 @@
 (function () {
-    function base() { var p=(window.location.pathname||'').split('/'); p.pop(); return p.join('/'); }
-
     // Cambio de contraseña (mostrar/ocultar)
     var pwCheck = document.getElementById('changePasswordCheck');
     var pwFields = document.getElementById('passwordFields');
@@ -13,20 +11,6 @@
         }
       });
     }
-    [['currentPassword', 'currentPasswordToggle'], ['newPassword', 'newPasswordToggle']].forEach(function (pair) {
-      var input = document.getElementById(pair[0]);
-      var toggle = document.getElementById(pair[1]);
-      if (input && toggle) {
-        toggle.addEventListener('click', function () {
-          var show = input.type === 'password';
-          input.type = show ? 'text' : 'password';
-          toggle.textContent = show ? 'Ocultar' : 'Mostrar';
-          toggle.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
-          input.focus();
-        });
-      }
-    });
-
     // Vista previa de la foto antes de subirla.
     var photoInput = document.querySelector('[data-photo-input]');
     if (photoInput) {
@@ -74,17 +58,9 @@
           if (nw) nw.value = '';
         }
 
-        fetch(pForm.getAttribute('action'), {
-          method: 'POST',
-          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-          body: new FormData(pForm)
-        }).then(function (r) {
-          return r.json().then(function (j) { return { ok: r.ok, data: j }; });
-        }).then(function (r) {
+        App.ajax(pForm.getAttribute('action'), { body: new FormData(pForm) }).then(function (r) {
           window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
           if (r.ok) setTimeout(function () { window.location.reload(); }, 700);
-        }).catch(function () {
-          window.App && App.toast('Ocurrió un error al guardar. Inténtalo de nuevo.', 'error');
         });
       });
     }
@@ -97,15 +73,10 @@
         window.App && App.confirmModal('¿Eliminar tu foto de perfil?', 'Eliminar foto')
           .then(function (ok) {
             if (!ok) return;
-            fetch(phForm.getAttribute('action'), {
-              method: 'POST',
-              headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-              body: new FormData(phForm)
-            }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
-              .then(function (r) {
-                window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
-                if (r.ok) setTimeout(function () { window.location.reload(); }, 700);
-              });
+            App.ajax(phForm.getAttribute('action'), { body: new FormData(phForm) }).then(function (r) {
+              window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
+              if (r.ok) setTimeout(function () { window.location.reload(); }, 700);
+            });
           });
       });
     }
@@ -120,15 +91,10 @@
           'Desactivar cuenta'
         ).then(function (ok) {
           if (!ok) return;
-          fetch(deact.getAttribute('action'), {
-            method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-            body: new FormData(deact)
-          }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
-            .then(function (r) {
-              window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
-              if (r.ok) setTimeout(function () { window.location.href = base() + '/index.php?controller=auth&action=showLogin'; }, 800);
-            });
+          App.ajax(deact.getAttribute('action'), { body: new FormData(deact) }).then(function (r) {
+            window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
+            if (r.ok) setTimeout(function () { window.location.href = App.actionUrl('auth', 'showLogin'); }, 800);
+          });
         });
       });
     }

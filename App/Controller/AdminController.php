@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/BaseController.php';
 require_once __DIR__ . '/../Service/AdminService.php';
 require_once __DIR__ . '/../Service/AuthService.php';
 require_once __DIR__ . '/../Service/RoleSecurityService.php';
@@ -7,26 +8,17 @@ require_once __DIR__ . '/../Service/InvoiceService.php';
 require_once __DIR__ . '/../Service/EarningService.php';
 require_once __DIR__ . '/../Service/BookingService.php';
 require_once __DIR__ . '/../Service/BookingAdminService.php';
+require_once __DIR__ . '/../Service/DemoDataService.php';
 require_once __DIR__ . '/../Service/NotificationService.php';
 require_once __DIR__ . '/../Service/CommissionConfigService.php';
+require_once __DIR__ . '/../Service/ProfileImageService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
-require_once __DIR__ . '/../Repository/BookingRepository.php';
-require_once __DIR__ . '/../Repository/BookingHistoryRepository.php';
-require_once __DIR__ . '/../Repository/HistoryRepository.php';
-require_once __DIR__ . '/../Repository/BookingRefundRepository.php';
-require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
-require_once __DIR__ . '/../Repository/DetailRepository.php';
-require_once __DIR__ . '/../Repository/VenueRepository.php';
-require_once __DIR__ . '/../Repository/RoleRepository.php';
-require_once __DIR__ . '/../Repository/AdminRepository.php';
-require_once __DIR__ . '/../Repository/ClientRepository.php';
-require_once __DIR__ . '/../Repository/OwnerRepository.php';
-require_once __DIR__ . '/../Repository/VenueRatingRepository.php';
-require_once __DIR__ . '/../Repository/ServiceRatingRepository.php';
+require_once __DIR__ . '/../Repository/NotificationRepository.php';
 require_once __DIR__ . '/../Repository/CommissionConfigRepository.php';
+require_once __DIR__ . '/../Model/Role.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
-class AdminController
+class AdminController extends BaseController
 {
   private AdminService $adminService;
   private AuthService $authService;
@@ -35,20 +27,10 @@ class AdminController
   private EarningService $earningService;
   private BookingService $bookingService;
   private BookingAdminService $bookingAdminService;
-  private BookingRepository $bookingRepo;
-  private BookingHistoryRepository $bookingHistoryRepo;
-  private BookingRefundRepository $bookingRefundRepo;
-  private BookingTicketRepository $bookingTicketRepo;
-  private DetailRepository $detailRepo;
-  private VenueRepository $venueRepo;
-  private RoleRepository $roleRepo;
-  private AdminRepository $adminRepo;
-  private ClientRepository $clientRepo;
-  private OwnerRepository $ownerRepo;
-  private VenueRatingRepository $venueRatingRepo;
-  private ServiceRatingRepository $serviceRatingRepo;
   private NotificationService $notificationService;
   private CommissionConfigService $commissionConfigService;
+  private DemoDataService $demoDataService;
+  private ProfileImageService $profileImageService;
 
   public function __construct()
   {
@@ -61,22 +43,12 @@ class AdminController
     $this->earningService = new EarningService($connection);
     $this->bookingService = new BookingService();
     $this->bookingAdminService = new BookingAdminService($connection);
-    $this->bookingRepo = new BookingRepository($connection);
-    $this->bookingHistoryRepo = new BookingHistoryRepository($connection);
-    $this->bookingRefundRepo = new BookingRefundRepository($connection);
-    $this->bookingTicketRepo = new BookingTicketRepository($connection);
-    $this->detailRepo = new DetailRepository($connection);
-    $this->venueRepo = new VenueRepository($connection);
-    $this->roleRepo = new RoleRepository($connection);
-    $this->adminRepo = new AdminRepository($connection);
-    $this->clientRepo = new ClientRepository($connection);
-    $this->ownerRepo = new OwnerRepository($connection);
-    $this->venueRatingRepo = new VenueRatingRepository($connection);
-    $this->serviceRatingRepo = new ServiceRatingRepository($connection);
     $this->notificationService = new NotificationService(new NotificationRepository($connection));
     $this->commissionConfigService = new CommissionConfigService(
       new CommissionConfigRepository($connection)
     );
+    $this->demoDataService = new DemoDataService($connection);
+    $this->profileImageService = new ProfileImageService();
   }
 
   // =========================================================
@@ -84,7 +56,6 @@ class AdminController
   // =========================================================
   public function dashboard(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $yearMonth = trim($_POST['month'] ?? $_GET['month'] ?? date('Y-m'));
@@ -93,24 +64,23 @@ class AdminController
       $yearMonth = date('Y-m');
     }
 
-    $bookings = $this->bookingRepo->findByMonth($yearMonth);
-    $topVenues = $this->bookingRepo->topActiveVenues(5);
-    $topServices = $this->detailRepo->topRequestedServices(5);
+    $dashboard = $this->adminService->getDashboardData($yearMonth);
+    $bookings = $dashboard['bookings'];
+    $topVenues = $dashboard['topVenues'];
+    $topServices = $dashboard['topServices'];
+    $stateCounts = $dashboard['stateCounts'];
+    $occupancy = $dashboard['occupancy'];
+    $clientStats = $dashboard['clientStats'];
+    $topClients = $dashboard['topClients'];
+    $venueAvg = $dashboard['venueAvg'];
+    $venueReviews = $dashboard['venueReviews'];
+    $serviceAvg = $dashboard['serviceAvg'];
+    $serviceReviews = $dashboard['serviceReviews'];
+
     $monthStats = $this->earningService->summarizeByMonth($yearMonth);
     $config = $this->commissionConfigService->getActive();
     $commissionPct = $config->getPercentage();
     $taxPct = $config->getTax();
-    $stateCounts = $this->bookingRepo->countByState($yearMonth);
-    $occupancy = $this->bookingRepo->occupancyByVenue($yearMonth);
-    $clientStats = [
-      'nuevos'      => $this->clientRepo->countNewThisMonth($yearMonth),
-      'recurrentes' => $this->clientRepo->countRecurrentThisMonth($yearMonth),
-    ];
-    $topClients = $this->clientRepo->topByBookings($yearMonth, 5);
-    $venueAvg = $this->venueRatingRepo->averageStars();
-    $venueReviews = $this->venueRatingRepo->countAll();
-    $serviceAvg = $this->serviceRatingRepo->averageStars();
-    $serviceReviews = $this->serviceRatingRepo->countAll();
     $prevMonth = date('Y-m', strtotime($yearMonth . '-01 first day of last month'));
     $nextMonth = date('Y-m', strtotime($yearMonth . '-01 first day of next month'));
 
@@ -122,12 +92,11 @@ class AdminController
   // =========================================================
   public function users(): void
   {
-    session_start();
     $this->requireAdmin();
 
-    $admins = $this->adminRepo->findAll();
-    $clients = $this->clientRepo->findAll();
-    $owners = $this->ownerRepo->findAll();
+    $admins = $this->adminService->findAllAdmins();
+    $clients = $this->adminService->findAllClients();
+    $owners = $this->adminService->findAllOwners();
 
     require_once __DIR__ . '/../View/Admin/List.php';
   }
@@ -137,15 +106,13 @@ class AdminController
   // =========================================================
   public function activateUser(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $idRole = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
 
     $this->adminService->activate($idRole);
 
-    header('Location: ../../Public/index.php?controller=admin&action=users');
-    exit;
+    $this->redirect('admin', 'users');
   }
 
   // =========================================================
@@ -153,7 +120,6 @@ class AdminController
   // =========================================================
   public function deactivateUser(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $idRole = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
@@ -163,14 +129,12 @@ class AdminController
 
       $this->adminService->desactivate($idRole, $targetType);
 
-      header('Location: ../../Public/index.php?controller=admin&action=users');
-      exit;
+      $this->redirect('admin', 'users');
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
 
-      header('Location: ../../Public/index.php?controller=admin&action=users');
-      exit;
+      $this->redirect('admin', 'users');
     }
   }
 
@@ -179,7 +143,6 @@ class AdminController
   // =========================================================
   public function bookings(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $yearMonth = trim($_POST['month'] ?? $_GET['month'] ?? date('Y-m'));
@@ -188,9 +151,9 @@ class AdminController
       $yearMonth = date('Y-m');
     }
 
-    $bookings = $this->bookingRepo->findByMonthWithDetails($yearMonth);
-    $history = $this->bookingHistoryRepo->findAllWithDetails();
-    $refundsPending = $this->bookingRefundRepo->findPending();
+    $bookings = $this->adminService->getBookingsByMonthWithDetails($yearMonth);
+    $history = $this->adminService->getBookingHistoryAll();
+    $refundsPending = $this->adminService->getPendingRefunds();
     $prevMonth = date('Y-m', strtotime($yearMonth . '-01 first day of last month'));
     $nextMonth = date('Y-m', strtotime($yearMonth . '-01 first day of next month'));
 
@@ -203,11 +166,9 @@ class AdminController
   // =========================================================
   public function userHistory(): void
   {
-    session_start();
     $this->requireAdmin();
 
-    $historyRepo = new HistoryRepository();
-    $history = $historyRepo->listAll();
+    $history = $this->adminService->getAllUserHistory();
 
     require_once __DIR__ . '/../View/Admin/UserHistory.php';
   }
@@ -217,7 +178,6 @@ class AdminController
   // =========================================================
   public function profile(): void
   {
-    session_start();
     $this->requireAdmin();
 
     require_once __DIR__ . '/../View/Admin/Profile.php';
@@ -228,7 +188,6 @@ class AdminController
   // =========================================================
   public function updateProfile(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -283,10 +242,17 @@ class AdminController
       $admin->setEmail($email);
       $admin->setPhoneNumber($phoneNumber);
 
-      $this->resolveAdminProfileImage($admin);
+      $admin->setImageAdmin(
+        $this->profileImageService->resolveAndPersist(
+          $admin->getImageAdmin(),
+          $_POST,
+          $_FILES,
+          'resource/admins/',
+          'admin_'
+        )
+      );
 
-      $this->roleRepo->update($admin);
-      $this->adminRepo->updateProfile($admin);
+      $this->adminService->updateAdminProfile($admin);
 
       if ($hasCurrent && $hasNew) {
         $this->roleSecurityService->changePassword($admin->getIdRol(), $newPassword);
@@ -321,7 +287,6 @@ class AdminController
   // =========================================================
   public function removePhoto(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -331,10 +296,10 @@ class AdminController
 
     $admin = $_SESSION['user'];
 
-    $this->deleteAdminImageFile($admin->getImageAdmin());
+    $this->profileImageService->deleteStoredFile($admin->getImageAdmin(), 'resource/admins/');
     $admin->setImageAdmin('');
 
-    $this->adminRepo->updateProfile($admin);
+    $this->adminService->updateAdminProfile($admin);
 
     $_SESSION['user'] = $admin;
 
@@ -351,7 +316,6 @@ class AdminController
   // =========================================================
   public function deactivateAccount(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -388,77 +352,10 @@ class AdminController
   }
 
   // =========================================================
-  // FOTO DE PERFIL: prioriza archivo, luego URL.
-  // =========================================================
-  private const ADMIN_IMAGE_DIR = 'resource/admins/';
-
-  private function resolveAdminProfileImage(Admin $admin): void
-  {
-    $current = $admin->getImageAdmin();
-    $newImage = $current;
-
-    if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-      $file = $_FILES['image'];
-      $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-      $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
-
-      if (!in_array($extension, $allowed, true)) {
-        throw new BusinessRuleException("Formato de imagen no válido (usa jpg, png, webp o gif).");
-      }
-
-      if ($file['size'] > 2 * 1024 * 1024) {
-        throw new BusinessRuleException("La imagen no puede superar los 2 MB.");
-      }
-
-      $dir = __DIR__ . '/../../Public/resource/admins/';
-      if (!is_dir($dir)) {
-        mkdir($dir, 0777, true);
-      }
-
-      $filename = 'admin_' . $admin->getIdAdmin() . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
-
-      if (!move_uploaded_file($file['tmp_name'], $dir . $filename)) {
-        throw new BusinessRuleException("No se pudo guardar la imagen.");
-      }
-
-      $newImage = self::ADMIN_IMAGE_DIR . $filename;
-    } else {
-      $url = trim($_POST['imageUrl'] ?? '');
-
-      if ($url !== '') {
-        if (!filter_var($url, FILTER_VALIDATE_URL)) {
-          throw new BusinessRuleException("URL de imagen no válida.");
-        }
-
-        $newImage = $url;
-      }
-    }
-
-    if ($newImage !== $current) {
-      $this->deleteAdminImageFile($current);
-      $admin->setImageAdmin($newImage);
-    }
-  }
-
-  // =========================================================
-  // BORRAR EL ARCHIVO LOCAL (nunca URLs externas)
-  // =========================================================
-  private function deleteAdminImageFile(string $storedPath): void
-  {
-    if (str_starts_with($storedPath, self::ADMIN_IMAGE_DIR)) {
-      $file = __DIR__ . '/../../Public/' . $storedPath;
-      if (is_file($file)) {
-        @unlink($file);
-      }
-    }
-  }
-
-  // =========================================================
   // APROBAR PAGO DE UNA RESERVA
   // =========================================================
   public function approvePayment(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $idBooking = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
@@ -468,13 +365,13 @@ class AdminController
       $this->invoiceService->approve($idBooking);
 
       $totals = $this->bookingService->calculateTotals($idBooking);
-      $this->earningService->recordEarning($idBooking, $totals, $this->currentAdminRoleId());
+      $this->earningService->recordEarning($idBooking, $totals, $this->currentRoleId());
 
-      $approvedBooking = $this->bookingRepo->findById($idBooking);
+      $approvedBooking = $this->adminService->getBookingById($idBooking);
       if ($approvedBooking !== null) {
         $this->notificationService->notifyClientPaymentApproved((int) $approvedBooking->getIdClient(), (int) $idBooking);
 
-        $approvedVenue = $this->venueRepo->findById($approvedBooking->getIdLocal());
+        $approvedVenue = $this->adminService->getVenueById($approvedBooking->getIdLocal());
         if ($approvedVenue !== null) {
           $this->notificationService->notifyOwnerPaymentReceived((int) $approvedVenue->getIdOwner(), (int) $idBooking);
         }
@@ -496,7 +393,6 @@ class AdminController
   // =========================================================
   public function rejectPayment(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $idBooking = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
@@ -505,7 +401,7 @@ class AdminController
 
       $this->invoiceService->reject($idBooking);
 
-      $rejectedBooking = $this->bookingRepo->findById($idBooking);
+      $rejectedBooking = $this->adminService->getBookingById($idBooking);
       if ($rejectedBooking !== null) {
         $this->notificationService->notifyClientPaymentRejected((int) $rejectedBooking->getIdClient(), (int) $idBooking);
       }
@@ -526,30 +422,28 @@ class AdminController
   // =========================================================
   public function bookingDetail(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $idBooking = (int) ($_GET['id'] ?? 0);
-    $booking = $this->bookingRepo->findById($idBooking);
+    $booking = $this->adminService->getBookingById($idBooking);
 
     if ($booking === null) {
-      header('Location: ../../Public/index.php?controller=admin&action=bookings');
-      exit;
+      $this->redirect('admin', 'bookings');
     }
 
-    $client = $this->clientRepo->findByClientPk($booking->getIdClient());
-    $venue = $this->venueRepo->findById($booking->getIdLocal());
+    $client = $this->adminService->getClientByPk($booking->getIdClient());
+    $venue = $this->adminService->getVenueById($booking->getIdLocal());
 
-    $lines = $this->detailRepo->findByBooking($idBooking);
+    $lines = $this->adminService->getDetailLinesByBooking($idBooking);
     $totals = $this->bookingService->calculateTotals($idBooking);
 
     $invoice = $this->invoiceService->findByBooking($idBooking);
-    $ticket = $this->bookingTicketRepo->findByBooking($idBooking);
+    $ticket = $this->adminService->getTicketByBooking($idBooking);
     $earning = $this->earningService->findByBooking($idBooking);
-    $refundRequest = $this->bookingRefundRepo->findByBooking($idBooking);
-    $history = $this->bookingHistoryRepo->findByBooking($idBooking);
-    $venues = $this->venueRepo->findActive();
-    $bookedDates = $this->bookingRepo->bookedDatesByVenue($booking->getIdLocal());
+    $refundRequest = $this->adminService->getRefundByBooking($idBooking);
+    $history = $this->adminService->getBookingHistoryByBooking($idBooking);
+    $venues = $this->adminService->getActiveVenues();
+    $bookedDates = $this->adminService->getBookedDates($booking->getIdLocal());
 
     require_once __DIR__ . '/../View/Admin/BookingDetail.php';
   }
@@ -559,16 +453,14 @@ class AdminController
   // =========================================================
   public function cancelBooking(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $idBooking = (int) ($_POST['id'] ?? 0);
     $note = trim($_POST['note'] ?? '') ?: null;
-    $adminRoleId = $this->currentAdminRoleId();
+    $adminRoleId = $this->currentRoleId();
 
     try {
-      $this->bookingAdminService->cancel($idBooking, $adminRoleId, $note);
-      $cancelledBooking = $this->bookingRepo->findById($idBooking);
+      $cancelledBooking = $this->bookingAdminService->cancel($idBooking, $adminRoleId, $note);
       if ($cancelledBooking !== null) {
         $this->notificationService->notifyClientBookingCancelled((int) $cancelledBooking->getIdClient(), (int) $idBooking);
       }
@@ -585,17 +477,15 @@ class AdminController
   // =========================================================
   public function rescheduleBooking(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $idBooking = (int) ($_POST['id'] ?? 0);
     $newDate = trim($_POST['date'] ?? '');
     $note = trim($_POST['note'] ?? '') ?: null;
-    $adminRoleId = $this->currentAdminRoleId();
+    $adminRoleId = $this->currentRoleId();
 
     try {
-      $this->bookingAdminService->reschedule($idBooking, $adminRoleId, $newDate, $note);
-      $rescheduledBooking = $this->bookingRepo->findById($idBooking);
+      $rescheduledBooking = $this->bookingAdminService->reschedule($idBooking, $adminRoleId, $newDate, $note);
       if ($rescheduledBooking !== null) {
         $this->notificationService->notifyClientBookingRescheduled((int) $rescheduledBooking->getIdClient(), (int) $idBooking);
       }
@@ -612,17 +502,15 @@ class AdminController
   // =========================================================
   public function changeBookingVenue(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $idBooking = (int) ($_POST['id'] ?? 0);
     $newVenueId = (int) ($_POST['venueId'] ?? 0);
     $note = trim($_POST['note'] ?? '') ?: null;
-    $adminRoleId = $this->currentAdminRoleId();
+    $adminRoleId = $this->currentRoleId();
 
     try {
-      $this->bookingAdminService->changeVenue($idBooking, $adminRoleId, $newVenueId, $note);
-      $venueChangedBooking = $this->bookingRepo->findById($idBooking);
+      $venueChangedBooking = $this->bookingAdminService->changeVenue($idBooking, $adminRoleId, $newVenueId, $note);
       if ($venueChangedBooking !== null) {
         $this->notificationService->notifyClientVenueChanged((int) $venueChangedBooking->getIdClient(), (int) $idBooking);
       }
@@ -639,17 +527,15 @@ class AdminController
   // =========================================================
   public function refundBooking(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $idBooking = (int) ($_POST['id'] ?? 0);
     $refundRequestId = (int) ($_POST['refundId'] ?? 0);
     $note = trim($_POST['note'] ?? '') ?: null;
-    $adminRoleId = $this->currentAdminRoleId();
+    $adminRoleId = $this->currentRoleId();
 
     try {
-      $this->bookingAdminService->approveRefund($idBooking, $adminRoleId, $refundRequestId, $note);
-      $refundedBooking = $this->bookingRepo->findById($idBooking);
+      $refundedBooking = $this->bookingAdminService->approveRefund($idBooking, $adminRoleId, $refundRequestId, $note);
       if ($refundedBooking !== null) {
         $this->notificationService->notifyClientRefundApproved((int) $refundedBooking->getIdClient(), (int) $idBooking);
       }
@@ -666,16 +552,14 @@ class AdminController
   // =========================================================
   public function rejectRefundBooking(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $idBooking = (int) ($_POST['id'] ?? 0);
     $refundRequestId = (int) ($_POST['refundId'] ?? 0);
-    $adminRoleId = $this->currentAdminRoleId();
+    $adminRoleId = $this->currentRoleId();
 
     try {
-      $this->bookingAdminService->rejectRefund($refundRequestId, $adminRoleId);
-      $refundRejectedBooking = $this->bookingRepo->findById($idBooking);
+      $refundRejectedBooking = $this->bookingAdminService->rejectRefund($refundRequestId, $adminRoleId);
       if ($refundRejectedBooking !== null) {
         $this->notificationService->notifyClientRefundRejected((int) $refundRejectedBooking->getIdClient(), (int) $idBooking);
       }
@@ -692,7 +576,6 @@ class AdminController
   // =========================================================
   public function commissionConfig(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $config = $this->commissionConfigService->getActive();
@@ -705,12 +588,10 @@ class AdminController
   // =========================================================
   public function saveCommissionConfig(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-      header('Location: ../../Public/index.php?controller=admin&action=commissionConfig');
-      exit;
+      $this->redirect('admin', 'commissionConfig');
     }
 
     $percentage = (float) trim($_POST['percentage'] ?? '');
@@ -747,41 +628,13 @@ class AdminController
   // =========================================================
   public function cleanTestData(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-      header('Location: ../../Public/index.php?controller=admin&action=dashboard');
-      exit;
+      $this->redirect('admin', 'dashboard');
     }
 
-    $connection = DataBase::getConnection();
-
-    // Se vacían solo tablas de datos generados por el uso (prueba/demo).
-    // NO se tocan datos maestros: roles, perfiles, ubicaciones,
-    // métodos de pago ni configuración de comisión.
-    $tables = [
-      'tbeearning',
-      'tbinvoice',
-      'tbbookingticket',
-      'tbbookingdetail',
-      'tbbooking',
-      'tbvenuerating',
-      'tbservicerating',
-      'tbpromotionservice',
-      'tbpromotion',
-      'tbservicehistory',
-      'tbservice',
-      'tbvenue',
-      'tbnotification',
-      'tbuserhistory',
-      'tbownerhistory',
-      'tbownerpayment',
-    ];
-
-    foreach ($tables as $table) {
-      $connection->exec('DELETE FROM ' . $table);
-    }
+    $this->demoDataService->cleanGeneratedData();
 
     header('Location: ../../Public/index.php?controller=admin&action=dashboard&cleaned=1');
     exit;
@@ -792,7 +645,6 @@ class AdminController
   // =========================================================
   public function showAdminForm(): void
   {
-    session_start();
     $this->requireAdmin();
 
     require_once __DIR__ . '/../View/Admin/AdminForm.php';
@@ -803,12 +655,10 @@ class AdminController
   // =========================================================
   public function createAdmin(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-      header('Location: ../../Public/index.php?controller=admin&action=showAdminForm');
-      exit;
+      $this->redirect('admin', 'showAdminForm');
     }
 
     $name = trim($_POST['name'] ?? '');
@@ -839,7 +689,6 @@ class AdminController
   // =========================================================
   public function showClientForm(): void
   {
-    session_start();
     $this->requireAdmin();
 
     require_once __DIR__ . '/../View/Admin/ClientForm.php';
@@ -850,12 +699,10 @@ class AdminController
   // =========================================================
   public function createClient(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-      header('Location: ../../Public/index.php?controller=admin&action=showClientForm');
-      exit;
+      $this->redirect('admin', 'showClientForm');
     }
 
     $name = trim($_POST['name'] ?? '');
@@ -886,7 +733,6 @@ class AdminController
   // =========================================================
   public function showOwnerForm(): void
   {
-    session_start();
     $this->requireAdmin();
 
     require_once __DIR__ . '/../View/Admin/OwnerForm.php';
@@ -897,12 +743,10 @@ class AdminController
   // =========================================================
   public function createOwner(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-      header('Location: ../../Public/index.php?controller=admin&action=showOwnerForm');
-      exit;
+      $this->redirect('admin', 'showOwnerForm');
     }
 
     $businessName = trim($_POST['ownerBusinessName'] ?? '');
@@ -962,17 +806,15 @@ class AdminController
   // =========================================================
   public function showEditForm(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $idRole = (int) ($_GET['id'] ?? 0);
     $type = trim($_GET['type'] ?? '');
 
-    $user = $this->loadUser($type, $idRole);
+    $user = $this->adminService->findUserByRoleId($type, $idRole);
 
     if ($user === null || !$this->viewFileFor($type)) {
-      header('Location: ../../Public/index.php?controller=admin&action=users');
-      exit;
+      $this->redirect('admin', 'users');
     }
 
     require_once __DIR__ . '/../View/Admin/' . $this->viewFileFor($type);
@@ -983,22 +825,19 @@ class AdminController
   // =========================================================
   public function updateUser(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-      header('Location: ../../Public/index.php?controller=admin&action=users');
-      exit;
+      $this->redirect('admin', 'users');
     }
 
     $idRole = (int) ($_POST['id'] ?? 0);
     $type = trim($_POST['type'] ?? '');
 
-    $user = $this->loadUser($type, $idRole);
+    $user = $this->adminService->findUserByRoleId($type, $idRole);
 
     if ($user === null || !$this->viewFileFor($type)) {
-      header('Location: ../../Public/index.php?controller=admin&action=users');
-      exit;
+      $this->redirect('admin', 'users');
     }
 
     $name = trim($_POST['name'] ?? '');
@@ -1047,7 +886,7 @@ class AdminController
         $user->setIdentificationNumberOwner($ownerIdentification);
       }
 
-      $this->roleRepo->update($user);
+      $this->adminService->updateRole($user);
 
       if ($password !== '') {
         $this->roleSecurityService->adminResetPassword($idRole, $password);
@@ -1058,7 +897,7 @@ class AdminController
       $this->roleSecurityService->recordEmailChange($idRole, $currentUserEmail, $email);
 
       if ($type === 'owner') {
-        $this->ownerRepo->updateProfile($user);
+        $this->adminService->updateOwnerProfile($user);
       }
 
       if (($_SESSION['type'] ?? null) === $type
@@ -1078,23 +917,6 @@ class AdminController
   }
 
   // =========================================================
-  // CARGAR USUARIO POR TIPO E ID DE ROL
-  // =========================================================
-  private function loadUser(string $type, int $idRole): Admin|Client|Owner|null
-  {
-    switch ($type) {
-      case 'admin':
-        return $this->adminRepo->findByRoleId($idRole);
-      case 'client':
-        return $this->clientRepo->findByRoleId($idRole);
-      case 'owner':
-        return $this->ownerRepo->findByRoleId($idRole);
-    }
-
-    return null;
-  }
-
-  // =========================================================
   // MAPEO TIPO -> VISTA DE EDICIÓN
   // =========================================================
   private function viewFileFor(string $type): ?string
@@ -1104,25 +926,5 @@ class AdminController
       'client' => 'ClientEdit.php',
       'owner'  => 'OwnerEdit.php',
     ][$type] ?? null;
-  }
-
-  // =========================================================
-  // GUARDIA: SOLO ADMIN AUTENTICADO
-  // =========================================================
-  private function requireAdmin(): void
-  {
-    if (($_SESSION['type'] ?? null) !== 'admin') {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
-      exit;
-    }
-  }
-
-  // =========================================================
-  // ROL ID DEL ADMIN EN SESIÓN (para la auditoría)
-  // =========================================================
-  private function currentAdminRoleId(): int
-  {
-    $user = $_SESSION['user'] ?? null;
-    return $user instanceof Admin && method_exists($user, 'getIdRol') ? (int) $user->getIdRol() : 0;
   }
 }

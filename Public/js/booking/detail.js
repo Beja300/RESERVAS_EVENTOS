@@ -17,17 +17,9 @@
   }
 
   function postJson(url, formData, onOk, onError) {
-    fetch(url, {
-      method: 'POST',
-      headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-      body: formData
-    }).then(function (res) {
-      return res.json().then(function (data) { return { ok: res.ok, data: data }; });
-    }).then(function (r) {
+    App.ajax(url, { body: formData }).then(function (r) {
       if (r.ok) onOk(r.data);
       else onError(r.data);
-    }).catch(function () {
-      onError({ message: 'Ocurrió un error de red. Intenta de nuevo.' });
     });
   }
 
@@ -100,7 +92,7 @@
 
         var data = new FormData(form);
 
-        postJson(form.getAttribute('action') || (window.location.pathname + '?controller=booking&action=uploadTicket'),
+        postJson(form.getAttribute('action') || App.actionUrl('booking', 'uploadTicket'),
           data,
           function (r) {
             App.toast(r.message || 'Comprobante subido.', 'success');
@@ -110,12 +102,6 @@
         );
       });
     }
-  }
-
-  function getBasePath() {
-    var script = (window.location.pathname || '').split('/');
-    script.pop();
-    return script.join('/');
   }
 
   function init() {
@@ -128,7 +114,7 @@
         e.preventDefault();
         var data = new FormData(addForm);
         data.set('bookingId', addForm.getAttribute('data-venue-booking'));
-        postJson(getBasePath() + '/index.php?controller=booking&action=addLine',
+        postJson(App.actionUrl('booking', 'addLine'),
           data,
           function (r) { App.toast(r.message || 'Servicio agregado.', 'success'); setTimeout(function () { window.location.reload(); }, 600); },
           function (r) { App.toast(r.message || 'No se pudo agregar el servicio.', 'error'); }
@@ -153,7 +139,7 @@
           var data = new FormData(cancelForm);
           postJson(cancelForm.getAttribute('action'),
             data,
-            function (r) { App.toast(r.message || 'Reserva cancelada.', 'success'); setTimeout(function () { window.location.href = getBasePath() + '/index.php?controller=booking&action=myBookings'; }, 600); },
+            function (r) { App.toast(r.message || 'Reserva cancelada.', 'success'); setTimeout(function () { window.location.href = App.actionUrl('booking', 'myBookings'); }, 600); },
             function (r) { App.toast(r.message || 'No se pudo cancelar.', 'error'); }
           );
         });

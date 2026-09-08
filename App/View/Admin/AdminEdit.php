@@ -1,7 +1,7 @@
 <?php
 $pageTitle = 'Editar administrador';
 $pageCss = 'admin/password-toggle';
-$pageJs = ['admin/password-toggle'];
+$pageJs = [];
 require_once __DIR__ . '/../_header.php';
 $u = $user;
 ?>
@@ -45,7 +45,7 @@ $u = $user;
       <label for="password">Contraseña (opcional)</label>
       <div class="password-wrapper">
         <input class="form-control" type="password" id="password" name="password" minlength="8" autocomplete="new-password">
-        <button class="password-toggle" type="button" id="passwordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+        <button class="password-toggle" type="button" id="passwordToggle" data-password-toggle="password" aria-label="Mostrar contraseña">Mostrar</button>
       </div>
       <div class="form-hint">Déjala vacía para no cambiarla. Mínimo 8 caracteres y un número.</div>
     </div>

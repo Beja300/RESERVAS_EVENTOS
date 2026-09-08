@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/BaseController.php';
 require_once __DIR__ . '/../Service/BookingService.php';
 require_once __DIR__ . '/../Service/DetailService.php';
 require_once __DIR__ . '/../Service/InvoiceService.php';
@@ -11,18 +12,11 @@ require_once __DIR__ . '/../Service/BookingTicketService.php';
 require_once __DIR__ . '/../Service/NotificationService.php';
 require_once __DIR__ . '/../Service/HistoryService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
-require_once __DIR__ . '/../Repository/BookingRepository.php';
-require_once __DIR__ . '/../Repository/DetailRepository.php';
 require_once __DIR__ . '/../Repository/ServiceRepository.php';
-require_once __DIR__ . '/../Repository/VenueRepository.php';
-require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
-require_once __DIR__ . '/../Repository/ClientRepository.php';
-require_once __DIR__ . '/../Repository/BookingRefundRepository.php';
-require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
-require_once __DIR__ . '/../Repository/OwnerRepository.php';
+require_once __DIR__ . '/../Repository/NotificationRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
-class BookingController
+class BookingController extends BaseController
 {
   private BookingService $bookingService;
   private DetailService $detailService;
@@ -31,16 +25,6 @@ class BookingController
   private ServiceService $serviceService;
   private OwnerService $ownerService;
   private BookingTicketService $bookingTicketService;
-  private BookingRepository $bookingRepo;
-  private DetailRepository $detailRepo;
-  private ServiceRepository $serviceRepo;
-  private VenueRepository $venueRepo;
-  private BookingTicketRepository $ticketRepo;
-  private BookingRefundRepository $refundRepo;
-  private PaymentMethodRepository $paymentMethodRepo;
-  private ClientRepository $clientRepo;
-  private OwnerRepository $ownerRepo;
-  private OwnerPaymentRepository $ownerPaymentRepo;
   private OwnerPaymentService $ownerPaymentService;
   private NotificationService $notificationService;
   private HistoryService $historyService;
@@ -52,19 +36,9 @@ class BookingController
     $this->bookingService = new BookingService();
     $this->detailService = new DetailService($connection);
     $this->invoiceService = new InvoiceService();
-    $this->clientService = new ClientService();
+    $this->clientService = new ClientService($connection);
     $this->serviceService = new ServiceService(new ServiceRepository($connection));
     $this->ownerService = new OwnerService($connection);
-    $this->bookingRepo = new BookingRepository($connection);
-    $this->detailRepo = new DetailRepository($connection);
-    $this->serviceRepo = new ServiceRepository($connection);
-    $this->venueRepo = new VenueRepository($connection);
-    $this->ticketRepo = new BookingTicketRepository($connection);
-    $this->refundRepo = new BookingRefundRepository($connection);
-    $this->paymentMethodRepo = new PaymentMethodRepository($connection);
-    $this->clientRepo = new ClientRepository($connection);
-    $this->ownerRepo = new OwnerRepository($connection);
-    $this->ownerPaymentRepo = new OwnerPaymentRepository($connection);
     $this->ownerPaymentService = new OwnerPaymentService($connection);
     $this->bookingTicketService = new BookingTicketService($connection);
     $this->notificationService = new NotificationService(new NotificationRepository($connection));
@@ -76,7 +50,6 @@ class BookingController
   // =========================================================
   public function create(): void
   {
-    session_start();
     $this->requireClient();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -84,7 +57,7 @@ class BookingController
       return;
     }
 
-    $client = $_SESSION['user'];
+    $client = $this->currentUser();
     $idVenue = (int) ($_POST['venueId'] ?? 0);
     $date = trim($_POST['date'] ?? '');
     $endDate = trim($_POST['endDate'] ?? '') ?: null;
@@ -118,7 +91,7 @@ class BookingController
 
       $this->historyService->logVenueBooking((int) $client->getIdRol(), $idVenue);
 
-      $venue = $this->venueRepo->findById($idVenue);
+      $venue = $this->bookingService->getVenue($idVenue);
       if ($venue !== null) {
         $this->notificationService->notifyOwnerOfNewBooking(
           (int) $venue->getIdOwner(),
@@ -133,9 +106,9 @@ class BookingController
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
-      $venue = $this->venueRepo->findById($idVenue);
+      $venue = $this->bookingService->getVenue($idVenue);
       $services = $this->serviceService->findAvailableByLocal($idVenue);
-      $bookedDates = $this->bookingRepo->bookedDatesByVenue($idVenue);
+      $bookedDates = $this->bookingService->getBookedDates($idVenue);
 
       require_once __DIR__ . '/../View/Booking/Form.php';
     }
@@ -146,18 +119,17 @@ class BookingController
   // =========================================================
   public function showForm(): void
   {
-    session_start();
+    $this->startSession();
 
     $idVenue = (int) ($_GET['venueId'] ?? 0);
-    $venue = $this->venueRepo->findById($idVenue);
+    $venue = $this->bookingService->getVenue($idVenue);
 
     if ($venue === null || !$venue->getIsActive()) {
-      header('Location: ../../Public/index.php?controller=venue&action=catalog');
-      exit;
+      $this->redirect('venue', 'catalog');
     }
 
     $services = $this->serviceService->findAvailableByLocal($idVenue);
-    $bookedDates = $this->bookingRepo->bookedDatesByVenue($idVenue);
+    $bookedDates = $this->bookingService->getBookedDates($idVenue);
 
     require_once __DIR__ . '/../View/Booking/Form.php';
   }
@@ -167,20 +139,19 @@ class BookingController
   // =========================================================
   public function myBookings(): void
   {
-    session_start();
     $this->requireClient();
 
-    $client = $_SESSION['user'];
-    $bookings = $this->bookingRepo->findByClient($client->getIdClient());
+    $client = $this->currentUser();
+    $bookings = $this->bookingService->getBookingsByClient($client->getIdClient());
 
     $venueNames = [];
     $hasTicket = [];
     foreach ($bookings as $b) {
-      $venue = $this->venueRepo->findById($b->getIdLocal());
+      $venue = $this->bookingService->getVenue($b->getIdLocal());
       $venueNames[$b->getIdBooking()] = $venue !== null
         ? $venue->getNameVenue()
         : 'Local #' . $b->getIdLocal();
-      $hasTicket[$b->getIdBooking()] = $this->ticketRepo->findByBooking($b->getIdBooking()) !== null;
+      $hasTicket[$b->getIdBooking()] = $this->bookingService->getTicketForBooking($b->getIdBooking()) !== null;
     }
 
     require_once __DIR__ . '/../View/Booking/List.php';
@@ -191,14 +162,13 @@ class BookingController
   // =========================================================
   public function detail(): void
   {
-    session_start();
+    $this->startSession();
 
     $idBooking = (int) ($_GET['id'] ?? 0);
-    $booking = $this->bookingRepo->findById($idBooking);
+    $booking = $this->bookingService->getBooking($idBooking);
 
     if ($booking === null) {
-      header('Location: ../../Public/index.php?controller=venue&action=catalog');
-      exit;
+      $this->redirect('venue', 'catalog');
     }
 
     $type = $_SESSION['type'] ?? null;
@@ -206,31 +176,29 @@ class BookingController
     if ($type === 'client') {
       $client = $_SESSION['user'];
       if ($booking->getIdClient() !== $client->getIdClient()) {
-        header('Location: ../../Public/index.php?controller=booking&action=myBookings');
-        exit;
+        $this->redirect('booking', 'myBookings');
       }
     } elseif ($type === 'owner') {
       $owner = $_SESSION['user'];
       $this->ownerService->assertOwnsVenue($owner->getIdOwner(), $booking->getIdLocal());
     } else {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
-      exit;
+      $this->redirect('auth', 'showLogin');
     }
 
-    $details = $this->detailRepo->findByBooking($idBooking);
+    $details = $this->bookingService->getDetailsForBooking($idBooking);
     $totals = $this->bookingService->calculateTotals($idBooking);
     $total = $totals['total'];
-    $venue = $this->venueRepo->findById($booking->getIdLocal());
-    $client = $this->clientRepo->findByClientPk($booking->getIdClient());
-    $owner = $venue !== null ? $this->ownerRepo->findByOwnerPk($venue->getIdOwner()) : null;
-    $ticket = $this->ticketRepo->findByBooking($idBooking);
-    $paymentMethods = $this->paymentMethodRepo->findActive();
+    $venue = $this->bookingService->getVenue($booking->getIdLocal());
+    $client = $this->bookingService->getClient($booking->getIdClient());
+    $owner = $venue !== null ? $this->bookingService->getOwner($venue->getIdOwner()) : null;
+    $ticket = $this->bookingService->getTicketForBooking($idBooking);
+    $paymentMethods = $this->bookingService->getActivePaymentMethods();
 
     $serviceMap = [];
     foreach ($details as $d) {
       if ($d->getIdLocalService() > 0
           && !isset($serviceMap[$d->getIdLocalService()])) {
-        $service = $this->serviceRepo->findById($d->getIdLocalService());
+        $service = $this->serviceService->findById($d->getIdLocalService());
         if ($service !== null) {
           $serviceMap[$d->getIdLocalService()] = $service;
         }
@@ -275,7 +243,7 @@ class BookingController
     $isClient = ($_SESSION['type'] ?? null) === 'client';
     $hasTicket = $ticket !== null;
 
-    $refundRequest = $isClient ? $this->refundRepo->findByBooking($idBooking) : null;
+    $refundRequest = $isClient ? $this->bookingService->getRefundForBooking($idBooking) : null;
 
     require_once __DIR__ . '/../View/Booking/Detail.php';
   }
@@ -285,7 +253,6 @@ class BookingController
   // =========================================================
   public function addLine(): void
   {
-    session_start();
     $this->requireClient();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -293,7 +260,7 @@ class BookingController
       return;
     }
 
-    $client = $_SESSION['user'];
+    $client = $this->currentUser();
     $idBooking = (int) ($_POST['bookingId'] ?? 0);
     $idService = (int) ($_POST['serviceId'] ?? 0);
     $quantity = (int) ($_POST['quantity'] ?? 1);
@@ -328,27 +295,25 @@ class BookingController
   // =========================================================
   public function cancel(): void
   {
-    session_start();
     $this->requireClient();
 
-    $client = $_SESSION['user'];
+    $client = $this->currentUser();
     $idBooking = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
 
     try {
 
       $this->clientService->assertOwnsBooking($client->getIdClient(), $idBooking);
 
-      $this->bookingService->cancel($idBooking);
+      $cancelledBooking = $this->bookingService->cancel($idBooking);
 
-      $cancelledBooking = $this->bookingRepo->findById($idBooking);
-      if ($cancelledBooking !== null) {
-        $cancelledVenue = $this->venueRepo->findById($cancelledBooking->getIdLocal());
-        if ($cancelledVenue !== null) {
-          $this->notificationService->notifyOwnerBookingCancelled(
-            (int) $cancelledVenue->getIdOwner(),
-            (int) $idBooking
-          );
-        }
+      $cancelledVenue = $cancelledBooking !== null
+        ? $this->bookingService->getVenue($cancelledBooking->getIdLocal())
+        : null;
+      if ($cancelledVenue !== null) {
+        $this->notificationService->notifyOwnerBookingCancelled(
+          (int) $cancelledVenue->getIdOwner(),
+          (int) $idBooking
+        );
       }
 
       if (is_ajax()) {
@@ -375,10 +340,9 @@ class BookingController
   // =========================================================
   public function requestRefund(): void
   {
-    session_start();
     $this->requireClient();
 
-    $client = $_SESSION['user'];
+    $client = $this->currentUser();
     $idBooking = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
     $motivo = trim($_POST['motivo'] ?? '');
 
@@ -408,9 +372,12 @@ class BookingController
       exit;
     }
   }
+
+  // =========================================================
+  // PAGAR (generar factura) — cliente
+  // =========================================================
   public function pay(): void
   {
-    session_start();
     $this->requireClient();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -418,7 +385,7 @@ class BookingController
       return;
     }
 
-    $client = $_SESSION['user'];
+    $client = $this->currentUser();
     $idBooking = (int) ($_POST['bookingId'] ?? 0);
     $idPaymentMethod = (int) ($_POST['paymentMethodId'] ?? 0);
 
@@ -428,7 +395,7 @@ class BookingController
 
       $this->invoiceService->generate($idBooking, $idPaymentMethod, date('Y-m-d'));
 
-      $paidBooking = $this->bookingRepo->findById($idBooking);
+      $paidBooking = $this->bookingService->getBooking($idBooking);
       if ($paidBooking !== null) {
         $this->historyService->logVenuePurchase((int) $client->getIdRol(), (int) $paidBooking->getIdLocal());
       }
@@ -449,28 +416,27 @@ class BookingController
   // =========================================================
   public function venueBookings(): void
   {
-    session_start();
     $this->requireOwner();
 
-    $owner = $_SESSION['user'];
+    $owner = $this->currentUser();
     $idVenue = (int) ($_GET['venueId'] ?? 0);
 
     try {
 
       $this->ownerService->assertOwnsVenue($owner->getIdOwner(), $idVenue);
 
-      $bookings = $this->bookingRepo->findByVenue($idVenue);
+      $bookings = $this->bookingService->getBookingsByVenue($idVenue);
 
       $venueNames = [];
       $hasTicket = [];
       $clientNames = [];
       foreach ($bookings as $b) {
-        $venue = $this->venueRepo->findById($b->getIdLocal());
+        $venue = $this->bookingService->getVenue($b->getIdLocal());
         $venueNames[$b->getIdBooking()] = $venue !== null
           ? $venue->getNameVenue()
           : 'Local #' . $b->getIdLocal();
-        $hasTicket[$b->getIdBooking()] = $this->ticketRepo->findByBooking($b->getIdBooking()) !== null;
-        $client = $this->clientRepo->findByClientPk($b->getIdClient());
+        $hasTicket[$b->getIdBooking()] = $this->bookingService->getTicketForBooking($b->getIdBooking()) !== null;
+        $client = $this->bookingService->getClient($b->getIdClient());
         $clientNames[$b->getIdBooking()] = $client !== null
           ? $client->getName()
           : '#' . $b->getIdClient();
@@ -481,8 +447,7 @@ class BookingController
 
       $error = $e->getMessage();
 
-      header('Location: ../../Public/index.php?controller=venue&action=list');
-      exit;
+      $this->redirect('venue', 'list');
     }
   }
 
@@ -493,12 +458,11 @@ class BookingController
   // =========================================================
   public function pendingBookings(): void
   {
-    session_start();
     $this->requireOwner();
 
-    $owner = $_SESSION['user'];
+    $owner = $this->currentUser();
 
-    $allPending = $this->bookingRepo->findPendingByOwner($owner->getIdOwner());
+    $allPending = $this->bookingService->getPendingBookingsByOwner($owner->getIdOwner());
 
     $bookings = [];
     $venueNames = [];
@@ -506,7 +470,7 @@ class BookingController
     $clientNames = [];
 
     foreach ($allPending as $b) {
-      $ticket = $this->ticketRepo->findByBooking($b->getIdBooking());
+      $ticket = $this->bookingService->getTicketForBooking($b->getIdBooking());
 
       // Solo las que tienen comprobante por aprobar (ticket pendiente).
       if ($ticket === null || $ticket->getState() !== 'pendiente') {
@@ -515,14 +479,14 @@ class BookingController
 
       $bookings[] = $b;
 
-      $venue = $this->venueRepo->findById($b->getIdLocal());
+      $venue = $this->bookingService->getVenue($b->getIdLocal());
       $venueNames[$b->getIdBooking()] = $venue !== null
         ? $venue->getNameVenue()
         : 'Local #' . $b->getIdLocal();
 
       $hasTicket[$b->getIdBooking()] = true;
 
-      $client = $this->clientRepo->findByClientPk($b->getIdClient());
+      $client = $this->bookingService->getClient($b->getIdClient());
       $clientNames[$b->getIdBooking()] = $client !== null
         ? $client->getName()
         : '#' . $b->getIdClient();
@@ -539,7 +503,6 @@ class BookingController
   // =========================================================
   public function uploadTicket(): void
   {
-    session_start();
     $this->requireClient();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -547,7 +510,7 @@ class BookingController
       return;
     }
 
-    $client = $_SESSION['user'];
+    $client = $this->currentUser();
     $idBooking = (int) ($_POST['bookingId'] ?? 0);
     $idPaymentMethod = (int) ($_POST['paymentMethodId'] ?? 0);
 
@@ -576,11 +539,11 @@ class BookingController
 
       $this->bookingTicketService->upload($idBooking, 'resource/tickets/' . $fileName, $ext, $idPaymentMethod);
 
-      $ticketBooking = $this->bookingRepo->findById($idBooking);
+      $ticketBooking = $this->bookingService->getBooking($idBooking);
       if ($ticketBooking !== null) {
         $this->historyService->logVenuePurchase((int) $client->getIdRol(), (int) $ticketBooking->getIdLocal());
 
-        $ticketVenue = $this->venueRepo->findById($ticketBooking->getIdLocal());
+        $ticketVenue = $this->bookingService->getVenue($ticketBooking->getIdLocal());
         if ($ticketVenue !== null) {
           $this->notificationService->notifyOwnerPaymentVerification(
             (int) $ticketVenue->getIdOwner(),
@@ -613,7 +576,6 @@ class BookingController
   // =========================================================
   public function approveTicket(): void
   {
-    session_start();
     $this->requireOwner();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -621,12 +583,12 @@ class BookingController
       return;
     }
 
-    $owner = $_SESSION['user'];
+    $owner = $this->currentUser();
     $idBooking = (int) ($_POST['bookingId'] ?? 0);
 
     try {
 
-      $booking = $this->bookingRepo->findById($idBooking);
+      $booking = $this->bookingService->getBooking($idBooking);
 
       if ($booking === null) {
         throw new BusinessRuleException('La reserva no existe.');
@@ -634,7 +596,7 @@ class BookingController
 
       $this->ownerService->assertOwnsVenue($owner->getIdOwner(), $booking->getIdLocal());
 
-      $ticket = $this->ticketRepo->findByBooking($idBooking);
+      $ticket = $this->bookingService->getTicketForBooking($idBooking);
 
       if ($ticket === null) {
         throw new BusinessRuleException('Esta reserva no tiene comprobante.');
@@ -668,7 +630,6 @@ class BookingController
   // =========================================================
   public function rejectTicket(): void
   {
-    session_start();
     $this->requireOwner();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -676,12 +637,12 @@ class BookingController
       return;
     }
 
-    $owner = $_SESSION['user'];
+    $owner = $this->currentUser();
     $idBooking = (int) ($_POST['bookingId'] ?? 0);
 
     try {
 
-      $booking = $this->bookingRepo->findById($idBooking);
+      $booking = $this->bookingService->getBooking($idBooking);
 
       if ($booking === null) {
         throw new BusinessRuleException('La reserva no existe.');
@@ -689,7 +650,7 @@ class BookingController
 
       $this->ownerService->assertOwnsVenue($owner->getIdOwner(), $booking->getIdLocal());
 
-      $ticket = $this->ticketRepo->findByBooking($idBooking);
+      $ticket = $this->bookingService->getTicketForBooking($idBooking);
 
       if ($ticket === null) {
         throw new BusinessRuleException('Esta reserva no tiene comprobante.');
@@ -714,28 +675,6 @@ class BookingController
       }
 
       header('Location: ../../Public/index.php?controller=booking&action=detail&id=' . $idBooking);
-      exit;
-    }
-  }
-
-  // =========================================================
-  // GUARDIA: SOLO CLIENTE AUTENTICADO
-  // =========================================================
-  private function requireClient(): void
-  {
-    if (($_SESSION['type'] ?? null) !== 'client') {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
-      exit;
-    }
-  }
-
-  // =========================================================
-  // GUARDIA: SOLO OWNER AUTENTICADO
-  // =========================================================
-  private function requireOwner(): void
-  {
-    if (($_SESSION['type'] ?? null) !== 'owner') {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
       exit;
     }
   }

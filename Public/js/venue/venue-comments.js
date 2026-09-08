@@ -100,22 +100,16 @@
   function refreshComments() {
     var url = form.getAttribute('data-refresh-url');
     if (!url || !list) return Promise.resolve();
-    return fetch(url, {
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'Accept': 'application/json'
-      }
-    })
-      .then(function (res) { return res.json(); })
-      .then(function (data) {
-        if (data && typeof data.html === 'string') {
-          list.innerHTML = data.html;
-          var empty = list.querySelector('.muted');
-          if (empty) {
-            list.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }
+    return App.ajax(url, { method: 'GET' }).then(function (r) {
+      var data = r.data;
+      if (data && typeof data.html === 'string') {
+        list.innerHTML = data.html;
+        var empty = list.querySelector('.muted');
+        if (empty) {
+          list.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
-      });
+      }
+    });
   }
 
   if (list) {
@@ -153,22 +147,11 @@
     submitBtn.disabled = true;
     submitBtn.textContent = editing ? 'Guardando...' : 'Publicando...';
 
-    fetch(url, {
-      method: 'POST',
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest',
-        'Accept': 'application/json'
-      },
-      body: new FormData(form)
-    })
-      .then(function (res) {
-        return res.json().catch(function () {
-          return { ok: false, message: 'El servidor no devolvió una respuesta válida.' };
-        });
-      })
-      .then(function (payload) {
-        if (!payload.ok) {
-          throw new Error(payload.message || 'No se pudo guardar la reserva.');
+    App.ajax(url, { body: new FormData(form) })
+      .then(function (r) {
+        var payload = r.data;
+        if (!payload || payload.ok !== true) {
+          throw new Error((payload && payload.message) || 'No se pudo guardar la reserva.');
         }
 
         // Si fue una creación, ahora el cliente YA tiene una reserva para el

@@ -47,7 +47,7 @@
           <div class="password-wrapper">
             <input class="form-control" type="password" id="password" name="password"
                    minlength="8" required>
-            <button class="password-toggle" type="button" id="passwordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+            <button class="password-toggle" type="button" id="passwordToggle" data-password-toggle="password" aria-label="Mostrar contraseña">Mostrar</button>
           </div>
           <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
         </div>
@@ -102,7 +102,7 @@
           <div class="password-wrapper">
             <input class="form-control" type="password" id="ownerPassword" name="password"
                    minlength="8" required>
-            <button class="password-toggle" type="button" id="ownerPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+            <button class="password-toggle" type="button" id="ownerPasswordToggle" data-password-toggle="ownerPassword" aria-label="Mostrar contraseña">Mostrar</button>
           </div>
           <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
         </div>
@@ -124,7 +124,5 @@
 
   <script src="<?= e(js_url()) ?>"></script>
   <script src="<?= e(js_url('auth/auth-register')) ?>"></script>
-  <script src="<?= e(js_url('auth/register')) ?>"></script>
-  <script>document.addEventListener('DOMContentLoaded', App.init);</script>
 </body>
 </html>

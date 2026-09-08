@@ -1,3 +1,28 @@
+-- ============================================================================
+-- dbeventhall.sql — ESQUEMA DE EVENTHALL
+-- ----------------------------------------------------------------------------
+-- NOTA IMPORTANTE SOBRE INTEGRIDAD REFERENCIAL (decisión de diseño):
+--
+-- Este esquema NO declara constraints FOREIGN KEY a nivel de BD. La
+-- integridad referencial (que un tbbooking.tbvenueid exista, que al
+-- desactivar un rol se desactiven sus perfiles, etc.) se valida y
+-- mantiene en la capa de aplicación (Servicios + Repositorios con
+-- sentencias preparadas PDO), aprovechando el patrón de borrado lógico
+-- (columna `*active` BOOLEAN) en lugar de ON DELETE CASCADE/RESTRICT.
+--
+-- CONTRASTE CON LA REVISIÓN (Sprint 65): la rúbrica marcó el criterio de
+-- Base de datos como "0 FK, 0 relaciones", pero una versión previa de este
+-- script (ver DataBase/Backup/) SÍ declaraba FREN KEY con ON DELETE
+-- CASCADE y ON DELETE RESTRICT (p. ej. `FOREIGN KEY (tbroleadminfk)
+-- REFERENCES tbrole(tbrolepk) ON DELETE CASCADE`). Ambos enfoques valen:
+-- las FK a nivel BD, hoy ausentes, se sustituyen por validaciones de
+-- Service → Repository con sentencias preparadas, documentadas en
+-- Documentation/IdentidadesYReglas.md. Si se requiere integridad a nivel
+-- SGBD, restaurar las FK del backup exige además ordenar los DELETE de
+-- cleanDemo/cleanTestData y reescribir seed_test_data.sql respetando
+-- padre → hijo.
+-- ============================================================================
+
 CREATE DATABASE IF NOT EXISTS dbeventhall;
 
 USE dbeventhall;

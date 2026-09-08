@@ -8,14 +8,12 @@ require_once __DIR__ . '/../../Configuration/DataBase.php';
 class LocationController
 {
   private LocationService $locationService;
-  private LocationRepository $locationRepo;
 
   public function __construct()
   {
     $connection = DataBase::getConnection();
 
     $this->locationService = new LocationService(new LocationRepository($connection));
-    $this->locationRepo = new LocationRepository($connection);
   }
 
   // =========================================================
@@ -23,7 +21,7 @@ class LocationController
   // =========================================================
   public function list(): void
   {
-    $locations = $this->locationRepo->findAll();
+    $locations = $this->locationService->findAll();
 
     require_once __DIR__ . '/../View/Location/List.php';
   }

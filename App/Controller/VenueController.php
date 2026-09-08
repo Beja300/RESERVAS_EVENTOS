@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/BaseController.php';
 require_once __DIR__ . '/../Service/VenueService.php';
 require_once __DIR__ . '/../Service/OwnerService.php';
 require_once __DIR__ . '/../Service/VenueRatingService.php';
@@ -8,13 +9,13 @@ require_once __DIR__ . '/../Service/ServiceService.php';
 require_once __DIR__ . '/../Service/HistoryService.php';
 require_once __DIR__ . '/../Repository/ServiceRepository.php';
 require_once __DIR__ . '/../Repository/ServiceHistoryRepository.php';
-require_once __DIR__ . '/../Repository/OwnerRepository.php';
 require_once __DIR__ . '/../Service/PromotionService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Service/LocationService.php';
+require_once __DIR__ . '/../Repository/LocationRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
-class VenueController
+class VenueController extends BaseController
 {
   private VenueService $venueService;
   private OwnerService $ownerService;
@@ -23,7 +24,6 @@ class VenueController
   private ServiceService $serviceService;
   private PromotionService $promotionService;
   private HistoryService $historyService;
-  private OwnerRepository $ownerRepository;
   private LocationService $locationService;
 
   public function __construct()
@@ -37,7 +37,6 @@ class VenueController
     $this->serviceService = new ServiceService(new ServiceRepository($connection), new ServiceHistoryRepository($connection));
     $this->promotionService = new PromotionService($connection);
     $this->historyService = new HistoryService($connection);
-    $this->ownerRepository = new OwnerRepository($connection);
     $this->locationService = new LocationService(new LocationRepository($connection));
   }
 
@@ -174,7 +173,7 @@ class VenueController
       exit;
     }
 
-    $owner = $this->ownerRepository->findByOwnerPk($venue->getIdOwner());
+    $owner = $this->ownerService->getOwner($venue->getIdOwner());
 
     $avgRating = $this->venueRatingService->getAverage($idVenue);
     $promotions = $this->promotionService->getActiveByVenue($idVenue);
@@ -232,7 +231,7 @@ class VenueController
   {
     $idOwner = (int) ($_GET['ownerId'] ?? 0);
     $returnVenueId = (int) ($_GET['venueId'] ?? 0);
-    $owner = $this->ownerRepository->findByOwnerPk($idOwner);
+    $owner = $this->ownerService->getOwner($idOwner);
 
     if ($owner === null) {
       header('Location: ../../Public/index.php?controller=venue&action=catalog');
@@ -628,16 +627,5 @@ class VenueController
     }
 
     return $current;
-  }
-
-  // =========================================================
-  // GUARDIA: SOLO OWNER AUTENTICADO
-  // =========================================================
-  private function requireOwner(): void
-  {
-    if (($_SESSION['type'] ?? null) !== 'owner') {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
-      exit;
-    }
   }
 }

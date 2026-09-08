@@ -7,6 +7,11 @@ require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/InvoiceRepository.php';
 require_once __DIR__ . '/../Repository/BookingHistoryRepository.php';
 require_once __DIR__ . '/../Repository/BookingRefundRepository.php';
+require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
+require_once __DIR__ . '/../Repository/ClientRepository.php';
+require_once __DIR__ . '/../Repository/OwnerRepository.php';
+require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
+require_once __DIR__ . '/../Repository/ServiceRepository.php';
 require_once __DIR__ . '/../Model/Booking.php';
 require_once __DIR__ . '/../Model/BookingHistory.php';
 require_once __DIR__ . '/../Model/BookingRefund.php';
@@ -23,6 +28,11 @@ class BookingService
     private InvoiceRepository $invoiceRepo;
     private BookingHistoryRepository $historyRepo;
     private BookingRefundRepository $refundRepo;
+    private BookingTicketRepository $ticketRepo;
+    private ClientRepository $clientRepo;
+    private OwnerRepository $ownerRepo;
+    private PaymentMethodRepository $paymentMethodRepo;
+    private ServiceRepository $serviceRepo;
     private CommissionConfigService $configService;
 
     public function __construct()
@@ -35,6 +45,11 @@ class BookingService
         $this->invoiceRepo = new InvoiceRepository($this->connection);
         $this->historyRepo = new BookingHistoryRepository($this->connection);
         $this->refundRepo = new BookingRefundRepository($this->connection);
+        $this->ticketRepo = new BookingTicketRepository($this->connection);
+        $this->clientRepo = new ClientRepository($this->connection);
+        $this->ownerRepo = new OwnerRepository($this->connection);
+        $this->paymentMethodRepo = new PaymentMethodRepository($this->connection);
+        $this->serviceRepo = new ServiceRepository($this->connection);
         $this->configService = new CommissionConfigService(
             new CommissionConfigRepository($this->connection)
         );
@@ -169,7 +184,7 @@ class BookingService
         ];
     }
 
-public function cancel(int $bookingPk): void
+public function cancel(int $bookingPk): Booking
   {
     $booking =
       $this->bookingRepo->findById($bookingPk);
@@ -192,6 +207,8 @@ public function cancel(int $bookingPk): void
       $bookingPk,
       'cancelado'
     );
+
+    return $booking;
   }
 
   // =========================================================
@@ -253,5 +270,74 @@ public function cancel(int $bookingPk): void
         detail: $motivo
       )
     );
+  }
+
+  // =========================================================
+  // LECTURAS DE DOMINIO (fachada para los controladores)
+  // El controller ya NO accede a repositorios directamente.
+  // =========================================================
+  public function getBooking(int $bookingPk): ?Booking
+  {
+    return $this->bookingRepo->findById($bookingPk);
+  }
+
+  public function getVenue(int $venuePk): ?Venue
+  {
+    return $this->venueRepo->findById($venuePk);
+  }
+
+  public function getClient(int $clientPk): ?Client
+  {
+    return $this->clientRepo->findByClientPk($clientPk);
+  }
+
+  public function getOwner(int $ownerPk): ?Owner
+  {
+    return $this->ownerRepo->findByOwnerPk($ownerPk);
+  }
+
+  public function getTicketForBooking(int $bookingPk): ?BookingTicket
+  {
+    return $this->ticketRepo->findByBooking($bookingPk);
+  }
+
+  public function getRefundForBooking(int $bookingPk): ?BookingRefund
+  {
+    return $this->refundRepo->findByBooking($bookingPk);
+  }
+
+  public function getDetailsForBooking(int $bookingPk): array
+  {
+    return $this->detailRepo->findByBooking($bookingPk);
+  }
+
+  public function getService(int $servicePk): ?Service
+  {
+    return $this->serviceRepo->findById($servicePk);
+  }
+
+  public function getBookedDates(int $venuePk): array
+  {
+    return $this->bookingRepo->bookedDatesByVenue($venuePk);
+  }
+
+  public function getBookingsByVenue(int $venuePk): array
+  {
+    return $this->bookingRepo->findByVenue($venuePk);
+  }
+
+  public function getBookingsByClient(int $clientPk): array
+  {
+    return $this->bookingRepo->findByClient($clientPk);
+  }
+
+  public function getPendingBookingsByOwner(int $ownerPk): array
+  {
+    return $this->bookingRepo->findPendingByOwner($ownerPk);
+  }
+
+  public function getActivePaymentMethods(): array
+  {
+    return $this->paymentMethodRepo->findActive();
   }
 }

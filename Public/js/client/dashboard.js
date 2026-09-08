@@ -11,11 +11,8 @@
     var csrf = module.getAttribute('data-csrf');
     if (!geoUrl || !saveUrl || !csrf) return;
 
-    fetch(geoUrl, {
-      headers: { 'Accept': 'application/json' }
-    })
-      .then(function (r) { return r.json(); })
-      .then(function (json) {
+    App.ajax(geoUrl, { method: 'GET' }).then(function (r) {
+        var json = r.data;
         if (!json || !json.ok) {
           window.App && App.toast(
             (json && json.message) || 'No pudimos detectar tu ubicación; configúrala en Mi perfil.',
@@ -30,24 +27,17 @@
         fd.append('canton', json.canton);
         fd.append('district', json.district);
 
-        return fetch(saveUrl, {
-          method: 'POST',
-          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-          body: fd
-        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
-          .then(function (r) {
-            if (r.data && r.data.ok && r.data.saved) {
-              window.App && App.toast(r.data.message, 'success');
-              setTimeout(function () { window.location.reload(); }, 900);
-            } else {
-              window.App && App.toast(
-                (r.data && r.data.message) || 'Ya tienes una ubicación configurada.',
-                'info'
-              );
-            }
-          });
-      })
-      .catch(function () {
-        window.App && App.toast('No pudimos detectar tu ubicación; configúrala en Mi perfil.', 'info');
+        return App.ajax(saveUrl, { body: fd }).then(function (r) {
+          var data = r.data;
+          if (data && data.ok && data.saved) {
+            window.App && App.toast(data.message, 'success');
+            setTimeout(function () { window.location.reload(); }, 900);
+          } else {
+            window.App && App.toast(
+              (data && data.message) || 'Ya tienes una ubicación configurada.',
+              'info'
+            );
+          }
+        });
       });
   })();
