@@ -1,19 +1,16 @@
 <?php
 
 require_once __DIR__ . '/../Service/AuthService.php';
-require_once __DIR__ . '/../Service/DemoDataService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class AuthController
 {
   private AuthService $authService;
-  private DemoDataService $demoDataService;
 
   public function __construct()
   {
     $this->authService = new AuthService();
-    $this->demoDataService = new DemoDataService(DataBase::getConnection());
   }
 
   // =========================================================
@@ -239,7 +236,28 @@ class AuthController
 
     try {
 
-      $this->demoDataService->cleanAndReseed();
+      $connection = DataBase::getConnection();
+
+      // Paso 1: vaciar todas las tablas (sin FK, el orden no importa).
+      $tables = $connection->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+
+      $connection->exec('SET FOREIGN_KEY_CHECKS = 0');
+
+      foreach ($tables as $table) {
+        $connection->exec('DELETE FROM ' . $table);
+      }
+
+      $connection->exec('SET FOREIGN_KEY_CHECKS = 1');
+
+      // Paso 2: re-sembrar los datos de prueba.
+      $seedFile = __DIR__ . '/../../DataBase/ScriptsSQL/seed_test_data.sql';
+      $sql = file_get_contents($seedFile);
+
+      if ($sql === false) {
+        throw new \RuntimeException('No se pudo leer el archivo de datos de prueba.');
+      }
+
+      $connection->exec($sql);
 
       header('Location: ../../Public/index.php?controller=auth&action=showLogin&reset=ok');
       exit;

@@ -78,25 +78,4 @@ class PaymentMethodService
 
         $this->paymentMethodRepo->deactivate($idPaymentMethod);
     }
-
-    /**
-     * @return PaymentMethod[]
-     */
-    public function findAll(): array
-    {
-        return $this->paymentMethodRepo->findAll();
-    }
-
-    /**
-     * @return PaymentMethod[]
-     */
-    public function findActive(): array
-    {
-        return $this->paymentMethodRepo->findActive();
-    }
-
-    public function findById(int $idPaymentMethod): ?PaymentMethod
-    {
-        return $this->paymentMethodRepo->findById($idPaymentMethod);
-    }
 }

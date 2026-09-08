@@ -45,7 +45,7 @@
         <label for="password">Contraseña</label>
         <div class="password-wrapper">
           <input class="form-control" type="password" id="password" name="password" required>
-          <button class="password-toggle" type="button" id="passwordToggle" data-password-toggle="password" aria-label="Mostrar contraseña">Mostrar</button>
+          <button class="password-toggle" type="button" id="passwordToggle" aria-label="Mostrar contraseña">Mostrar</button>
         </div>
         <div class="form-hint">Ej: ClaveSegura7</div>
       </div>
@@ -58,6 +58,6 @@
     </div>
   </div>
 
-  <script src="<?= e(js_url()) ?>"></script>
+  <script src="<?= e(js_url('auth/login')) ?>"></script>
 </body>
 </html>

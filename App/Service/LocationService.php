@@ -41,12 +41,4 @@ class LocationService
     {
         return $this->locationRepo->findById($idLocation);
     }
-
-    /**
-     * @return Location[]
-     */
-    public function findAll(): array
-    {
-        return $this->locationRepo->findAll();
-    }
 }

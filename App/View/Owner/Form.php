@@ -118,7 +118,7 @@ if ($owner === null) {
         <label for="currentPassword">Contraseña actual</label>
         <div class="password-wrapper">
           <input class="form-control" type="password" id="currentPassword" name="currentPassword" autocomplete="current-password">
-          <button class="password-toggle" type="button" id="currentPasswordToggle" data-password-toggle="currentPassword" aria-label="Mostrar contraseña">Mostrar</button>
+          <button class="password-toggle" type="button" id="currentPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
         </div>
       </div>
 
@@ -126,7 +126,7 @@ if ($owner === null) {
         <label for="newPassword">Contraseña nueva</label>
         <div class="password-wrapper">
           <input class="form-control" type="password" id="newPassword" name="newPassword" minlength="8" autocomplete="new-password">
-          <button class="password-toggle" type="button" id="newPasswordToggle" data-password-toggle="newPassword" aria-label="Mostrar contraseña">Mostrar</button>
+          <button class="password-toggle" type="button" id="newPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
         </div>
         <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
       </div>

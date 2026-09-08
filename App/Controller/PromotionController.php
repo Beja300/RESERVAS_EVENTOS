@@ -1,21 +1,20 @@
 <?php
 
-require_once __DIR__ . '/BaseController.php';
 require_once __DIR__ . '/../Service/PromotionService.php';
 require_once __DIR__ . '/../Service/OwnerService.php';
-require_once __DIR__ . '/../Service/VenueService.php';
 require_once __DIR__ . '/../Service/ServiceService.php';
 require_once __DIR__ . '/../Repository/ServiceRepository.php';
 require_once __DIR__ . '/../Repository/ServiceHistoryRepository.php';
+require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
-class PromotionController extends BaseController
+class PromotionController
 {
   private PromotionService $promotionService;
   private OwnerService $ownerService;
-  private VenueService $venueService;
   private ServiceService $serviceService;
+  private VenueRepository $venueRepo;
 
   public function __construct()
   {
@@ -23,8 +22,8 @@ class PromotionController extends BaseController
 
     $this->promotionService = new PromotionService($connection);
     $this->ownerService = new OwnerService($connection);
-    $this->venueService = new VenueService($connection);
     $this->serviceService = new ServiceService(new ServiceRepository($connection), new ServiceHistoryRepository($connection));
+    $this->venueRepo = new VenueRepository($connection);
   }
 
   // =========================================================
@@ -32,9 +31,10 @@ class PromotionController extends BaseController
   // =========================================================
   public function list(): void
   {
+    session_start();
     $this->requireOwner();
 
-    $owner = $this->currentUser();
+    $owner = $_SESSION['user'];
     $idVenue = (int) ($_GET['venueId'] ?? 0);
 
     try {
@@ -66,10 +66,11 @@ class PromotionController extends BaseController
   // =========================================================
   public function showForm(): void
   {
+    session_start();
     $this->requireOwner();
 
-    $owner = $this->currentUser();
-    $venues = $this->venueService->findByOwner($owner->getIdOwner());
+    $owner = $_SESSION['user'];
+    $venues = $this->venueRepo->findByOwner($owner->getIdOwner());
 
     $promotion = null;
     $idVenue = (int) ($_GET['venueId'] ?? 0);
@@ -82,6 +83,7 @@ class PromotionController extends BaseController
   // =========================================================
   public function create(): void
   {
+    session_start();
     $this->requireOwner();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -89,7 +91,7 @@ class PromotionController extends BaseController
       return;
     }
 
-    $owner = $this->currentUser();
+    $owner = $_SESSION['user'];
     $idVenue = (int) ($_POST['venueId'] ?? 0);
     $label = trim($_POST['label'] ?? '');
     $description = trim($_POST['description'] ?? '') ?: null;
@@ -115,8 +117,8 @@ class PromotionController extends BaseController
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
-      $owner = $this->currentUser();
-      $venues = $this->venueService->findByOwner($owner->getIdOwner());
+      $owner = $_SESSION['user'];
+      $venues = $this->venueRepo->findByOwner($owner->getIdOwner());
       $promotion = null;
 
       require_once __DIR__ . '/../View/Promotion/Form.php';
@@ -128,6 +130,7 @@ class PromotionController extends BaseController
   // =========================================================
   public function addService(): void
   {
+    session_start();
     $this->requireOwner();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -135,7 +138,7 @@ class PromotionController extends BaseController
       return;
     }
 
-    $owner = $this->currentUser();
+    $owner = $_SESSION['user'];
     $idPromotion = (int) ($_POST['promotionId'] ?? 0);
     $idService = (int) ($_POST['serviceId'] ?? 0);
     $idVenue = (int) ($_POST['venueId'] ?? 0);
@@ -153,6 +156,17 @@ class PromotionController extends BaseController
       $error = $e->getMessage();
 
       header('Location: ../../Public/index.php?controller=promotion&action=list&venueId=' . $idVenue);
+      exit;
+    }
+  }
+
+  // =========================================================
+  // GUARDIA: SOLO OWNER AUTENTICADO
+  // =========================================================
+  private function requireOwner(): void
+  {
+    if (($_SESSION['type'] ?? null) !== 'owner') {
+      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
       exit;
     }
   }

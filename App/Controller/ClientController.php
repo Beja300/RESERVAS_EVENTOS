@@ -1,36 +1,42 @@
 <?php
 
-require_once __DIR__ . '/BaseController.php';
-require_once __DIR__ . '/../Service/ClientService.php';
 require_once __DIR__ . '/../Service/HistoryService.php';
 require_once __DIR__ . '/../Service/AuthService.php';
 require_once __DIR__ . '/../Service/RoleSecurityService.php';
 require_once __DIR__ . '/../Service/LocationService.php';
-require_once __DIR__ . '/../Service/ProfileImageService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
+require_once __DIR__ . '/../Repository/BookingRepository.php';
+require_once __DIR__ . '/../Repository/RoleRepository.php';
+require_once __DIR__ . '/../Repository/ClientRepository.php';
+require_once __DIR__ . '/../Repository/DetailRepository.php';
 require_once __DIR__ . '/../Repository/LocationRepository.php';
-require_once __DIR__ . '/../Model/Client.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
-class ClientController extends BaseController
+class ClientController
 {
-  private ClientService $clientService;
   private HistoryService $historyService;
   private AuthService $authService;
   private RoleSecurityService $roleSecurityService;
+  private BookingRepository $bookingRepo;
+  private RoleRepository $roleRepo;
+  private ClientRepository $clientRepo;
+  private DetailRepository $detailRepo;
   private LocationService $locationService;
-  private ProfileImageService $profileImageService;
+  private LocationRepository $locationRepo;
 
   public function __construct()
   {
     $connection = DataBase::getConnection();
 
-    $this->clientService = new ClientService($connection);
     $this->historyService = new HistoryService($connection);
     $this->authService = new AuthService();
     $this->roleSecurityService = new RoleSecurityService();
+    $this->bookingRepo = new BookingRepository($connection);
+    $this->roleRepo = new RoleRepository($connection);
+    $this->clientRepo = new ClientRepository($connection);
+    $this->detailRepo = new DetailRepository($connection);
     $this->locationService = new LocationService(new LocationRepository($connection));
-    $this->profileImageService = new ProfileImageService();
+    $this->locationRepo = new LocationRepository($connection);
   }
 
   // =========================================================
@@ -38,9 +44,10 @@ class ClientController extends BaseController
   // =========================================================
   public function dashboard(): void
   {
+    session_start();
     $this->requireClient();
 
-    $client = $this->currentUser();
+    $client = $_SESSION['user'];
 
     $recommendations = $this->historyService->recommendVenues(
       $client->getIdRol(),
@@ -49,21 +56,27 @@ class ClientController extends BaseController
 
     $clientLocationId = $client->getLocationId();
 
-    $hasLocation = $clientLocationId !== null
-      && $this->clientService->isValidLocation($clientLocationId);
+    $hasValidLocation = $clientLocationId !== null
+      && $this->locationRepo->findById($clientLocationId) !== null;
 
-    $nearbyVenues = $hasLocation
+    $nearbyVenues = $hasValidLocation
       ? $this->historyService->recommendVenuesByLocation($clientLocationId, 5)
       : [];
 
-    $bookings = $this->clientService->getClientBookings($client->getIdClient());
+    $hasLocation = $hasValidLocation;
+
+    $bookings = $this->bookingRepo->findByClient($client->getIdClient());
 
     $allVenues = array_merge($recommendations, $nearbyVenues);
     $locationByVenue = [];
+    $locationCache = [];
     foreach ($allVenues as $v) {
       $locId = $v->getIdLocation();
       if ($locId > 0) {
-        $locationByVenue[$v->getIdVenue()] = $this->clientService->getLocation($locId);
+        if (!isset($locationCache[$locId])) {
+          $locationCache[$locId] = $this->locationRepo->findById($locId);
+        }
+        $locationByVenue[$v->getIdVenue()] = $locationCache[$locId];
       }
     }
 
@@ -75,13 +88,17 @@ class ClientController extends BaseController
   // =========================================================
   public function profile(): void
   {
+    session_start();
     $this->requireClient();
 
-    $client = $this->currentUser();
+    $client = $_SESSION['user'];
 
     $suspicious = $this->roleSecurityService->getSuspiciousCounts($client->getIdRol());
 
-    $location = $this->clientService->getLocation($client->getLocationId());
+    $location = null;
+    if ($client->getLocationId() !== null) {
+      $location = $this->locationRepo->findById($client->getLocationId());
+    }
 
     require_once __DIR__ . '/../View/Client/Profile.php';
   }
@@ -91,6 +108,7 @@ class ClientController extends BaseController
   // =========================================================
   public function updateProfile(): void
   {
+    session_start();
     $this->requireClient();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -98,7 +116,7 @@ class ClientController extends BaseController
       return;
     }
 
-    $client = $this->currentUser();
+    $client = $_SESSION['user'];
 
     $currentEmail = $client->getEmail();
     $currentPhone = $client->getPhoneNumber();
@@ -141,6 +159,8 @@ class ClientController extends BaseController
       $client->setEmail($email);
       $client->setPhoneNumber($phoneNumber);
 
+      $this->roleRepo->update($client);
+
       // Seguridad: auditar y alertar ante cambios de credenciales.
       $this->roleSecurityService->recordPhoneChange(
         $client->getIdRol(),
@@ -153,13 +173,7 @@ class ClientController extends BaseController
         $email
       );
 
-      $image = $this->profileImageService->resolveAndPersist(
-        $client->getImageClient(),
-        $_POST,
-        $_FILES,
-        'resource/clients/',
-        'client_' . $client->getIdClient() . '_'
-      );
+      $image = $this->resolveProfileImage($client->getIdClient(), $client->getImageClient());
 
       $province = trim($_POST['province'] ?? '');
       $canton = trim($_POST['canton'] ?? '');
@@ -172,7 +186,7 @@ class ClientController extends BaseController
       if ($province !== '' || $canton !== '' || $district !== '') {
         // Solo crea una ubicación nueva si realmente cambió respecto a la actual.
         // Así no se rompe al guardar de nuevo la misma dirección (idempotente).
-        $currentLocation = $locationId !== null ? $this->clientService->getLocation($locationId) : null;
+        $currentLocation = $locationId !== null ? $this->locationRepo->findById($locationId) : null;
         $changed = $currentLocation === null
           || $currentLocation->getProvinceLocation() !== $province
           || $currentLocation->getCantonLocation() !== $canton
@@ -191,7 +205,9 @@ class ClientController extends BaseController
         }
       }
 
-      $this->clientService->saveProfile($client, $image, $locationId);
+      $this->clientRepo->updateProfile($client->getIdClient(), $image, $locationId);
+      $client->setImageClient($image);
+      $client->setLocationId($locationId);
 
       $_SESSION['user'] = $client;
 
@@ -199,7 +215,8 @@ class ClientController extends BaseController
         respond_json(['ok' => true, 'message' => 'Perfil actualizado correctamente.']);
       }
 
-      $this->redirect('client', 'profile');
+      header('Location: ../../Public/index.php?controller=client&action=profile');
+      exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
@@ -208,7 +225,10 @@ class ClientController extends BaseController
         respond_json(['ok' => false, 'message' => $error], 422);
       }
 
-      $location = $this->clientService->getLocation($client->getLocationId());
+      $location = null;
+      if ($client->getLocationId() !== null) {
+        $location = $this->locationRepo->findById($client->getLocationId());
+      }
 
       require_once __DIR__ . '/../View/Client/Profile.php';
     }
@@ -220,6 +240,7 @@ class ClientController extends BaseController
   // =========================================================
   public function updateLocation(): void
   {
+    session_start();
     $this->requireClient();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -227,7 +248,7 @@ class ClientController extends BaseController
       return;
     }
 
-    $client = $this->currentUser();
+    $client = $_SESSION['user'];
 
     $province = trim($_POST['province'] ?? '');
     $canton = trim($_POST['canton'] ?? '');
@@ -241,7 +262,7 @@ class ClientController extends BaseController
 
       $currentLocationId = $client->getLocationId();
       $hasValidLocation = $currentLocationId !== null
-        && $this->clientService->isValidLocation($currentLocationId);
+        && $this->locationRepo->findById($currentLocationId) !== null;
 
       if ($hasValidLocation) {
         respond_json([
@@ -254,17 +275,18 @@ class ClientController extends BaseController
 
       // Reutiliza una ubicación existente (por partes o solo por cantón)
       // para no duplicar filas; solo crea si no existe ninguna.
-      $locationId = $this->clientService->findLocationIdByParts($province, $canton, $district);
+      $locationId = $this->locationRepo->findIdByParts($province, $canton, $district);
 
       if ($locationId === null) {
-        $locationId = $this->clientService->findLocationIdByCanton($province, $canton);
+        $locationId = $this->locationRepo->findIdByCanton($province, $canton);
       }
 
       if ($locationId === null) {
         $locationId = $this->locationService->validateAndCreate($province, $canton, $district);
       }
 
-      $this->clientService->saveProfile($client, $client->getImageClient(), $locationId);
+      $this->clientRepo->updateProfile($client->getIdClient(), $client->getImageClient(), $locationId);
+      $client->setLocationId($locationId);
 
       $_SESSION['user'] = $client;
 
@@ -285,10 +307,62 @@ class ClientController extends BaseController
   }
 
   // =========================================================
+  // FOTO DE PERFIL: prioriza el archivo subido, luego la URL.
+  // =========================================================
+  private function resolveProfileImage(int $idClient, string $currentImage): string
+  {
+    if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+      $file = $_FILES['image'];
+      $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+      $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
+      if (!in_array($extension, $allowed, true)) {
+        throw new BusinessRuleException("Formato de imagen no válido (usa jpg, png, webp o gif).");
+      }
+
+      if ($file['size'] > 2 * 1024 * 1024) {
+        throw new BusinessRuleException("La imagen no puede superar los 2 MB.");
+      }
+
+      $dir = __DIR__ . '/../../Public/resource/clients/';
+      if (!is_dir($dir)) {
+        mkdir($dir, 0777, true);
+      }
+
+      $filename = 'client_' . $idClient . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+
+      if (move_uploaded_file($file['tmp_name'], $dir . $filename)) {
+        return 'resource/clients/' . $filename;
+      }
+
+      throw new BusinessRuleException("No se pudo guardar la imagen.");
+    }
+
+    $url = trim($_POST['imageUrl'] ?? '');
+    if ($url !== '') {
+      return $url;
+    }
+
+    return $currentImage;
+  }
+
+  // =========================================================
+  // GUARDIA: SOLO CLIENTE AUTENTICADO
+  // =========================================================
+  private function requireClient(): void
+  {
+    if (($_SESSION['type'] ?? null) !== 'client') {
+      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+      exit;
+    }
+  }
+
+  // =========================================================
   // ELIMINAR FOTO DE PERFIL
   // =========================================================
   public function removePhoto(): void
   {
+    session_start();
     $this->requireClient();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -296,10 +370,12 @@ class ClientController extends BaseController
       return;
     }
 
-    $client = $this->currentUser();
+    $client = $_SESSION['user'];
 
-    $this->profileImageService->deleteStoredFile($client->getImageClient(), 'resource/clients/');
-    $this->clientService->saveProfile($client, '', $client->getLocationId());
+    $this->deleteClientImageFile($client->getImageClient());
+    $client->setImageClient('');
+
+    $this->clientRepo->updateProfile($client->getIdClient(), '', $client->getLocationId());
 
     $_SESSION['user'] = $client;
 
@@ -307,7 +383,23 @@ class ClientController extends BaseController
       respond_json(['ok' => true, 'message' => 'Foto de perfil eliminada.']);
     }
 
-    $this->redirect('client', 'profile', ['removed' => 1]);
+    header('Location: ../../Public/index.php?controller=client&action=profile&removed=1');
+    exit;
+  }
+
+  // =========================================================
+  // BORRAR EL ARCHIVO LOCAL (nunca URLs externas)
+  // =========================================================
+  private const CLIENT_IMAGE_DIR = 'resource/clients/';
+
+  private function deleteClientImageFile(string $storedPath): void
+  {
+    if (str_starts_with($storedPath, self::CLIENT_IMAGE_DIR)) {
+      $file = __DIR__ . '/../../Public/' . $storedPath;
+      if (is_file($file)) {
+        @unlink($file);
+      }
+    }
   }
 
   // =========================================================
@@ -316,6 +408,7 @@ class ClientController extends BaseController
   // =========================================================
   public function deactivateAccount(): void
   {
+    session_start();
     $this->requireClient();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -323,9 +416,9 @@ class ClientController extends BaseController
       return;
     }
 
-    $client = $this->currentUser();
+    $client = $_SESSION['user'];
 
-    $this->clientService->deactivateAccount($client->getIdRol());
+    $this->roleRepo->setActive($client->getIdRol(), false);
 
     session_unset();
     session_destroy();

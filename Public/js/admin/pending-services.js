@@ -1,4 +1,6 @@
 (function () {
+  function base() { var p = (window.location.pathname || '').split('/'); p.pop(); return p.join('/'); }
+
   var filterGlobal = document.getElementById('filter-global');
   var filterState = document.getElementById('filter-history-state');
   var tablePending = document.getElementById('table-pending');
@@ -34,12 +36,17 @@
   document.querySelectorAll('form[data-ajax-service-action]').forEach(function (form) {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      App.ajax(form.getAttribute('action'), { body: new FormData(form) }).then(function (r) {
-        window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
-        if (r.ok) {
-          setTimeout(function () { window.location.reload(); }, 500);
-        }
-      });
+      fetch(form.getAttribute('action'), {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+        body: new FormData(form)
+      }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
+        .then(function (r) {
+          window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
+          if (r.ok) {
+            setTimeout(function () { window.location.reload(); }, 500);
+          }
+        });
     });
   });
 })();

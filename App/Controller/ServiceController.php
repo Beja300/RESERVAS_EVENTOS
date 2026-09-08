@@ -1,25 +1,22 @@
 <?php
 
-require_once __DIR__ . '/BaseController.php';
 require_once __DIR__ . '/../Service/ServiceService.php';
 require_once __DIR__ . '/../Service/OwnerService.php';
-require_once __DIR__ . '/../Service/AdminService.php';
-require_once __DIR__ . '/../Service/VenueService.php';
 require_once __DIR__ . '/../Service/HistoryService.php';
 require_once __DIR__ . '/../Service/NotificationService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
-require_once __DIR__ . '/../Repository/ServiceRepository.php';
-require_once __DIR__ . '/../Repository/ServiceHistoryRepository.php';
-require_once __DIR__ . '/../Repository/NotificationRepository.php';
-require_once __DIR__ . '/../Model/Admin.php';
+require_once __DIR__ . '/../Repository/OwnerRepository.php';
+require_once __DIR__ . '/../Repository/VenueRepository.php';
+require_once __DIR__ . '/../Repository/AdminRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
-class ServiceController extends BaseController
+class ServiceController
 {
   private ServiceService $serviceService;
   private OwnerService $ownerService;
-  private VenueService $venueService;
-  private AdminService $adminService;
+  private OwnerRepository $ownerRepo;
+  private VenueRepository $venueRepo;
+  private AdminRepository $adminRepo;
   private NotificationService $notificationService;
 
   public function __construct()
@@ -28,8 +25,9 @@ class ServiceController extends BaseController
 
     $this->serviceService = new ServiceService(new ServiceRepository($connection), new ServiceHistoryRepository($connection));
     $this->ownerService = new OwnerService($connection);
-    $this->venueService = new VenueService($connection);
-    $this->adminService = new AdminService();
+    $this->ownerRepo = new OwnerRepository($connection);
+    $this->venueRepo = new VenueRepository($connection);
+    $this->adminRepo = new AdminRepository($connection);
     $this->notificationService = new NotificationService(new NotificationRepository($connection));
   }
 
@@ -38,9 +36,10 @@ class ServiceController extends BaseController
   // =========================================================
   public function list(): void
   {
+    session_start();
     $this->requireOwner();
 
-    $owner = $this->currentUser();
+    $owner = $_SESSION['user'];
     $idVenue = (int) ($_GET['venueId'] ?? 0);
 
     try {
@@ -63,6 +62,7 @@ class ServiceController extends BaseController
   // =========================================================
   public function showForm(): void
   {
+    session_start();
     $this->requireOwner();
 
     $idService = (int) ($_GET['id'] ?? 0);
@@ -77,6 +77,7 @@ class ServiceController extends BaseController
   // =========================================================
   public function create(): void
   {
+    session_start();
     $this->requireOwner();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -84,7 +85,7 @@ class ServiceController extends BaseController
       return;
     }
 
-    $owner = $this->currentUser();
+    $owner = $_SESSION['user'];
     $idVenue = (int) ($_POST['venueId'] ?? 0);
 
     $name = trim($_POST['name'] ?? '');
@@ -136,6 +137,7 @@ class ServiceController extends BaseController
   // =========================================================
   public function update(): void
   {
+    session_start();
     $this->requireOwner();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -143,7 +145,7 @@ class ServiceController extends BaseController
       return;
     }
 
-    $owner = $this->currentUser();
+    $owner = $_SESSION['user'];
     $idService = (int) ($_POST['idService'] ?? 0);
 
     $name = trim($_POST['name'] ?? '');
@@ -193,6 +195,7 @@ class ServiceController extends BaseController
   // =========================================================
   public function pending(): void
   {
+    session_start();
     $this->requireAdmin();
 
     $services = $this->serviceService->findPending();
@@ -206,10 +209,11 @@ class ServiceController extends BaseController
   // =========================================================
   public function approve(): void
   {
+    session_start();
     $this->requireAdmin();
 
     $idService = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
-    $admin = $this->currentUser();
+    $admin = $_SESSION['user'] ?? null;
     $approvedByRoleId = $admin instanceof Admin && method_exists($admin, 'getIdRol') ? $admin->getIdRol() : 0;
 
     try {
@@ -240,10 +244,11 @@ class ServiceController extends BaseController
   // =========================================================
   public function reject(): void
   {
+    session_start();
     $this->requireAdmin();
 
     $idService = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
-    $admin = $this->currentUser();
+    $admin = $_SESSION['user'] ?? null;
     $approvedByRoleId = $admin instanceof Admin && method_exists($admin, 'getIdRol') ? $admin->getIdRol() : 0;
 
     try {
@@ -273,18 +278,20 @@ class ServiceController extends BaseController
   // =========================================================
   public function detail(): void
   {
+    session_start();
     $this->requireAdmin();
 
     $idService = (int) ($_GET['id'] ?? 0);
     $service = $this->serviceService->findById($idService);
 
     if ($service === null) {
-      $this->redirect('service', 'pending');
+      header('Location: ../../Public/index.php?controller=service&action=pending');
+      exit;
     }
 
-    $venue = $this->venueService->findById($service->getIdLocal());
-    $owner = $venue !== null ? $this->ownerService->getOwner($venue->getIdOwner()) : null;
-    $approvedBy = $service->getApprovedBy() !== null ? $this->adminService->findUserByRoleId('admin', $service->getApprovedBy()) : null;
+    $venue = $this->venueRepo->findById($service->getIdLocal());
+    $owner = $venue !== null ? $this->ownerRepo->findByOwnerPk($venue->getIdOwner()) : null;
+    $approvedBy = $service->getApprovedBy() !== null ? $this->adminRepo->findByRoleId($service->getApprovedBy()) : null;
 
     require_once __DIR__ . '/../View/Service/AdminDetail.php';
   }
@@ -300,13 +307,13 @@ class ServiceController extends BaseController
       return;
     }
 
-    $venue = $this->venueService->findById($service->getIdLocal());
+    $venue = $this->venueRepo->findById($service->getIdLocal());
 
     if ($venue === null) {
       return;
     }
 
-    $owner = $this->ownerService->getOwner($venue->getIdOwner());
+    $owner = $this->ownerRepo->findByOwnerPk($venue->getIdOwner());
 
     if ($owner === null) {
       return;
@@ -317,5 +324,24 @@ class ServiceController extends BaseController
       $approved,
       $this->notificationService->serviceListUrl((int) $venue->getIdVenue())
     );
+  }
+
+  // =========================================================
+  // GUARDIAS
+  // =========================================================
+  private function requireOwner(): void
+  {
+    if (($_SESSION['type'] ?? null) !== 'owner') {
+      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+      exit;
+    }
+  }
+
+  private function requireAdmin(): void
+  {
+    if (($_SESSION['type'] ?? null) !== 'admin') {
+      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+      exit;
+    }
   }
 }

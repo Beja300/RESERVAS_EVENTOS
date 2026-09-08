@@ -39,5 +39,6 @@ if ($client === null) {
     </form>
   </div>
   <script src="<?= e(js_url()) ?>"></script>
+  <script>document.addEventListener('DOMContentLoaded', App.init);</script>
 </body>
 </html>

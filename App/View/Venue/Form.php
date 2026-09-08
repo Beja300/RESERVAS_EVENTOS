@@ -4,18 +4,11 @@ $isEdit = $venue !== null;
 $action = $isEdit ? base_url('venue', 'update') : base_url('venue', 'create');
 $pageJs = ['venue/form', 'venue/location'];
 
-// Persistencia: en un repost (error de validación) se conserva lo tecleado;
-// en GET se cae al valor guardado del modelo.
-$curProvince = trim($_POST['province'] ?? '') !== '' ? $_POST['province']
-    : ($isEdit && $location !== null ? $location->getProvinceLocation() : '');
-$curCanton   = trim($_POST['canton'] ?? '') !== '' ? $_POST['canton']
-    : ($isEdit && $location !== null ? $location->getCantonLocation()   : '');
-$curDistrict = trim($_POST['district'] ?? '') !== '' ? $_POST['district']
-    : ($isEdit && $location !== null ? $location->getDistrictLocation() : '');
-$curTown     = trim($_POST['town'] ?? '') !== '' ? $_POST['town']
-    : ($isEdit && $location !== null ? $location->getTownLocation()     : '');
-$curDesc     = trim($_POST['description'] ?? '') !== '' ? $_POST['description']
-    : ($isEdit && $location !== null ? $location->getDescriptionLocation() : '');
+$curProvince = $isEdit && $location !== null ? $location->getProvinceLocation() : ($_POST['province'] ?? '');
+$curCanton   = $isEdit && $location !== null ? $location->getCantonLocation()   : ($_POST['canton'] ?? '');
+$curDistrict = $isEdit && $location !== null ? $location->getDistrictLocation() : ($_POST['district'] ?? '');
+$curTown     = $isEdit && $location !== null ? $location->getTownLocation()     : ($_POST['town'] ?? '');
+$curDesc     = $isEdit && $location !== null ? $location->getDescriptionLocation() : ($_POST['description'] ?? '');
 ?>
 
 <div class="page-head">
@@ -39,26 +32,26 @@ $curDesc     = trim($_POST['description'] ?? '') !== '' ? $_POST['description']
     <div class="form-group">
       <label for="name">Nombre del local *</label>
       <input class="form-control" type="text" id="name" name="name" required
-        value="<?= e($_POST['name'] ?? ($isEdit ? $venue->getNameVenue() : '')) ?>">
+        value="<?= e($isEdit ? $venue->getNameVenue() : ($_POST['name'] ?? '')) ?>">
     </div>
 
     <div class="form-group">
       <label for="type">Tipo de local</label>
       <input class="form-control" type="text" id="type" name="type"
         placeholder="Ej: Salón de eventos, Restaurante, Jardín..."
-        value="<?= e(trim($_POST['type'] ?? '') !== '' ? $_POST['type'] : ($isEdit ? $venue->getTypeVenue() : '')) ?>">
+        value="<?= e($isEdit && $venue->getTypeVenue() !== '' ? $venue->getTypeVenue() : ($_POST['type'] ?? '')) ?>">
     </div>
 
     <div class="form-group">
       <label for="capacity">Capacidad</label>
       <input class="form-control" type="number" id="capacity" name="capacity" min="1"
-        value="<?= e($_POST['capacity'] ?? ($isEdit ? (string) $venue->getCapacityVenue() : '')) ?>">
+        value="<?= e($isEdit ? (string) $venue->getCapacityVenue() : ($_POST['capacity'] ?? '')) ?>">
     </div>
 
     <div class="form-group">
       <label for="price">Precio de renta por evento *</label>
       <input class="form-control" type="number" id="price" name="price" min="0.01" step="0.01" required
-        value="<?= e($_POST['price'] ?? ($isEdit ? number_format($venue->getPriceVenue(), 2, '.', '') : '')) ?>">
+        value="<?= e($isEdit ? number_format($venue->getPriceVenue(), 2, '.', '') : ($_POST['price'] ?? '')) ?>">
       <p class="form-hint">Este precio se incluye siempre en la factura de cada reserva de este local.</p>
     </div>
 
@@ -74,8 +67,7 @@ $curDesc     = trim($_POST['description'] ?? '') !== '' ? $_POST['description']
 
     <?php if ($isEdit): ?>
       <div class="checkbox-row" style="margin:18px 0;">
-        <input type="checkbox" id="active" name="active"
-          <?= !empty($_POST) ? (isset($_POST['active']) ? 'checked' : '') : ($venue->getIsActive() ? 'checked' : '') ?>>
+        <input type="checkbox" id="active" name="active" <?= $venue->getIsActive() ? 'checked' : '' ?>>
         <label for="active">Local activo (visible en el catálogo)</label>
       </div>
     <?php endif; ?>

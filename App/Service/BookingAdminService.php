@@ -44,7 +44,7 @@ class BookingAdminService
   // =========================================================
   // CANCELAR UNA RESERVA
   // =========================================================
-  public function cancel(int $bookingPk, int $adminRoleId, ?string $note = null): Booking
+  public function cancel(int $bookingPk, int $adminRoleId, ?string $note = null): void
   {
     $booking = $this->requireBooking($bookingPk);
 
@@ -56,14 +56,12 @@ class BookingAdminService
 
     $this->bookingRepo->updateStatus($bookingPk, 'cancelado');
     $this->log($bookingPk, $adminRoleId, 'CANCELAR', $this->text($note, 'Cancelada por el administrador.'));
-
-    return $booking;
   }
 
   // =========================================================
   // REPROGRAMAR (cambiar el rango de fechas preservando la duración)
   // =========================================================
-  public function reschedule(int $bookingPk, int $adminRoleId, string $newDate, ?string $note = null): Booking
+  public function reschedule(int $bookingPk, int $adminRoleId, string $newDate, ?string $note = null): void
   {
     $booking = $this->requireBooking($bookingPk);
 
@@ -109,14 +107,12 @@ class BookingAdminService
       . ' -> nuevo rango: ' . $newDate . ' - ' . $newEndDate
       . ($this->text($note) ? ' | ' . $note : '')
     );
-
-    return $booking;
   }
 
   // =========================================================
   // CAMBIAR LOCAL (actualiza la reserva y la línea de renta)
   // =========================================================
-  public function changeVenue(int $bookingPk, int $adminRoleId, int $newVenueId, ?string $note = null): Booking
+  public function changeVenue(int $bookingPk, int $adminRoleId, int $newVenueId, ?string $note = null): void
   {
     $booking = $this->requireBooking($bookingPk);
 
@@ -161,8 +157,6 @@ class BookingAdminService
       'Local anterior: #' . $booking->getIdLocal() . ' -> nuevo local: #' . $newVenueId
       . ($this->text($note) ? ' | ' . $note : '')
     );
-
-    return $booking;
   }
 
   private function updateVenueLine(int $bookingPk, int $newVenueId, float $unitPrice): void
@@ -177,7 +171,7 @@ class BookingAdminService
   // =========================================================
   // APROBAR REEMBOLSO (el admin valida la solicitud del cliente)
   // =========================================================
-  public function approveRefund(int $bookingPk, int $adminRoleId, int $refundRequestId, ?string $note = null): Booking
+  public function approveRefund(int $bookingPk, int $adminRoleId, int $refundRequestId, ?string $note = null): void
   {
     $booking = $this->requireBooking($bookingPk);
     $refund = $this->requirePendingRefund($refundRequestId);
@@ -211,14 +205,12 @@ class BookingAdminService
       'Motivo del cliente: ' . $refund->getDetail()
       . ($this->text($note) ? ' | ' . $note : '')
     );
-
-    return $booking;
   }
 
   // =========================================================
   // RECHAZAR SOLICITUD DE REEMBOLSO
   // =========================================================
-  public function rejectRefund(int $refundRequestId, int $adminRoleId): Booking
+  public function rejectRefund(int $refundRequestId, int $adminRoleId): void
   {
     $refund = $this->requirePendingRefund($refundRequestId);
 
@@ -230,8 +222,6 @@ class BookingAdminService
       'REEMBOLSO_RECHAZADO',
       'Se rechazó la solicitud de reembolso.'
     );
-
-    return $this->requireBooking($refund->getIdBooking());
   }
 
   // =========================================================
