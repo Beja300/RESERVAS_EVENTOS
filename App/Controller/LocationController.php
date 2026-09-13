@@ -4,6 +4,7 @@ require_once __DIR__ . '/../Service/LocationService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/LocationRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
+require_once __DIR__ . '/../View/_helpers.php';
 
 class LocationController
 {
@@ -56,8 +57,7 @@ class LocationController
 
       $this->locationService->validateAndCreate($province, $canton, $district, $town, $description);
 
-      header('Location: ../../Public/index.php?controller=location&action=list');
-      exit;
+      redirect_to('location', 'list');
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();

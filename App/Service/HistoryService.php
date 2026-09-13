@@ -5,6 +5,7 @@ require_once __DIR__ . '/../Repository/LocationRepository.php';
 require_once __DIR__ . '/../Model/History.php';
 require_once __DIR__ . '/../Model/HistoryAction.php';
 require_once __DIR__ . '/VenueService.php';
+require_once __DIR__ . '/OrderingService.php';
 
 class HistoryService
 {
@@ -143,26 +144,34 @@ class HistoryService
         continue;
       }
 
-      if ($venueLocation->getCantonLocation() === $canton) {
-        $matches[] = $venue;
+      $entry = ['venue' => $venue, 'location' => $venueLocation];
 
-        if (count($matches) >= $limit) {
-          break;
-        }
+      if ($venueLocation->getCantonLocation() === $canton) {
+        $matches[] = $entry;
       } else {
-        $suggested[] = $venue;
+        $suggested[] = $entry;
       }
     }
 
-    foreach ($suggested as $venue) {
-      $matches[] = $venue;
+    usort($matches, static function (array $a, array $b): int {
+      return OrderingService::locations($a['location'], $b['location']);
+    });
 
-      if (count($matches) >= $limit) {
+    usort($suggested, static function (array $a, array $b): int {
+      return OrderingService::locations($a['location'], $b['location']);
+    });
+
+    $result = [];
+
+    foreach (array_merge($matches, $suggested) as $entry) {
+      $result[] = $entry['venue'];
+
+      if (count($result) >= $limit) {
         break;
       }
     }
 
-    return $matches;
+    return $result;
   }
 
   public function recommendVenues(

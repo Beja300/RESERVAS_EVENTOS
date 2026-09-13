@@ -158,6 +158,54 @@ if (!function_exists('respond_json')) {
     }
 }
 
+if (!function_exists('format_venue_location')) {
+    /**
+     * Devuelve la ubicación completa como "Provincia · Cantón · Distrito",
+     * omitiendo las partes que falten (nunca deja separadores colgantes).
+     *
+     * Si el cantón o el distrito vienen vacíos en BD pero existen en el
+     * dataset oficial de Costa Rica, se completan en pantalla con el primer
+     * valor real de esa provincia/cantón para que nunca se vea incompleto.
+     */
+    function format_venue_location(?Location $location): string
+    {
+        if ($location === null) {
+            return '';
+        }
+
+        $province = trim((string) $location->getProvinceLocation());
+        $canton = trim((string) $location->getCantonLocation());
+        $district = trim((string) $location->getDistrictLocation());
+
+        if ($province === '') {
+            return '';
+        }
+
+        $locations = require __DIR__ . '/../Data/locations.php';
+
+        if ($canton === '') {
+            $firstCanton = array_key_first($locations[$province] ?? []);
+            if ($firstCanton !== null) {
+                $canton = (string) $firstCanton;
+            }
+        }
+
+        if ($district === '') {
+            $districts = $locations[$province][$canton] ?? [];
+            if (!empty($districts)) {
+                $district = (string) $districts[0];
+            }
+        }
+
+        $parts = array_values(array_filter(
+            [$province, $canton, $district],
+            static fn(string $part): bool => $part !== ''
+        ));
+
+        return $parts === [] ? '' : e(implode(' · ', $parts));
+    }
+}
+
 if (!function_exists('render_partial')) {
     /**
      * Renderiza una vista parcial y devuelve su HTML (sin imprimir).
@@ -172,5 +220,131 @@ if (!function_exists('render_partial')) {
         ob_start();
         include $path;
         return (string) ob_get_clean();
+    }
+}
+
+if (!function_exists('input')) {
+    /**
+     * Lee y recorta un campo de formulario (POST).
+     */
+    function input(string $key, string $default = ''): string
+    {
+        return trim((string) ($_POST[$key] ?? $default));
+    }
+}
+
+if (!function_exists('require_login')) {
+    /**
+     * Exige sesión iniciada (cualquier rol). Redirige al login si falta.
+     */
+    function require_login(): void
+    {
+        if (empty($_SESSION['type'])) {
+            $target = $_SERVER['HTTP_REFERER'] ?? 'index.php';
+            header('Location: ' . base_url('auth', 'showLogin'));
+            exit;
+        }
+    }
+}
+
+if (!function_exists('require_role')) {
+    /**
+     * Exige que el usuario autenticado sea del rol dado.
+     * Redirige al login si no hay sesión o el rol no coincide.
+     */
+    function require_role(string $expectedType): void
+    {
+        require_login();
+        if (($_SESSION['type'] ?? '') !== $expectedType) {
+            header('Location: ' . base_url('auth', 'showLogin'));
+            exit;
+        }
+    }
+}
+
+if (!function_exists('redirect_to')) {
+    /**
+     * Redirige al front controller (controller/acción) y termina el script.
+     */
+    function redirect_to(string $controller, string $action, array $params = []): void
+    {
+        header('Location: ' . base_url($controller, $action, $params));
+        exit;
+    }
+}
+
+if (!function_exists('respond_or_redirect')) {
+    /**
+     * Respuesta común AJAX + redirección fallback.
+     * Si la petición es AJAX responde JSON (con $status); si no, redirige.
+     */
+    function respond_or_redirect(array $payload, string $controller, string $action, array $params = [], int $status = 200): void
+    {
+        if (is_ajax()) {
+            respond_json($payload, $status);
+        }
+        redirect_to($controller, $action, $params);
+    }
+}
+
+if (!function_exists('parse_year_month')) {
+    /**
+     * Valida/normaliza un año-mes "YYYY-MM". Devuelve el valor vigente,
+     * el anterior y el siguiente, y una etiqueta legible (Ej: "Agosto 2026").
+     */
+    function parse_year_month(string $raw): array
+    {
+        $current = (preg_match('~^\d{4}-\d{2}$~', $raw)) ? $raw : date('Y-m');
+
+        $months = [
+            1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+            5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+            9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
+        ];
+
+        $label = $months[(int) substr($current, 5, 2)] . ' ' . substr($current, 0, 4);
+
+        return [
+            'value' => $current,
+            'prev'  => date('Y-m', strtotime($current . ' first day of this month -1 month')),
+            'next'  => date('Y-m', strtotime($current . ' first day of this month +1 month')),
+            'label' => $label,
+        ];
+    }
+}
+
+if (!function_exists('venue_comments_html')) {
+    /**
+     * HTML de los comentarios de un local (para refresco AJAX sin recargar).
+     */
+    function venue_comments_html(int $idVenue): string
+    {
+        require_once __DIR__ . '/../Service/VenueRatingService.php';
+        require_once __DIR__ . '/../../Configuration/DataBase.php';
+
+        $service = new VenueRatingService(DataBase::getConnection());
+
+        return render_partial(
+            __DIR__ . '/Venue/_venueComments.php',
+            ['venueComments' => $service->getPublicComments($idVenue)]
+        );
+    }
+}
+
+if (!function_exists('service_comments_html')) {
+    /**
+     * HTML de los comentarios de un servicio (para refresco AJAX sin recargar).
+     */
+    function service_comments_html(int $idService): string
+    {
+        require_once __DIR__ . '/../Service/ServiceRatingService.php';
+        require_once __DIR__ . '/../../Configuration/DataBase.php';
+
+        $service = new ServiceRatingService(DataBase::getConnection());
+
+        return render_partial(
+            __DIR__ . '/Venue/_serviceComments.php',
+            ['comments' => $service->getPublicComments($idService)]
+        );
     }
 }

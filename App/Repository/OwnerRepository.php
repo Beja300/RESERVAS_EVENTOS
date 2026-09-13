@@ -239,7 +239,7 @@ class OwnerRepository
             FROM tbrole r
             INNER JOIN tbroleowner o ON o.tbroleid = r.tbroleid
             INNER JOIN tbowner p ON p.tbownerid = o.tbownerid
-            ORDER BY p.tbownerid ASC
+            ORDER BY r.tbrolename ASC
         ";
 
         $stmt = $this->connection->prepare($sql);

@@ -30,8 +30,8 @@ $client = $_SESSION['user'] ?? null;
           <?php endif; ?>
           <h3 style="color:var(--neutral-900);margin-bottom:6px;"><?= e($r->getNameVenue()) ?></h3>
           <p class="muted">Capacidad: <?= (int) $r->getCapacityVenue() ?></p>
-          <?php if (isset($locationByVenue[$r->getIdVenue()])): $loc = $locationByVenue[$r->getIdVenue()]; ?>
-            <p class="muted">&#128205; <?= e($loc->getProvinceLocation()) ?> &middot; <?= e($loc->getCantonLocation()) ?> &middot; <?= e($loc->getDistrictLocation()) ?></p>
+          <?php if (isset($locationByVenue[$r->getIdVenue()]) && $locationByVenue[$r->getIdVenue()] !== null): ?>
+            <p class="muted">&#128205; <?= format_venue_location($locationByVenue[$r->getIdVenue()]) ?></p>
           <?php endif; ?>
         </div>
         <a class="btn btn-sm btn-outline" style="margin-top:12px;" href="<?= e(base_url('venue', 'detail', ['id' => $r->getIdVenue()])) ?>">Ver local</a>
@@ -60,8 +60,8 @@ $client = $_SESSION['user'] ?? null;
             <?php endif; ?>
             <h3 style="color:var(--neutral-900);margin-bottom:6px;"><?= e($v->getNameVenue()) ?></h3>
             <p class="muted">Capacidad: <?= (int) $v->getCapacityVenue() ?></p>
-            <?php if (isset($locationByVenue[$v->getIdVenue()])): $loc = $locationByVenue[$v->getIdVenue()]; ?>
-              <p class="muted">&#128205; <?= e($loc->getProvinceLocation()) ?> &middot; <?= e($loc->getCantonLocation()) ?> &middot; <?= e($loc->getDistrictLocation()) ?></p>
+            <?php if (isset($locationByVenue[$v->getIdVenue()]) && $locationByVenue[$v->getIdVenue()] !== null): ?>
+              <p class="muted">&#128205; <?= format_venue_location($locationByVenue[$v->getIdVenue()]) ?></p>
             <?php endif; ?>
           </div>
           <a class="btn btn-sm btn-outline" style="margin-top:12px;" href="<?= e(base_url('venue', 'detail', ['id' => $v->getIdVenue()])) ?>">Ver local</a>

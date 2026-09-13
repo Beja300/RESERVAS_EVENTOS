@@ -84,16 +84,103 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // =========================================================
-// MAPEO DE CONTROLLERS
+// TABLA DE RUTAS (controller/action -> Clase y método)
+// -------------------------------------------------------
+// Cada acción conserva su URL histórica. Los controladores se dividieron
+// por rol/función (p. ej. "venue/catalog" vive en VenueCatalogController y
+// "venue/list" en OwnerVenueController) manteniendo los mismos parámetros.
 // =========================================================
-$controllers = [
+$routeMap = [
+  // ---------- service ----------
+  'service.list'       => ['OwnerServiceController', 'list'],
+  'service.showForm'   => ['OwnerServiceController', 'showForm'],
+  'service.create'     => ['OwnerServiceController', 'create'],
+  'service.update'     => ['OwnerServiceController', 'update'],
+  'service.pending'    => ['AdminServiceController', 'pending'],
+  'service.approve'    => ['AdminServiceController', 'approve'],
+  'service.reject'     => ['AdminServiceController', 'reject'],
+  'service.detail'     => ['AdminServiceController', 'detail'],
+
+  // ---------- venue ----------
+  'venue.catalog'      => ['VenueCatalogController', 'catalog'],
+  'venue.detail'       => ['VenueCatalogController', 'detail'],
+  'venue.showOwner'    => ['VenueCatalogController', 'showOwner'],
+  'venue.rate'         => ['VenueCatalogController', 'rate'],
+  'venue.rateService'  => ['VenueCatalogController', 'rateService'],
+  'venue.updateComment'=> ['VenueCatalogController', 'updateComment'],
+  'venue.list'         => ['OwnerVenueController', 'list'],
+  'venue.showForm'     => ['OwnerVenueController', 'showForm'],
+  'venue.create'       => ['OwnerVenueController', 'create'],
+  'venue.update'       => ['OwnerVenueController', 'update'],
+
+  // ---------- booking ----------
+  'booking.create'        => ['ClientBookingController', 'create'],
+  'booking.showForm'      => ['ClientBookingController', 'showForm'],
+  'booking.myBookings'    => ['ClientBookingController', 'myBookings'],
+  'booking.addLine'       => ['ClientBookingController', 'addLine'],
+  'booking.cancel'        => ['ClientBookingController', 'cancel'],
+  'booking.requestRefund' => ['ClientBookingController', 'requestRefund'],
+  'booking.pay'           => ['ClientBookingController', 'pay'],
+  'booking.uploadTicket'  => ['ClientBookingController', 'uploadTicket'],
+  'booking.detail'        => ['BookingDetailController', 'detail'],
+  'booking.venueBookings' => ['OwnerBookingController', 'venueBookings'],
+  'booking.pendingBookings' => ['OwnerBookingController', 'pendingBookings'],
+  'booking.approveTicket' => ['OwnerBookingController', 'approveTicket'],
+  'booking.rejectTicket'  => ['OwnerBookingController', 'rejectTicket'],
+
+  // ---------- client ----------
+  'client.dashboard'       => ['ClientDashboardController', 'dashboard'],
+  'client.profile'         => ['ClientProfileController', 'profile'],
+  'client.updateProfile'   => ['ClientProfileController', 'updateProfile'],
+  'client.updateLocation'  => ['ClientProfileController', 'updateLocation'],
+  'client.removePhoto'     => ['ClientProfileController', 'removePhoto'],
+  'client.deactivateAccount' => ['ClientProfileController', 'deactivateAccount'],
+
+  // ---------- owner ----------
+  'owner.dashboard'       => ['OwnerDashboardController', 'dashboard'],
+  'owner.profile'         => ['OwnerProfileController', 'profile'],
+  'owner.updateProfile'   => ['OwnerProfileController', 'updateProfile'],
+  'owner.removePhoto'     => ['OwnerProfileController', 'removePhoto'],
+  'owner.deactivateAccount' => ['OwnerProfileController', 'deactivateAccount'],
+  'owner.paymentData'     => ['OwnerPaymentController', 'paymentData'],
+  'owner.savePayment'     => ['OwnerPaymentController', 'savePayment'],
+  'owner.removePayment'   => ['OwnerPaymentController', 'removePayment'],
+
+  // ---------- admin ----------
+  'admin.dashboard'             => ['AdminDashboardController', 'dashboard'],
+  'admin.users'                 => ['AdminUserController', 'users'],
+  'admin.activateUser'          => ['AdminUserController', 'activateUser'],
+  'admin.deactivateUser'        => ['AdminUserController', 'deactivateUser'],
+  'admin.showAdminForm'         => ['AdminUserController', 'showAdminForm'],
+  'admin.createAdmin'           => ['AdminUserController', 'createAdmin'],
+  'admin.showClientForm'        => ['AdminUserController', 'showClientForm'],
+  'admin.createClient'          => ['AdminUserController', 'createClient'],
+  'admin.showOwnerForm'         => ['AdminUserController', 'showOwnerForm'],
+  'admin.createOwner'           => ['AdminUserController', 'createOwner'],
+  'admin.showEditForm'          => ['AdminUserController', 'showEditForm'],
+  'admin.updateUser'            => ['AdminUserController', 'updateUser'],
+  'admin.bookings'              => ['AdminBookingController', 'bookings'],
+  'admin.userHistory'           => ['AdminBookingController', 'userHistory'],
+  'admin.bookingDetail'         => ['AdminBookingController', 'bookingDetail'],
+  'admin.approvePayment'        => ['AdminBookingController', 'approvePayment'],
+  'admin.rejectPayment'         => ['AdminBookingController', 'rejectPayment'],
+  'admin.cancelBooking'         => ['AdminBookingController', 'cancelBooking'],
+  'admin.rescheduleBooking'     => ['AdminBookingController', 'rescheduleBooking'],
+  'admin.changeBookingVenue'    => ['AdminBookingController', 'changeBookingVenue'],
+  'admin.refundBooking'         => ['AdminBookingController', 'refundBooking'],
+  'admin.rejectRefundBooking'   => ['AdminBookingController', 'rejectRefundBooking'],
+  'admin.profile'               => ['AdminProfileController', 'profile'],
+  'admin.updateProfile'         => ['AdminProfileController', 'updateProfile'],
+  'admin.removePhoto'           => ['AdminProfileController', 'removePhoto'],
+  'admin.deactivateAccount'     => ['AdminProfileController', 'deactivateAccount'],
+  'admin.commissionConfig'      => ['AdminFinanceController', 'commissionConfig'],
+  'admin.saveCommissionConfig'  => ['AdminFinanceController', 'saveCommissionConfig'],
+  'admin.cleanTestData'         => ['AdminFinanceController', 'cleanTestData'],
+];
+
+// Controladores no divididos (misma clase para todas sus acciones).
+$fallbackControllers = [
   'auth'          => 'AuthController',
-  'service'       => 'ServiceController',
-  'venue'         => 'VenueController',
-  'booking'       => 'BookingController',
-  'admin'         => 'AdminController',
-  'client'        => 'ClientController',
-  'owner'         => 'OwnerController',
   'invoice'       => 'InvoiceController',
   'paymentmethod' => 'PaymentMethodController',
   'location'      => 'LocationController',
@@ -152,7 +239,7 @@ $controllerKey = strtolower(trim($_GET['controller'] ?? $defaultController));
 $action        = ($_GET['action'] ?? $defaultAction);
 
 // Validar que el controlador exista en el mapa.
-if (!isset($controllers[$controllerKey])) {
+if (!isset($fallbackControllers[$controllerKey]) && !isset($allowedActions[$controllerKey])) {
     renderError(404, 'Controlador no encontrado.');
 }
 
@@ -161,7 +248,17 @@ if (!isset($allowedActions[$controllerKey]) || !in_array($action, $allowedAction
     renderError(404, 'Acción no encontrada.');
 }
 
-$controllerClass = $controllers[$controllerKey];
+$mapped = $fallbackControllers[$controllerKey] ?? null;
+
+if ($mapped !== null) {
+    $controllerClass = $mapped;
+    $method = $action;
+} elseif (isset($routeMap[$controllerKey . '.' . $action])) {
+    [$controllerClass, $method] = $routeMap[$controllerKey . '.' . $action];
+} else {
+    renderError(404, 'Acción no encontrada.');
+}
+
 $controllerFile  = __DIR__ . '/../App/Controller/' . $controllerClass . '.php';
 
 if (!file_exists($controllerFile)) {
@@ -176,4 +273,4 @@ if (!class_exists($controllerClass)) {
 
 // Crear la instancia y ejecutar la acción (el controller valida sesión y roles).
 $controller = new $controllerClass();
-$controller->$action();
+$controller->$method();

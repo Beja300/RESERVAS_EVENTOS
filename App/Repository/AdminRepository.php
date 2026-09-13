@@ -184,7 +184,7 @@ class AdminRepository
             FROM tbrole r
             INNER JOIN tbroleadmin a ON a.tbroleid = r.tbroleid
             INNER JOIN tbadmin p ON p.tbadminid = a.tbadminid
-            ORDER BY p.tbadminid ASC
+            ORDER BY r.tbrolename ASC
         ";
 
         $stmt = $this->connection->prepare($sql);

@@ -205,6 +205,7 @@ class VenueRepository
             FROM tbvenue
 
             WHERE tbownerid = :idOwner
+            ORDER BY tbvenuename ASC
         ";
 
     $stmt = $this->connection->prepare($sql);
