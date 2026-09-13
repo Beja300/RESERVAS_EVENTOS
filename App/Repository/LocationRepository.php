@@ -77,7 +77,7 @@ class LocationRepository
                 tblocationtown,
                 tblocationdescription
             FROM tblocation
-            ORDER BY tblocationid ASC
+            ORDER BY tblocationprovince ASC, tblocationcanton ASC, tblocationdistrict ASC
         ";
 
         $stmt = $this->connection->prepare($sql);

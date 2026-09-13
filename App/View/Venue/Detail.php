@@ -75,7 +75,7 @@ if ($venue === null) {
   <div class="detail-item"><div class="k">Ubicación</div>
       <div class="v">
         <?php if ($location !== null): ?>
-          <div><?= e($location->getProvinceLocation()) ?>, <?= e($location->getCantonLocation()) ?>, <?= e($location->getDistrictLocation()) ?></div>
+          <div><?= format_venue_location($location) ?></div>
           <?php if ($location->getTownLocation() !== null && $location->getTownLocation() !== ''): ?>
             <div class="muted">Pueblo: <?= e($location->getTownLocation()) ?></div>
           <?php endif; ?>

@@ -81,9 +81,9 @@ $filters = $filters ?? [
             <?= $v->getTypeVenue() !== '' ? e($v->getTypeVenue()) : 'General' ?>
             &nbsp;·&nbsp; Capacidad: <?= (int) $v->getCapacityVenue() ?>
           </p>
-          <?php if (isset($locationByVenue[$v->getIdVenue()])): $loc = $locationByVenue[$v->getIdVenue()]; ?>
+          <?php if (isset($locationByVenue[$v->getIdVenue()]) && $locationByVenue[$v->getIdVenue()] !== null): ?>
             <p style="color:var(--neutral-500);font-size:0.85rem;margin-top:4px;">
-              &#128205; <?= e($loc->getProvinceLocation()) ?> &middot; <?= e($loc->getCantonLocation()) ?> &middot; <?= e($loc->getDistrictLocation()) ?>
+              &#128205; <?= format_venue_location($locationByVenue[$v->getIdVenue()]) ?>
             </p>
           <?php endif; ?>
           <p style="color:var(--neutral-900);font-weight:700;margin-top:6px;">

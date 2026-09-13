@@ -186,7 +186,7 @@ class ClientRepository
             FROM tbrole r
             INNER JOIN tbroleclient c ON c.tbroleid = r.tbroleid
             INNER JOIN tbclient p ON p.tbclientid = c.tbclientid
-            ORDER BY p.tbclientid ASC
+            ORDER BY r.tbrolename ASC
         ";
 
         $stmt = $this->connection->prepare($sql);

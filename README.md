@@ -246,3 +246,101 @@ justifican un `Service` dedicado — por ejemplo `ReservaService.php`,
 # REGLA JS
 La regla general: JS es para experiencia de usuario en el navegador, nunca para lógica de negocio real — todo lo que ya puedes validar en PHP (Service/Controller) se debe volver a validar ahí, porque cualquiera puede desactivar JS o manipular el HTML.
 **/
+
+---
+# HISTORIAL DE TRABAJO RECIENTE 13 de septiembre
+
+> Sección informativa para el siguiente desarrollador: qué cambió, dónde está
+> cada cosa y cómo verificar que todo sigue funcionando.
+
+## 1) Ordenamiento lexicográfico en listas
+
+Se estandarizó el orden de las listas por **nombres/ubicaciones** para que se
+vean ordenadas de forma natural (sin importar mayúsculas, tildes ni números).
+
+### Dónde se implementó
+- `App/Service/OrderingService.php` — nuevo servicio con tres comparadores:
+  - `OrderingService::strings($a, $b)` → nombres con acentos/case-insensitive.
+  - `OrderingService::sequences($a, $b)` → orden natural de secuencias (ej. "Local 2" antes de "Local 10").
+  - `OrderingService::locations($a, $b)` → ubicaciones por provincia → cantón → distrito.
+- Catálogo de locales (`VenueCatalogController::sortCatalogVenues`): orden
+  cercanía al cliente → rating → ubicación (lexicográfico) → nombre (natural).
+- `HistoryService::recommendVenuesByLocation()` ordena por ubicación.
+- `ORDER BY` agregados en repositorios: `VenueRepository::findByOwner`,
+  `ServiceRepository` (findAvailableByLocal / findByLocal / findPending),
+  `ClientRepository::findAll`, `OwnerRepository::findAll`,
+  `AdminRepository::findAll`, `LocationRepository::findAll`.
+
+### Cómo verificar
+- `/tmp/opencode/test_sort_catalog.php` (test de integración del catálogo):
+  espera el orden `[2, 3, 6, 5, 4, 1]`. Resultado actual: **OK**.
+
+## 2) Refactorización de controladores (controllers más pequeños)
+
+Se dividieron los 6 controladores grandes en **17 controladores** por rol/función.
+**Las URLs no cambian** (sigue siendo `Public/index.php?controller=X&action=Y`).
+
+### Controllers creados
+
+| Antes (eliminado) | Después (nuevo) |
+|---|---|
+| `ServiceController` | `OwnerServiceController`, `AdminServiceController` |
+| `ClientController` | `ClientDashboardController`, `ClientProfileController` |
+| `OwnerController` | `OwnerDashboardController`, `OwnerProfileController`, `OwnerPaymentController` |
+| `VenueController` | `VenueCatalogController`, `OwnerVenueController` |
+| `BookingController` | `ClientBookingController`, `OwnerBookingController`, `BookingDetailController` |
+| `AdminController` | `AdminDashboardController`, `AdminProfileController`, `AdminUserController`, `AdminBookingController`, `AdminFinanceController` |
+
+### Servicios nuevos (reglas de negocio que vivían en los controllers)
+- `App/Service/BookingActionService.php` — crear/cancelar/pagar/subir comprobante/aprobar-rechazar comprobante de reservas.
+- `App/Service/BookingDetailService.php` — arma el detalle de una reserva (cliente/owner) para la vista.
+- `App/Service/OwnerDashboardService.php` y `App/Service/AdminDashboardService.php` — métricas de los dashboards.
+- `App/Service/ImageStorageService.php` — subida/borrado de archivos (fotos de perfil, locales, comprobantes). Usa `resource/{subdir}/` bajo `Public/`.
+- `App/Service/ProfileService.php` — validaciones de perfil, cambio de contraseña y auditoría de credenciales.
+- `App/Service/LocationService::findOrCreateByParts()` — reutiliza o crea una ubicación en un solo paso.
+
+### Helpers globales (`App/View/_helpers.php`)
+`input()`, `require_login()`, `require_role()`, `redirect_to()`, `respond_or_redirect()`,
+`parse_year_month()`, `venue_comments_html()`, `service_comments_html()`.
+Ya existían: `base_url`, `is_ajax`, `respond_json`, `render_partial`, `csrf_*`, `e`, `image_url`, `css_url`, `js_url`, `format_venue_location`, `current_user_type`.
+
+> Regla para el siguiente desarrollador: **no volver a crear controllers de cientos de líneas**.
+> Guardias de rol → `require_role('client'|'owner'|'admin')`. Redirects → `redirect_to()`. Respuestas AJAX/POST → `respond_or_redirect()`.
+> Lógica de negocio → en `App/Service/`, nunca en el controller.
+
+### Routing (`Public/index.php`)
+La lista plana `$controllers`/`$allowedActions` se reemplazó por una **tabla de rutas por acción**:
+`$routeMap['controller.action'] = ['Clase', 'método']`. Los controllers no divididos quedan en `$fallbackControllers`.
+Para agregar una ruta nueva basta añadir una entrada al mapa **y** el nombre en `$allowedActions`.
+
+### Bugs corregidos en el proceso
+- `uploadTicket` ahora valida la extensión y el tamaño **antes** de mover el archivo.
+- `activateUser` y `deactivateUser` tienen try/catch y mensajes de error.
+- `cleanTestData` se ejecuta dentro de una transacción (rollback si algo falla).
+- `approveTicket` (owner) redirige bien a `booking/detail`.
+- `ServiceController::approve/reject` ahora inyectan `HistoryService` y en `reject` también se registra `logAction` (simetría con `approve`).
+- Se eliminaron `session_start()` redundantes (el front controller ya inicia sesión).
+- Los catch de formularios recargan sus datos antes de re-renderizar la vista.
+
+## Cómo verificar el proyecto tras estos cambios
+
+1. Sintaxis de todos los archivos:
+   ```
+   find App Public -name '*.php' | xargs -n1 php -l
+   ```
+   Resultado esperado: ningún error en los 163 archivos.
+2. Levantar el servidor local:
+   ```
+   php -S 127.0.0.1:8899 -t Public
+   ```
+3. Smoke test por rol (login con los usuarios demo de `DataBase/ScriptsSQL/seed_test_data.sql`):
+   - Admin: `admin/dashboard`, `admin/users`, `admin/bookings`, `admin/bookingDetail&id=1`, `admin/commissionConfig`, `service/pending`.
+   - Owner: `owner/dashboard`, `owner/profile`, `owner/paymentData`, `venue/list`, `booking/venueBookings&venueId=1`, `service/list&venueId=1`.
+   - Cliente: `client/dashboard`, `client/profile`, `booking/myBookings`, `booking/showForm&venueId=1`, `booking/detail&id=1`.
+   - Público: `venue/catalog`, `venue/detail&id=1` → 200. Acciones de rol sin sesión → 302.
+   - POST sin `csrf_token` → 403. Acción inexistente → 404.
+4. Orden del catálogo: `php /tmp/opencode/test_sort_catalog.php` → debe devolver `[2, 3, 6, 5, 4, 1]`.
+
+> NOTA: los controladores antiguos (`ServiceController`, `VenueController`, `BookingController`,
+> `AdminController`, `ClientController`, `OwnerController`) **fueron eliminados**. Si el front
+> controller deja de resolver algo, revisar `$routeMap` en `Public/index.php`, no restaurar los viejos.

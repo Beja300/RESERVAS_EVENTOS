@@ -140,6 +140,7 @@ class ServiceRepository
             WHERE tbvenueid = :idLocal
               AND tbservicestate = 'aprobado'
               AND tbserviceactive = true
+            ORDER BY tbservicename ASC
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -173,6 +174,7 @@ class ServiceRepository
             FROM tbservice
 
             WHERE tbservicestate = 'solicitado'
+            ORDER BY tbservicename ASC
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -235,6 +237,7 @@ class ServiceRepository
             FROM tbservice
 
             WHERE tbvenueid = :idLocal
+            ORDER BY tbservicename ASC
         ";
 
     $stmt = $this->connection->prepare($sql);
