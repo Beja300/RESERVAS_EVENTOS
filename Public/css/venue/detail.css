@@ -15,3 +15,25 @@
   opacity: 0.7;
   cursor: progress;
 }
+
+/* Botón de favorito (corazón) del local */
+#favoriteBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+#favoriteBtn .fav-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+#favoriteBtn.is-favorite {
+  color: #e11d48;
+  border-color: #e11d48;
+  background: #fff1f2;
+}
+
+#favoriteBtn.is-favorite:hover {
+  background: #ffe4e6;
+}

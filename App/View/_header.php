@@ -46,21 +46,22 @@ if ($userType !== null && isset($_SESSION['user']) && is_object($_SESSION['user'
     </a>
     <nav class="nav">
       <?php if ($userType === 'client'): ?>
-        <a href="<?= e(base_url('client', 'dashboard')) ?>">Mi panel</a>
+        <a href="<?= e(base_url('client', 'dashboard')) ?>">Inicio</a>
         <a href="<?= e(base_url('venue', 'catalog')) ?>">Explorar locales</a>
-        <a href="<?= e(base_url('booking', 'myBookings')) ?>">Mis reservas</a>
+        <a href="<?= e(base_url('client', 'recommendations')) ?>">Recomendaciones</a>
+        <a href="<?= e(base_url('client', 'favorites')) ?>">Mis favoritos</a>
         <a href="<?= e(base_url('invoice', 'list')) ?>">Mis facturas</a>
         <?= $notificationNav ?>
         <a href="<?= e(base_url('client', 'profile')) ?>">Perfil</a>
       <?php elseif ($userType === 'owner'): ?>
-        <a href="<?= e(base_url('owner', 'dashboard')) ?>">Mi panel</a>
+        <a href="<?= e(base_url('owner', 'dashboard')) ?>">Inicio</a>
         <a href="<?= e(base_url('venue', 'list')) ?>">Mis locales</a>
         <a href="<?= e(base_url('booking', 'pendingBookings')) ?>">Reservas pendientes</a>
         <a href="<?= e(base_url('owner', 'paymentData')) ?>">Métodos de pago</a>
         <?= $notificationNav ?>
         <a href="<?= e(base_url('owner', 'profile')) ?>">Perfil</a>
       <?php elseif ($userType === 'admin'): ?>
-        <a href="<?= e(base_url('admin', 'dashboard')) ?>">Panel</a>
+        <a href="<?= e(base_url('admin', 'dashboard')) ?>">Inicio</a>
         <a href="<?= e(base_url('admin', 'users')) ?>">Usuarios</a>
         <a href="<?= e(base_url('service', 'pending')) ?>">Servicios por aprobar</a>
         <a href="<?= e(base_url('admin', 'userHistory')) ?>">Historial de usuarios</a>

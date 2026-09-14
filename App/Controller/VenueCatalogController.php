@@ -7,7 +7,7 @@ require_once __DIR__ . '/../Service/ServiceService.php';
 require_once __DIR__ . '/../Service/PromotionService.php';
 require_once __DIR__ . '/../Service/HistoryService.php';
 require_once __DIR__ . '/../Service/LocationService.php';
-require_once __DIR__ . '/../Service/OrderingService.php';
+require_once __DIR__ . '/../Service/GeoService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/ServiceRepository.php';
 require_once __DIR__ . '/../Repository/ServiceHistoryRepository.php';
@@ -91,78 +91,38 @@ class VenueCatalogController
 
     // Ubicación válida del cliente (si la tiene) para ordenar por cercanía.
     $clientLocation = null;
+    $clientRoleId = 0;
     if (($_SESSION['type'] ?? null) === 'client') {
+      $clientRoleId = (int) $_SESSION['user']->getIdRol();
       $clientLocationId = (int) $_SESSION['user']->getLocationId();
       if ($clientLocationId > 0) {
         $clientLocation = $this->locationService->findById($clientLocationId);
       }
     }
 
-    // Orden: más cercanos → más populares (rating) → el resto.
-    $venues = $this->sortCatalogVenues($venues, $clientLocation, $ratingsByVenue, $locationByVenue);
+    // Ranking híbrido: proximidad + rating + afinidad por contenido +
+    // popularidad global (App/Service/Recommendation/HybridEngine).
+    $venues = $this->historyService->rankVenuesForCatalog(
+      $venues,
+      $clientLocation,
+      $clientRoleId
+    );
+
+    // Etiqueta "a X km" cuando local y cliente tienen coordenadas.
+    $distanceLabelByVenue = [];
+    if ($clientLocation !== null) {
+      foreach ($venues as $v) {
+        $loc = $locationByVenue[$v->getIdVenue()] ?? null;
+        if ($loc !== null) {
+          $label = GeoService::distanceLabel($clientLocation, $loc);
+          if ($label !== null) {
+            $distanceLabelByVenue[$v->getIdVenue()] = $label;
+          }
+        }
+      }
+    }
 
     require_once __DIR__ . '/../View/Venue/Catalog.php';
-  }
-
-  // =========================================================
-  // ORDENAR CATÁLOGO POR CERCANÍA Y POPULARIDAD (rating)
-  // =========================================================
-  private function sortCatalogVenues(
-    array $venues,
-    ?Location $clientLocation,
-    array $ratingsByVenue,
-    array $locationByVenue
-  ): array
-  {
-    $nearTier = static function (Venue $v) use ($clientLocation, $locationByVenue): int {
-      if ($clientLocation === null) {
-        return 3;
-      }
-
-      $loc = $locationByVenue[$v->getIdVenue()] ?? null;
-      if ($loc === null) {
-        return 3;
-      }
-
-      if ($loc->getProvinceLocation() !== $clientLocation->getProvinceLocation()) {
-        return 3;
-      }
-
-      if ($loc->getCantonLocation() === $clientLocation->getCantonLocation()) {
-        if ($loc->getDistrictLocation() === $clientLocation->getDistrictLocation()) {
-          return 0;
-        }
-        return 1;
-      }
-
-      return 2;
-    };
-
-    usort($venues, static function (Venue $a, Venue $b) use ($nearTier, $ratingsByVenue, $locationByVenue): int {
-      $tierDiff = $nearTier($a) <=> $nearTier($b);
-      if ($tierDiff !== 0) {
-        return $tierDiff;
-      }
-
-      $ratingA = $ratingsByVenue[$a->getIdVenue()] ?? -1.0;
-      $ratingB = $ratingsByVenue[$b->getIdVenue()] ?? -1.0;
-      if ($ratingA !== $ratingB) {
-        return $ratingB <=> $ratingA;
-      }
-
-      $locationA = $locationByVenue[$a->getIdVenue()] ?? null;
-      $locationB = $locationByVenue[$b->getIdVenue()] ?? null;
-      if ($locationA !== null && $locationB !== null) {
-        $locationDiff = OrderingService::locations($locationA, $locationB);
-        if ($locationDiff !== 0) {
-          return $locationDiff;
-        }
-      }
-
-      return OrderingService::strings($a->getNameVenue(), $b->getNameVenue());
-    });
-
-    return $venues;
   }
 
   // =========================================================
@@ -223,6 +183,9 @@ class VenueCatalogController
       $location = $this->locationService->findById($venue->getIdLocation());
     }
 
+    // ¿Este usuario ya tiene marcado el local como favorito?
+    $isFavorite = $loggedRolePk > 0 && $this->historyService->isFavorite($loggedRolePk, $idVenue);
+
     require_once __DIR__ . '/../View/Venue/Detail.php';
   }
 
@@ -247,6 +210,47 @@ class VenueCatalogController
     }
 
     require_once __DIR__ . '/../View/Owner/PublicProfile.php';
+  }
+
+  // =========================================================
+  // MARCAR / DESMARCAR UN LOCAL COMO FAVORITO (toggle)
+  // =========================================================
+  public function favorite(): void
+  {
+    require_login();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      redirect_to('venue', 'catalog');
+    }
+
+    $idVenue = (int) ($_POST['venueId'] ?? 0);
+    $rolePk = (int) ($_SESSION['user']->getIdRol() ?? 0);
+
+    try {
+      if ($this->venueService->findById($idVenue) === null) {
+        throw new BusinessRuleException('El local no existe.');
+      }
+
+      $isFavorite = $this->historyService->isFavorite($rolePk, $idVenue);
+
+      if ($isFavorite) {
+        $this->historyService->logVenueUnfavorite($rolePk, $idVenue);
+      } else {
+        $this->historyService->logVenueFavorite($rolePk, $idVenue);
+      }
+
+      if (is_ajax()) {
+        respond_json(['ok' => true, 'favorite' => !$isFavorite]);
+      }
+
+      redirect_to('venue', 'detail', ['id' => $idVenue]);
+    } catch (BusinessRuleException $e) {
+      if (is_ajax()) {
+        respond_json(['ok' => false, 'message' => $e->getMessage()], 422);
+      }
+
+      redirect_to('venue', 'detail', ['id' => $idVenue]);
+    }
   }
 
   // =========================================================
@@ -316,6 +320,7 @@ class VenueCatalogController
       }
 
       $commentId = $this->venueRatingService->rate($idVenue, $rolePk, $stars, $comment);
+      $this->historyService->logVenueRating($rolePk, $idVenue);
 
       if (is_ajax()) {
         respond_json([
@@ -359,6 +364,7 @@ class VenueCatalogController
 
     try {
       $this->venueRatingService->updateComment($idVenueRating, $rolePk, $stars, $comment);
+      $this->historyService->logVenueRating($rolePk, $idVenue);
 
       if (is_ajax()) {
         respond_json([

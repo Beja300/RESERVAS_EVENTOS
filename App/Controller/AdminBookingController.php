@@ -5,6 +5,7 @@ require_once __DIR__ . '/../Service/EarningService.php';
 require_once __DIR__ . '/../Service/BookingService.php';
 require_once __DIR__ . '/../Service/BookingAdminService.php';
 require_once __DIR__ . '/../Service/NotificationService.php';
+require_once __DIR__ . '/../Service/HistoryService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/BookingHistoryRepository.php';
@@ -32,6 +33,7 @@ class AdminBookingController
   private VenueRepository $venueRepo;
   private ClientRepository $clientRepo;
   private NotificationService $notificationService;
+  private HistoryService $historyService;
 
   public function __construct()
   {
@@ -49,6 +51,7 @@ class AdminBookingController
     $this->venueRepo = new VenueRepository($connection);
     $this->clientRepo = new ClientRepository($connection);
     $this->notificationService = new NotificationService(new NotificationRepository($connection));
+    $this->historyService = new HistoryService($connection);
   }
 
   // =========================================================
@@ -188,6 +191,7 @@ class AdminBookingController
       $this->bookingAdminService->cancel($idBooking, $adminRoleId, $note);
       $cancelledBooking = $this->bookingRepo->findById($idBooking);
       if ($cancelledBooking !== null) {
+        $this->historyService->logVenueCancel($adminRoleId, (int) $cancelledBooking->getIdLocal());
         $this->notificationService->notifyClientBookingCancelled((int) $cancelledBooking->getIdClient(), (int) $idBooking);
       }
       redirect_to('admin', 'bookingDetail', ['id' => $idBooking, 'msg' => 'cancelled']);
@@ -260,6 +264,7 @@ class AdminBookingController
       $this->bookingAdminService->approveRefund($idBooking, $adminRoleId, $refundRequestId, $note);
       $refundedBooking = $this->bookingRepo->findById($idBooking);
       if ($refundedBooking !== null) {
+        $this->historyService->logVenueCancel($adminRoleId, (int) $refundedBooking->getIdLocal());
         $this->notificationService->notifyClientRefundApproved((int) $refundedBooking->getIdClient(), (int) $idBooking);
       }
       redirect_to('admin', 'bookingDetail', ['id' => $idBooking, 'msg' => 'refunded']);

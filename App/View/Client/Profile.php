@@ -1,5 +1,5 @@
 <?php $pageCss = 'client/profile';
-      $pageJs = ['client/profile']; ?>
+      $pageJs = ['client/profile', 'venue/location', 'geo']; ?>
 <?php require_once __DIR__ . '/../_header.php';
 
 $client = $client ?? ($_SESSION['user'] ?? null);
@@ -11,6 +11,8 @@ if ($client === null) {
 
 $location = $location ?? null;
 $suspicious = $suspicious ?? ['password' => 0, 'phone' => 0, 'email' => 0];
+$curLat    = $location !== null ? ($location->getLatitudeLocation()  !== null ? (string) $location->getLatitudeLocation()  : '') : ($_POST['latitude']  ?? '');
+$curLng    = $location !== null ? ($location->getLongitudeLocation() !== null ? (string) $location->getLongitudeLocation() : '') : ($_POST['longitude'] ?? '');
 ?>
 
 <div class="page-head">
@@ -148,6 +150,23 @@ $suspicious = $suspicious ?? ['password' => 0, 'phone' => 0, 'email' => 0];
       <label for="description">Descripción / señas</label>
       <input class="form-control" type="text" id="description" name="description"
              value="<?= e($location !== null ? $location->getDescriptionLocation() : ($_POST['description'] ?? '')) ?>">
+    </div>
+
+    <div class="form-group">
+      <label for="geo-status">Ubicación (latitud / longitud)</label>
+      <div id="geo-status" data-geo-auto="<?= ($curLat === '') || ($curLng === '') ? '1' : '0' ?>">
+        <span id="geo-display" class="<?= $curLat !== '' && $curLng !== '' ? '' : 'muted' ?>">
+          <?php if ($curLat !== '' && $curLng !== ''): ?>
+            Lat <?= e($curLat) ?> · Lon <?= e($curLng) ?>
+          <?php else: ?>
+            Se detectará automáticamente
+          <?php endif; ?>
+        </span>
+      </div>
+      <input type="hidden" name="latitude" id="latitude" value="<?= e($curLat ?? '') ?>">
+      <input type="hidden" name="longitude" id="longitude" value="<?= e($curLng ?? '') ?>">
+      <button type="button" id="geo-detect-btn" class="btn btn-outline btn-sm">Detectar ubicación</button>
+      <p class="form-hint">La latitud/longitud se obtiene automáticamente de tu ubicación o por IP; no es editable.</p>
     </div>
 
     <button class="btn btn-primary" type="submit">Guardar cambios</button>

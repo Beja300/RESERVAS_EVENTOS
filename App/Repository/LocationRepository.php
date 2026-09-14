@@ -20,14 +20,18 @@ class LocationRepository
                 tblocationcanton,
                 tblocationdistrict,
                 tblocationtown,
-                tblocationdescription
+                tblocationdescription,
+                tblocationlatitude,
+                tblocationlongitude
             )
             VALUES (
                 :province,
                 :canton,
                 :district,
                 :town,
-                :description
+                :description,
+                :latitude,
+                :longitude
             )
         ";
 
@@ -39,6 +43,8 @@ class LocationRepository
             ':district'     => $location->getDistrictLocation(),
             ':town'         => $location->getTownLocation(),
             ':description'  => $location->getDescriptionLocation(),
+            ':latitude'     => $location->getLatitudeLocation(),
+            ':longitude'    => $location->getLongitudeLocation(),
         ]);
 
         return (int) $this->connection->lastInsertId();
@@ -53,7 +59,9 @@ class LocationRepository
                 tblocationcanton,
                 tblocationdistrict,
                 tblocationtown,
-                tblocationdescription
+                tblocationdescription,
+                tblocationlatitude,
+                tblocationlongitude
             FROM tblocation
             WHERE tblocationid = :idLocation
         ";
@@ -75,7 +83,9 @@ class LocationRepository
                 tblocationcanton,
                 tblocationdistrict,
                 tblocationtown,
-                tblocationdescription
+                tblocationdescription,
+                tblocationlatitude,
+                tblocationlongitude
             FROM tblocation
             ORDER BY tblocationprovince ASC, tblocationcanton ASC, tblocationdistrict ASC
         ";
@@ -84,6 +94,26 @@ class LocationRepository
         $stmt->execute();
 
         return array_map([$this, 'mapRow'], $stmt->fetchAll());
+    }
+
+    // =========================================================
+    // ACTUALIZAR COORDENADAS DE UNA UBICACIÓN EXISTENTE
+    // =========================================================
+    public function updateCoordinates(int $idLocation, ?float $latitude, ?float $longitude): bool
+    {
+        $sql = "
+            UPDATE tblocation
+            SET tblocationlatitude = :latitude,
+                tblocationlongitude = :longitude
+            WHERE tblocationid = :idLocation
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+        return $stmt->execute([
+            ':latitude'   => $latitude,
+            ':longitude'  => $longitude,
+            ':idLocation' => $idLocation,
+        ]);
     }
 
     // =========================================================
@@ -144,7 +174,9 @@ class LocationRepository
             cantonLocation: $row['tblocationcanton'],
             districtLocation: $row['tblocationdistrict'],
             townLocation: $row['tblocationtown'],
-            descriptionLocation: $row['tblocationdescription']
+            descriptionLocation: $row['tblocationdescription'],
+            latitudeLocation: isset($row['tblocationlatitude']) && $row['tblocationlatitude'] !== null ? (float) $row['tblocationlatitude'] : null,
+            longitudeLocation: isset($row['tblocationlongitude']) && $row['tblocationlongitude'] !== null ? (float) $row['tblocationlongitude'] : null
         );
     }
 }

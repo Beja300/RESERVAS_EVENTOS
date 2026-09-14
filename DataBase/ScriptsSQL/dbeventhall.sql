@@ -82,7 +82,8 @@ CREATE TABLE tbowner (
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 8) tblocation: ubicaciones (provincia/canton/distrito/pueblo/desc)
+-- 8) tblocation: ubicaciones (provincia/canton/distrito/pueblo/desc) + coords
+--    lat/long (DECIMAL(10,7)) para calcular distancia con Haversine.
 -- =========================================================
 CREATE TABLE tblocation (
     tblocationid INT AUTO_INCREMENT PRIMARY KEY,
@@ -90,7 +91,9 @@ CREATE TABLE tblocation (
     tblocationcanton VARCHAR(60) NOT NULL,
     tblocationdistrict VARCHAR(60) NOT NULL,
     tblocationtown VARCHAR(100),
-    tblocationdescription VARCHAR(300)
+    tblocationdescription VARCHAR(300),
+    tblocationlatitude DECIMAL(10,7) NULL,
+    tblocationlongitude DECIMAL(10,7) NULL
 ) ENGINE=InnoDB;
 
 -- =========================================================

@@ -125,6 +125,71 @@ class VenueRepository
   // =========================================================
   // BUSCAR LOCALES ACTIVOS POR FILTROS (ubicación, tipo, texto)
   // =========================================================
+  public function findActiveByIds(array $ids): array
+  {
+    return $this->findByIds($ids, true);
+  }
+
+  // =========================================================
+  // BUSCAR LOCALES POR IDS (opcionalmente solo activos)
+  // =========================================================
+  public function findByIds(array $ids, bool $onlyActive = false): array
+  {
+    $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($i) => $i > 0)));
+
+    if (empty($ids)) {
+      return [];
+    }
+
+    $placeholders = [];
+    $params = [];
+    foreach ($ids as $i => $id) {
+      $key = ":id{$i}";
+      $placeholders[] = $key;
+      $params[$key] = $id;
+    }
+
+    $sql = "
+            SELECT
+                tbvenueid,
+                tbownerid,
+                tblocationid,
+                tbvenuename,
+                tbvenuetype,
+                tbvenuecapacity,
+                tbvenueprice,
+                tbvenueimage,
+                tbvenueactive
+            FROM tbvenue
+            WHERE tbvenueid IN (" . implode(', ', $placeholders) . ")
+        ";
+
+    if ($onlyActive) {
+      $sql .= ' AND tbvenueactive = true';
+    }
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute($params);
+
+    $byId = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+      $byId[(int) $row['tbvenueid']] = $this->mapRow($row);
+    }
+
+    // Conserva el orden pedido por el llamador (ej. el de la lista de favoritos).
+    $ordered = [];
+    foreach ($ids as $id) {
+      if (isset($byId[$id])) {
+        $ordered[] = $byId[$id];
+      }
+    }
+
+    return $ordered;
+  }
+
+  // =========================================================
+  // BUSCAR LOCALES ACTIVOS POR FILTROS (ubicación, tipo, texto)
+  // =========================================================
   public function findByFilters(array $filters = []): array
   {
     $sql = "

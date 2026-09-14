@@ -27,6 +27,8 @@
       'PURCHASE'=> 'Pagó',
       'APPROVE' => 'Aprobó',
       'FAVORITE'=> 'Marcó favorito',
+      'CANCEL'  => 'Canceló',
+      'RATING'  => 'Calificó',
     ];
   ?>
   <div class="table-wrap">

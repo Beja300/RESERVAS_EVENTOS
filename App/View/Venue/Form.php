@@ -1,15 +1,24 @@
+<?php
+$pageCss = 'venue/form';
+$pageJs = ['venue/form', 'venue/location', 'venue/location-map'];
+?>
 <?php require_once __DIR__ . '/../_header.php';
 
 $isEdit = $venue !== null;
 $action = $isEdit ? base_url('venue', 'update') : base_url('venue', 'create');
-$pageJs = ['venue/form', 'venue/location'];
 
 $curProvince = $isEdit && $location !== null ? $location->getProvinceLocation() : ($_POST['province'] ?? '');
 $curCanton   = $isEdit && $location !== null ? $location->getCantonLocation()   : ($_POST['canton'] ?? '');
 $curDistrict = $isEdit && $location !== null ? $location->getDistrictLocation() : ($_POST['district'] ?? '');
 $curTown     = $isEdit && $location !== null ? $location->getTownLocation()     : ($_POST['town'] ?? '');
 $curDesc     = $isEdit && $location !== null ? $location->getDescriptionLocation() : ($_POST['description'] ?? '');
+$curLat      = $isEdit && $location !== null ? ($location->getLatitudeLocation() !== null ? (string) $location->getLatitudeLocation() : '') : ($_POST['latitude'] ?? '');
+$curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation() !== null ? (string) $location->getLongitudeLocation() : '') : ($_POST['longitude'] ?? '');
 ?>
+
+<?php $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'), '/'); ?>
+<link rel="stylesheet" href="<?= e($basePath . '/vendor/leaflet/leaflet.css') ?>">
+<script src="<?= e($basePath . '/vendor/leaflet/leaflet.js') ?>"></script>
 
 <div class="page-head">
   <div>
@@ -108,6 +117,26 @@ $curDesc     = $isEdit && $location !== null ? $location->getDescriptionLocation
       <label for="description">Descripción</label>
       <input class="form-control" type="text" id="description" name="description"
         value="<?= e($curDesc ?? '') ?>">
+    </div>
+
+    <div class="form-group">
+      <label for="venue-map">Ubicación exacta en el mapa *</label>
+      <div class="geo-search-box">
+        <input class="form-control" type="search" id="venue-map-search"
+          placeholder="Buscar dirección o cantón (ej. San José)...">
+        <ul class="geo-search-results" id="venue-map-results"></ul>
+      </div>
+      <div id="venue-map"></div>
+      <span id="geo-display" class="geo-coords <?= $curLat !== '' && $curLng !== '' ? '' : 'muted' ?>">
+        <?php if ($curLat !== '' && $curLng !== ''): ?>
+          Lat <?= e($curLat) ?> · Lon <?= e($curLng) ?>
+        <?php else: ?>
+          Marca el punto en el mapa
+        <?php endif; ?>
+      </span>
+      <input type="hidden" name="latitude" id="latitude" value="<?= e($curLat ?? '') ?>">
+      <input type="hidden" name="longitude" id="longitude" value="<?= e($curLng ?? '') ?>">
+      <p class="form-hint">Haz clic en el mapa o arrastra el marcador para marcar la ubicación del local (obligatorio).</p>
     </div>
 
     <button class="btn btn-primary" type="submit"><?= $isEdit ? 'Guardar cambios' : 'Crear local' ?></button>

@@ -26,9 +26,11 @@
 
         var fd = new FormData();
         fd.append('csrf_token', csrf);
-        fd.append('province', json.province);
-        fd.append('canton', json.canton);
-        fd.append('district', json.district);
+        fd.append('province', json.province || '');
+        fd.append('canton', json.canton || '');
+        fd.append('district', json.district || '');
+        if (typeof json.lat !== 'undefined' && json.lat !== null) fd.append('latitude', json.lat);
+        if (typeof json.lon !== 'undefined' && json.lon !== null) fd.append('longitude', json.lon);
 
         return fetch(saveUrl, {
           method: 'POST',

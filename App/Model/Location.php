@@ -8,6 +8,8 @@ class Location
     private string $districtLocation;
     private ?string $townLocation;
     private ?string $descriptionLocation;
+    private ?float $latitudeLocation;
+    private ?float $longitudeLocation;
 
     public function __construct(
         int $idLocation = 0,
@@ -15,7 +17,9 @@ class Location
         string $cantonLocation = '',
         string $districtLocation = '',
         ?string $townLocation = null,
-        ?string $descriptionLocation = null
+        ?string $descriptionLocation = null,
+        ?float $latitudeLocation = null,
+        ?float $longitudeLocation = null
     ) {
         $this->idLocation = $idLocation;
         $this->provinceLocation = $provinceLocation;
@@ -23,6 +27,8 @@ class Location
         $this->districtLocation = $districtLocation;
         $this->townLocation = $townLocation;
         $this->descriptionLocation = $descriptionLocation;
+        $this->latitudeLocation = $latitudeLocation;
+        $this->longitudeLocation = $longitudeLocation;
     }
 
     // Getters
@@ -56,6 +62,16 @@ class Location
         return $this->descriptionLocation;
     }
 
+    public function getLatitudeLocation(): ?float
+    {
+        return $this->latitudeLocation;
+    }
+
+    public function getLongitudeLocation(): ?float
+    {
+        return $this->longitudeLocation;
+    }
+
     // Setters
     public function setIdLocation(int $idLocation): void
     {
@@ -85,5 +101,15 @@ class Location
     public function setDescriptionLocation(?string $descriptionLocation): void
     {
         $this->descriptionLocation = $descriptionLocation;
+    }
+
+    public function setLatitudeLocation(?float $latitudeLocation): void
+    {
+        $this->latitudeLocation = $latitudeLocation;
+    }
+
+    public function setLongitudeLocation(?float $longitudeLocation): void
+    {
+        $this->longitudeLocation = $longitudeLocation;
     }
 }

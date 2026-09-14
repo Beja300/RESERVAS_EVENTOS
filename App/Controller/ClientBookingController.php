@@ -154,7 +154,7 @@ class ClientBookingController
     $idBooking = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
 
     try {
-      $this->bookingActionService->cancel($client->getIdClient(), $idBooking);
+      $this->bookingActionService->cancel($client->getIdClient(), (int) $client->getIdRol(), $idBooking);
 
       respond_or_redirect(
         ['ok' => true, 'message' => 'Reserva cancelada correctamente.'],

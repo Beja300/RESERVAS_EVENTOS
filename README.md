@@ -344,3 +344,178 @@ Para agregar una ruta nueva basta añadir una entrada al mapa **y** el nombre en
 > NOTA: los controladores antiguos (`ServiceController`, `VenueController`, `BookingController`,
 > `AdminController`, `ClientController`, `OwnerController`) **fueron eliminados**. Si el front
 > controller deja de resolver algo, revisar `$routeMap` en `Public/index.php`, no restaurar los viejos.
+
+---
+
+## Recomendaciones y posicionamiento de locales (híbrido por reglas)
+
+Objetivo original: ordenar el catálogo por **mejor calificación y cercanía al cliente**
+(primero por distrito, luego por distancia real con la **fórmula de Haversine**). Sobre esa base
+se agregó registro de interacciones de comportamiento y un **motor de recomendación híbrido por
+reglas + distancia geográfica**, con la arquitectura lista para incorporar ML en el futuro.
+
+### Coordenadas (DB y modelos)
+
+- `DataBase/ScriptsSQL/migrate_recommendations.sql` → `ALTER TABLE tblocation` agrega
+  `tblocationlatitude` y `tblocationlongitude` (`DECIMAL(10,7) NULL`).
+- `DataBase/ScriptsSQL/dbeventhall.sql` ahora incluye ambas columnas en `tblocation`.
+- `App/Model/Location.php` → propiedades `latitudeLocation` / `longitudeLocation` con getters/setters.
+- `App/Repository/LocationRepository.php` → `save`, `findById`, `findAll`, `mapRow` manejan lat/lng;
+  nuevo `updateCoordinates($idLocation, $latitude, $longitude)`.
+- `App/Service/LocationService.php` → `validateAndCreate` / `findOrCreateByParts` aceptan
+  lat/lng opcionales, validan rangos (−90..90 / −180..180) y exigen ambas juntas
+  (`assertValidCoordinates`); al reutilizar una ubicación existente actualiza las coordenadas.
+- `App/Service/VenueService.php::validateAndCreate` y `App/Controller/OwnerVenueController.php`
+  (create/update) persisten lat/lng del local; `App/View/Venue/Form.php` incluye inputs opcionales.
+- `App/Controller/ClientProfileController.php` + `App/View/Client/Profile.php` + 
+  `Public/js/client/dashboard.js` guardan lat/lng del cliente (manual o geolocalización).
+- Decisión: las coordenadas son **opcionales** y se piden/guardan en segundo plano; en `DataBase/Backup/*.sql`
+  **no** se tocó nada.
+
+### GeoService (distancia)
+
+`App/Service/GeoService.php`:
+- `haversineKm(...)` con radio terrestre 6371 km.
+- `distanceKm(?Location, ?Location)` → `null` si faltan coordenadas.
+- `proximityScore(...)` → `1/(1+d)` con coordenadas; sin ellas, fallback por niveles:
+  mismo distrito = 1.0, mismo cantón = 0.7, misma provincia = 0.4, otra provincia = 0.1;
+  sin ubicación de cliente o local = 0.5 neutro.
+- `distanceLabel(...)` → `"a X km"` (1 decimal) o `"a X m"` (> ignorar razón de preferencia).
+
+### Registro de interacciones (tbuserhistory)
+
+- `HistoryAction` suma `CANCEL` y `RATING` (ya existían `VIEW`, `SEARCH`, `FAVORITE`, `BOOKING`, `PURCHASE`).
+- `HistoryService` agrega `logVenueCancel`, `logVenueRating`, `logVenueFavorite`, `logVenueUnfavorite`, `isFavorite`, `favoriteVenueIdsByRole`.
+- Cancelaciones del cliente (`BookingActionService::cancel`) y del admin
+  (`AdminBookingController::cancelBooking` y `refundBooking`) registran `CANCEL`.
+- Calificaciones del local (`VenueCatalogController::rate` / `updateComment`) registran `RATING`.
+- `Admin/UserHistory.php` muestra las etiquetas "Canceló" y "Calificó".
+
+### Favoritos (feature completo)
+
+- Toggle por AJAX: `VenueCatalogController::favorite()` + ruta `venue.favorite` en `Public/index.php`.
+- Botón ❤️ en `App/View/Venue/Detail.php` con `Public/js/venue/favorite.js` y estilos en `Public/css/venue/detail.css`.
+- Página "Mis favoritos": ruta `client.favorites` → `ClientDashboardController::favorites()`
+  + `App/View/Client/Favorites.php`, enlazada en `App/View/_header.php`.
+- Al marcar FAVORITE se agrega `tbuserhistory`; al desmarcar se borra (`deleteFavorite`).
+
+### Motor de recomendación híbrido (App/Service/Recommendation/)
+
+Por reglas y distancia geográfica (sin ML), preparado para ML futuro:
+
+- `RecommendationConfig` → pesos por modo e `INTERACTION_WEIGHTS`
+  (SEARCH=1, VIEW=1, FAVORITE=4, BOOKING=7, PURCHASE=10, RATING=6, CANCEL=−4).
+- `RecommendationContext` → candidatos + ubicaciones + ratings + colab + historial del rol.
+- `RecommendationStrategy` (interfaz) + estrategias:
+  - `LocationStrategy` (geo), `RatingStrategy`, `ContentStrategy` (afinidad por tipo de local),
+    `CollaborativeStrategy` (popularidad global ponderada).
+- `HybridEngine::rankVenues()` → normaliza cada señal a [0,1] y las combina con el peso del modo:
+  catálogo `geo=0.40 rating=0.25 content=0.20 colab=0.15`; cerca de ti `geo=0.60 rating=0.20 content=0.05 colab=0.15`.
+  Las señales sin datos quedan en 0 (no deforman el ranking). Empate → rating, luego nombre.
+- `HistoryService` delega en el motor: `recommendForUser`, `recommendNear`, `rankVenuesForCatalog`
+  (reemplazan a `recommendVenues`, `recommendVenuesByLocation` y a `sortCatalogVenues`/`nearTier`).
+- `App/Repository/HistoryRepository.php` → `interactionWeightedScores` para el puntaje colaborativo
+  y helpers de favoritos (`hasFavorite`, `deleteFavorite`, `favoriteVenueIdsByRole`).
+- TODO(ML): agregar una estrategia "ml" en `HybridEngine` y su peso en `RecommendationConfig`.
+
+### Cómo se ve en la UI
+
+- `App/View/Venue/Catalog.php` y `App/View/Client/Dashboard.php` muestran la etiqueta
+  **"a X km"** en las tarjetas cuando cliente y local tienen coordenadas
+  (`$distanceLabelByVenue` calculado con `GeoService::distanceLabel`).
+
+### Verificación
+
+1. Sintaxis de todos los archivos PHP (`find App Public -name '*.php' | xargs -n1 php -l`).
+2. Levantar `php -S 127.0.0.1:8899 -t Public`.
+3. Probar: catálogo ordenado híbrido, badges "a X km", favoritos (marcar/desmarcar), panel
+   "Mis favoritos", historial con CANCEL/RATING, y "Recomendados para ti"/"Locales cerca de ti"
+   en `client/dashboard`.
+
+---
+
+# HISTORIAL DE TRABAJO RECIENTE 13 de septiembre (2.ª tanda)
+
+> Continuación de la sección anterior. Qué cambió en esta tanda y cómo verificar.
+
+## 1) Combos de ubicación vacíos (provincia/cantón/distrito) — corregido
+
+El formulario de perfil del cliente y del local mostraban los `<select>` de
+provincia/cantón/distrito vacíos o se borraban al editar. Causas y solución:
+
+- `App/View/Client/Profile.php` — el pie de página no cargaba
+  `Public/js/venue/location.js` (`$pageJs`), por eso nunca se poblaban los combos.
+  Ahora `$pageJs = ['client/profile', 'venue/location']`.
+- `Public/js/venue/location.js::applyPreselection()` — no hacía
+  `provinceCombo.setValue(province)` y `syncNative()` dejaba el `<select>`
+  nativo en blanco, rompiendo los `required` (impedía guardar aunque solo se
+  cambiara la foto). Ahora se preselecciona con `setValue`.
+
+## 2) Latitud/longitud no editables (auto-detección)
+
+Decisión de diseño: **el usuario no teclea lat/lng a mano**; se obtienen de la
+ubicación del navegador (o por IP como respaldo).
+
+- `Public/js/geo.js` — nuevo: `navigator.geolocation` con respaldo
+  `api/geolocate` (IP vía `ip-api.com`). Rellena los hidden `#latitude/#longitude`.
+- `App/View/Client/Profile.php` y `App/View/Venue/Form.php` dejaron de mostrar
+  inputs numéricos; solo hay hidden + texto de solo lectura + botón
+  "Detectar ubicación" (`data-geo-auto="1"` solo si aún no hay coordenadas).
+- `App/Controller/ApiController.php::geolocate` devuelve `{ok, lat, lng}`
+  (y provincia/cantón/distrito por IP).
+
+## 3) Dashboard e navegación del cliente
+
+- Etiqueta del nav unificada: **"Inicio"** en dashboards de cliente, propietario y admin.
+- Se eliminó **"Mis reservas"** del nav del cliente (las reservas se muestran
+  en el panel). Se agregó el link **"Recomendaciones"** → `client/recommendations`.
+- `App/View/Client/Dashboard.php` reescrito:
+  - Div 1 "Locales alquilados": últimas 5 reservas (nombre, fechas, estado) + "Ver todas →".
+  - Div 2 "Locales más frecuentes": los locales que el cliente **más ha visto**
+    (historial `tbuserhistory` con `HistoryAction::VIEW`), no por reservas.
+    Badge "X visitas" + "Ver local".
+  - Módulo geo ligero: detecta y guarda la posición del cliente desde el panel.
+- `App/View/Client/Recommendations.php` — nuevo: concentra "Recomendados para ti",
+  "Locales cerca de ti" y el módulo geo completo.
+- `App/Repository/HistoryRepository.php::mostViewedVenueIdsByRole()`
+  → `[idVenue => nº de vistas]` ordenado por visitas (solo `VIEW` de `Venue`).
+- `Public/index.php` → ruta y allowlist `client.recommendations`.
+
+## 4) Ubicación del local con mapa (Leaflet + OpenStreetMap)
+
+El formulario del local (crear/editar) **ya no usa la auto-detección**: el
+propietario marca la ubicación en un mapa tipo "Google Maps".
+
+- `Public/vendor/leaflet/` — Leaflet 1.9.4 descargado localmente
+  (`leaflet.css`, `leaflet.js`, `images/`). Las teselas usan OpenStreetMap
+  y la búsqueda usa Nominatim (requieren internet en el navegador).
+- `Public/js/venue/location-map.js` — nuevo:
+  - Clic/arrastre del marcador → hidden `#latitude/#longitude` (6 decimales).
+  - Búsqueda de dirección/cantón (Nominatim, `countrycodes=cr`).
+  - Re-centrado automático al elegir provincia/cantón (si aún no hay punto marcado).
+  - Validación cliente: bloquea el envío sin marcar el mapa.
+- `Public/js/venue/location.js` — `syncNative()` dispara el evento `change`
+  en los `<select>` nativos (setear `.value` por JS no lo emite), necesario
+  para el re-centrado del mapa por cantón.
+- `App/View/Venue/Form.php` — carga Leaflet, `$pageCss = 'venue/form'`,
+  `$pageJs = ['venue/form', 'venue/location', 'venue/location-map']` (sin `geo`),
+  y el bloque del mapa reemplaza la auto-detección.
+- `Public/css/venue/form.css` — estilos del mapa y del dropdown de búsqueda.
+- `App/Controller/OwnerVenueController.php` — `requireCoordinates()` en
+  `create()` y `update()`: las coordenadas ahora son **obligatorias**
+  (error: "Debes marcar la ubicación exacta del local en el mapa.").
+
+El perfil del cliente conserva la auto-detección de `geo.js`; el mapa es
+exclusivo del formulario del local.
+
+## Cómo verificar esta tanda
+
+1. `find App Public -name '*.php' | xargs -n1 php -l` → sin errores.
+2. `php -S 127.0.0.1:8899 -t Public` y login con los usuarios demo
+   (`owner@eventhall.com`, `cliente@eventhall.com`, `admin@eventhall.com` / `Clave123`).
+3. Owner → `venue/showForm`: el formulario muestra el mapa, el buscador y
+   `client/vendor/leaflet/leaflet.js` responde 200. Guardar sin marcar el mapa
+   responde 422 con el mensaje; marcarlo permite guardar.
+4. Cliente → panel con "Locales alquilados" + "Locales más frecuentes" (X visitas),
+   página "Recomendaciones", nav con "Inicio"; perfil con combos de ubicación
+   poblados y auto-detección funcionando.

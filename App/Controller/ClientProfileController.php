@@ -92,6 +92,8 @@ class ClientProfileController
       $district = trim($_POST['district'] ?? '');
       $town = trim($_POST['town'] ?? '') ?: null;
       $description = trim($_POST['description'] ?? '') ?: null;
+      $latitude = isset($_POST['latitude']) && $_POST['latitude'] !== '' ? (float) $_POST['latitude'] : null;
+      $longitude = isset($_POST['longitude']) && $_POST['longitude'] !== '' ? (float) $_POST['longitude'] : null;
 
       $locationId = $client->getLocationId();
 
@@ -103,10 +105,12 @@ class ClientProfileController
           || $currentLocation->getCantonLocation() !== $canton
           || $currentLocation->getDistrictLocation() !== $district
           || $currentLocation->getTownLocation() !== $town
-          || $currentLocation->getDescriptionLocation() !== $description;
+          || $currentLocation->getDescriptionLocation() !== $description
+          || $currentLocation->getLatitudeLocation() !== $latitude
+          || $currentLocation->getLongitudeLocation() !== $longitude;
 
         if ($changed) {
-          $locationId = $this->locationService->validateAndCreate($province, $canton, $district, $town, $description);
+          $locationId = $this->locationService->findOrCreateByParts($province, $canton, $district, $town, $description, $latitude, $longitude);
         }
       }
 
@@ -156,6 +160,8 @@ class ClientProfileController
     $province = trim($_POST['province'] ?? '');
     $canton = trim($_POST['canton'] ?? '');
     $district = trim($_POST['district'] ?? '');
+    $latitude = isset($_POST['latitude']) && $_POST['latitude'] !== '' ? (float) $_POST['latitude'] : null;
+    $longitude = isset($_POST['longitude']) && $_POST['longitude'] !== '' ? (float) $_POST['longitude'] : null;
 
     try {
       if ($province === '' || $canton === '' || $district === '') {
@@ -174,7 +180,7 @@ class ClientProfileController
         ]);
       }
 
-      $locationId = $this->locationService->findOrCreateByParts($province, $canton, $district);
+      $locationId = $this->locationService->findOrCreateByParts($province, $canton, $district, null, null, $latitude, $longitude);
 
       $this->clientRepo->updateProfile($client->getIdClient(), $client->getImageClient(), $locationId);
       $client->setLocationId($locationId);
@@ -189,6 +195,8 @@ class ClientProfileController
           'province' => $province,
           'canton'   => $canton,
           'district' => $district,
+          'latitude' => $latitude,
+          'longitude' => $longitude,
         ],
       ]);
     } catch (BusinessRuleException $e) {

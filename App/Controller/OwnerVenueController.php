@@ -72,12 +72,16 @@ class OwnerVenueController
     $district = trim($_POST['district'] ?? '');
     $town = trim($_POST['town'] ?? '') ?: null;
     $description = trim($_POST['description'] ?? '') ?: null;
+    $latitude = isset($_POST['latitude']) && $_POST['latitude'] !== '' ? (float) $_POST['latitude'] : null;
+    $longitude = isset($_POST['longitude']) && $_POST['longitude'] !== '' ? (float) $_POST['longitude'] : null;
     $name = trim($_POST['name'] ?? '');
     $type = trim($_POST['type'] ?? '') ?: null;
     $capacity = isset($_POST['capacity']) && $_POST['capacity'] !== '' ? (int) $_POST['capacity'] : null;
     $price = isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : 0.0;
 
     try {
+      $this->requireCoordinates($latitude, $longitude);
+
       $image = $this->resolveVenueImage($owner->getIdOwner(), '');
 
       if ($image === '') {
@@ -95,7 +99,9 @@ class OwnerVenueController
         $type,
         $capacity,
         $price,
-        $image
+        $image,
+        $latitude,
+        $longitude
       );
 
       respond_or_redirect(
@@ -141,10 +147,14 @@ class OwnerVenueController
     $district = trim($_POST['district'] ?? '');
     $town = trim($_POST['town'] ?? '') ?: null;
     $description = trim($_POST['description'] ?? '') ?: null;
+    $latitude = isset($_POST['latitude']) && $_POST['latitude'] !== '' ? (float) $_POST['latitude'] : null;
+    $longitude = isset($_POST['longitude']) && $_POST['longitude'] !== '' ? (float) $_POST['longitude'] : null;
 
     $venue = null;
 
     try {
+      $this->requireCoordinates($latitude, $longitude);
+
       $venue = $this->venueService->findById($idVenue);
 
       if ($venue === null) {
@@ -155,7 +165,7 @@ class OwnerVenueController
 
       $image = $this->resolveVenueImage($owner->getIdOwner(), $venue->getImageVenue());
 
-      $idLocation = $this->locationService->validateAndCreate($province, $canton, $district, $town, $description);
+      $idLocation = $this->locationService->findOrCreateByParts($province, $canton, $district, $town, $description, $latitude, $longitude);
 
       $this->venueService->validateAndUpdate(
         $venue,
@@ -203,5 +213,15 @@ class OwnerVenueController
     }
 
     return $current;
+  }
+
+  // =========================================================
+  // COORDENADAS OBLIGATORIAS: el local debe marcarse en el mapa.
+  // =========================================================
+  private function requireCoordinates(?float $latitude, ?float $longitude): void
+  {
+    if ($latitude === null || $longitude === null) {
+      throw new BusinessRuleException("Debes marcar la ubicación exacta del local en el mapa.");
+    }
   }
 }

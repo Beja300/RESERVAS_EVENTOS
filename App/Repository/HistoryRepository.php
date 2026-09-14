@@ -69,6 +69,38 @@ class HistoryRepository
         return array_map([$this, 'mapearFila'], $stmt->fetchAll());
     }
 
+    /**
+     * Locales que un rol ha revisado MÁS veces (acción VIEW sobre entidad
+     * 'Venue'), ordenados de mayor a menor número de visitas -- alimenta la
+     * sección "Locales más frecuentes" del panel del cliente.
+     *
+     * @return array<int, int> mapa entityId => nº de visitas, en orden de frecuencia
+     */
+    public function mostViewedVenueIdsByRole(int $roleId, int $limit): array
+    {
+        $sql = "SELECT tbuserhistoryentityid AS venueId, COUNT(*) AS visits
+                FROM tbuserhistory
+                WHERE tbroleid = :roleId
+                  AND tbuserhistoryaction = 'VIEW'
+                  AND tbuserhistoryentity = 'Venue'
+                  AND tbuserhistoryentityid IS NOT NULL
+                GROUP BY tbuserhistoryentityid
+                ORDER BY visits DESC, MAX(tbuserhistorydate) DESC
+                LIMIT :limit";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':roleId', $roleId, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $result = [];
+        foreach ($stmt->fetchAll() as $fila) {
+            $result[(int) $fila['venueId']] = (int) $fila['visits'];
+        }
+
+        return $result;
+    }
+
     private function mapearFila(array $fila): History
     {
         return new History(
@@ -156,6 +188,96 @@ class HistoryRepository
             }
         }
         $stmt->execute();
+
+        return array_map(fn($fila) => (int) $fila['tbuserhistoryentityid'], $stmt->fetchAll());
+    }
+
+    /**
+     * Puntaje de interacción GLOBAL ponderado por venue (señal colaborativa
+     * del sistema híbrido): suma la cantidad de acciones de todos los usuarios
+     * multiplicada por el peso de cada acción. Las acciones con peso negativo
+     * (ej. CANCEL) restan popularidad.
+     *
+     * @param string[] $weights mapa accion => peso (ej. ['VIEW' => 2, 'CANCEL' => -4])
+     * @return array<int, float> mapa entityId => puntaje ponderado
+     */
+    public function interactionWeightedScores(string $entity, array $weights): array
+    {
+        $placeholders = [];
+        $params = [':entity' => $entity];
+        foreach ($weights as $action => $weight) {
+            $key = ":a" . count($placeholders);
+            $placeholders[] = "(tbuserhistoryaction = {$key}) * " . (int) $weight;
+            $params[$key] = $action;
+        }
+
+        if (empty($placeholders)) {
+            return [];
+        }
+
+        $sumExpr = implode(' + ', $placeholders);
+
+        $sql = "SELECT tbuserhistoryentityid, SUM({$sumExpr}) AS score
+                FROM tbuserhistory
+                WHERE tbuserhistoryentity = :entity
+                  AND tbuserhistoryentityid IS NOT NULL
+                GROUP BY tbuserhistoryentityid";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+
+        $result = [];
+        foreach ($stmt->fetchAll() as $fila) {
+            $result[(int) $fila['tbuserhistoryentityid']] = (float) $fila['score'];
+        }
+
+        return $result;
+    }
+
+    public function hasFavorite(int $roleId, int $venueId): bool
+    {
+        $sql = "SELECT tbuserhistoryid
+                FROM tbuserhistory
+                WHERE tbroleid = :roleId
+                  AND tbuserhistoryaction = 'FAVORITE'
+                  AND tbuserhistoryentity = 'Venue'
+                  AND tbuserhistoryentityid = :venueId
+                LIMIT 1";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':roleId' => $roleId, ':venueId' => $venueId]);
+
+        return $stmt->fetchColumn() !== false;
+    }
+
+    public function deleteFavorite(int $roleId, int $venueId): void
+    {
+        $sql = "DELETE FROM tbuserhistory
+                WHERE tbroleid = :roleId
+                  AND tbuserhistoryaction = 'FAVORITE'
+                  AND tbuserhistoryentity = 'Venue'
+                  AND tbuserhistoryentityid = :venueId";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':roleId' => $roleId, ':venueId' => $venueId]);
+    }
+
+    /**
+     * ids de locales favoritos de un rol, los más recientes primero.
+     * @return int[]
+     */
+    public function favoriteVenueIdsByRole(int $roleId): array
+    {
+        $sql = "SELECT tbuserhistoryentityid
+                FROM tbuserhistory
+                WHERE tbroleid = :roleId
+                  AND tbuserhistoryaction = 'FAVORITE'
+                  AND tbuserhistoryentity = 'Venue'
+                  AND tbuserhistoryentityid IS NOT NULL
+                ORDER BY tbuserhistorydate DESC, tbuserhistoryid DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([':roleId' => $roleId]);
 
         return array_map(fn($fila) => (int) $fila['tbuserhistoryentityid'], $stmt->fetchAll());
     }

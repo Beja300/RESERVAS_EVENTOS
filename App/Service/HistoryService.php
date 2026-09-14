@@ -5,28 +5,26 @@ require_once __DIR__ . '/../Repository/LocationRepository.php';
 require_once __DIR__ . '/../Model/History.php';
 require_once __DIR__ . '/../Model/HistoryAction.php';
 require_once __DIR__ . '/VenueService.php';
-require_once __DIR__ . '/OrderingService.php';
+require_once __DIR__ . '/VenueRatingService.php';
+require_once __DIR__ . '/Recommendation/RecommendationConfig.php';
+require_once __DIR__ . '/Recommendation/RecommendationContext.php';
+require_once __DIR__ . '/Recommendation/HybridEngine.php';
 
 class HistoryService
 {
-  private const MIN_HISTORY_FOR_PERSONAL = 3;
   private const ENTITY_VENUE = 'Venue';
-
-  private const POPULARITY_ACTIONS = [
-    HistoryAction::VIEW,
-    HistoryAction::BOOKING,
-    HistoryAction::PURCHASE
-  ];
 
   private HistoryRepository $historyRepo;
   private VenueService $venueService;
   private LocationRepository $locationRepo;
+  private VenueRatingService $venueRatingService;
 
   public function __construct(PDO $connection)
   {
     $this->historyRepo = new HistoryRepository();
     $this->venueService = new VenueService($connection);
     $this->locationRepo = new LocationRepository($connection);
+    $this->venueRatingService = new VenueRatingService($connection);
   }
 
   public function logAction(
@@ -105,22 +103,83 @@ class HistoryService
     );
   }
 
+  public function logVenueCancel(int $roleId, int $venueId): void
+  {
+    $this->logAction($roleId, HistoryAction::CANCEL, self::ENTITY_VENUE, $venueId);
+  }
+
+  public function logVenueRating(int $roleId, int $venueId): void
+  {
+    $this->logAction($roleId, HistoryAction::RATING, self::ENTITY_VENUE, $venueId);
+  }
+
+  public function logVenueFavorite(int $roleId, int $venueId): void
+  {
+    $this->logAction($roleId, HistoryAction::FAVORITE, self::ENTITY_VENUE, $venueId);
+  }
+
+  public function logVenueUnfavorite(int $roleId, int $venueId): void
+  {
+    $this->historyRepo->deleteFavorite($roleId, $venueId);
+  }
+
+  public function isFavorite(int $roleId, int $venueId): bool
+  {
+    return $this->historyRepo->hasFavorite($roleId, $venueId);
+  }
+
+  public function favoriteVenueIdsByRole(int $roleId): array
+  {
+    return $this->historyRepo->favoriteVenueIdsByRole($roleId);
+  }
+
   public function listByRole(int $roleId): array
   {
     return $this->historyRepo->listByRole($roleId);
   }
 
   // =========================================================
-  // RECOMENDAR LOCALES CERCA DE LA UBICACIÓN ACTUAL DEL CLIENTE
-  // Misma provincia que la ubicación del rol; mismo cantón primero.
-  // Devuelve [] si no hay ubicación o si no hay locales cercanos.
+  // RECOMENDACIONES HÍBRIDAS (motor de App/Service/Recommendation)
   // =========================================================
-  public function recommendVenuesByLocation(
+
+  /**
+   * Rankeo general para el dashboard del cliente (modo catálogo):
+   * combina geo + rating + contenido + colaborativo.
+   */
+  public function recommendForUser(
+    int $roleId,
+    ?int $clientLocationId = null,
+    int $limit = 5
+  ): array {
+
+    $venues = $this->venueService->findActive();
+
+    $clientLocation = null;
+    if ($clientLocationId !== null && $clientLocationId > 0) {
+      $clientLocation = $this->locationRepo->findById($clientLocationId);
+    }
+
+    $context = $this->buildContext($venues, $clientLocation, $roleId);
+
+    return (new HybridEngine())->rankVenues(
+      $venues,
+      $context,
+      RecommendationConfig::MODE_CATALOG,
+      $limit
+    );
+  }
+
+  /**
+   * "Locales cerca de ti" (modo nearby con pesos de geo reforzados).
+   * Restringe los candidatos a la misma provincia del cliente para
+   * conservar la intención de la sección. Devuelve [] sin ubicación.
+   */
+  public function recommendNear(
     ?int $locationId,
     int $limit = 5
   ): array {
 
-    if ($locationId === null || $limit <= 0) {
+    if ($locationId === null || $locationId <= 0 || $limit <= 0) {
       return [];
     }
 
@@ -131,279 +190,101 @@ class HistoryService
     }
 
     $province = $clientLocation->getProvinceLocation();
-    $canton = $clientLocation->getCantonLocation();
 
-    $matches = [];
-    $suggested = [];
-
+    $near = [];
     foreach ($this->venueService->findActive() as $venue) {
-
       $venueLocation = $this->locationRepo->findById($venue->getIdLocation());
-
-      if ($venueLocation === null || $venueLocation->getProvinceLocation() !== $province) {
-        continue;
-      }
-
-      $entry = ['venue' => $venue, 'location' => $venueLocation];
-
-      if ($venueLocation->getCantonLocation() === $canton) {
-        $matches[] = $entry;
-      } else {
-        $suggested[] = $entry;
+      if ($venueLocation !== null && $venueLocation->getProvinceLocation() === $province) {
+        $near[] = $venue;
       }
     }
 
-    usort($matches, static function (array $a, array $b): int {
-      return OrderingService::locations($a['location'], $b['location']);
-    });
+    $context = $this->buildContext($near, $clientLocation, 0);
 
-    usort($suggested, static function (array $a, array $b): int {
-      return OrderingService::locations($a['location'], $b['location']);
-    });
-
-    $result = [];
-
-    foreach (array_merge($matches, $suggested) as $entry) {
-      $result[] = $entry['venue'];
-
-      if (count($result) >= $limit) {
-        break;
-      }
-    }
-
-    return $result;
-  }
-
-  public function recommendVenues(
-    int $roleId,
-    int $limit = 5
-  ): array {
-
-    $history = $this->historyRepo->listByRole($roleId);
-
-    $venueHistory = [];
-
-    foreach ($history as $item) {
-
-      if (
-        $item->getEntity() === self::ENTITY_VENUE &&
-        $item->getEntityId() !== null
-      ) {
-        $venueHistory[] = $item;
-      }
-    }
-
-    if (count($venueHistory) < self::MIN_HISTORY_FOR_PERSONAL) {
-
-      return $this->getPopularVenues($limit);
-    }
-
-    $personalRecommendations = $this->getPersonalRecommendations(
-      $venueHistory,
+    return (new HybridEngine())->rankVenues(
+      $near,
+      $context,
+      RecommendationConfig::MODE_NEARBY,
       $limit
     );
-
-    if (count($personalRecommendations) >= $limit) {
-
-      return array_slice(
-        $personalRecommendations,
-        0,
-        $limit
-      );
-    }
-
-    $excludeIds = [];
-
-    foreach ($personalRecommendations as $venue) {
-      $excludeIds[] = $venue->getIdVenue();
-    }
-
-    $missing = $limit - count($personalRecommendations);
-
-    $popularRecommendations = $this->getPopularVenues(
-      $missing,
-      $excludeIds
-    );
-
-    foreach ($popularRecommendations as $venue) {
-      $excludeIds[] = $venue->getIdVenue();
-    }
-
-    $merged = array_merge(
-      $personalRecommendations,
-      $popularRecommendations
-    );
-
-    if (count($merged) < $limit) {
-      $locationMatches = $this->getLocationRecommendations(
-        $roleId,
-        $excludeIds,
-        $limit - count($merged)
-      );
-
-      $merged = array_merge($merged, $locationMatches);
-    }
-
-    return $merged;
   }
 
-  private function getLocationRecommendations(
+  /**
+   * Rankeo del catálogo (modo catálogo): rankea el conjunto de venues ya
+   * filtrado por el controlador. Con $limit <= 0 devuelve TODOS ordenados.
+   */
+  public function rankVenuesForCatalog(
+    array $venues,
+    ?Location $clientLocation,
     int $roleId,
-    array $excludeIds,
-    int $limit
+    int $limit = 0
   ): array {
 
-    $history = $this->historyRepo->listByRole($roleId);
+    $context = $this->buildContext($venues, $clientLocation, $roleId);
 
-    $provinces = [];
-
-    foreach ($history as $item) {
-
-      if (
-        $item->getAction() !== HistoryAction::SEARCH ||
-        $item->getEntity() !== self::ENTITY_VENUE ||
-        $item->getEntityId() === null ||
-        $item->getEntityId() <= 0
-      ) {
-        continue;
-      }
-
-      $location = $this->locationRepo->findById($item->getEntityId());
-
-      if ($location !== null) {
-        $provinces[$location->getProvinceLocation()] = true;
-      }
+    if ($limit <= 0) {
+      $limit = max(count($venues), 1);
     }
 
-    if (empty($provinces)) {
-      return [];
-    }
-
-    $recommendations = [];
-
-    foreach ($this->venueService->findActive() as $venue) {
-
-      if (in_array($venue->getIdVenue(), $excludeIds, true)) {
-        continue;
-      }
-
-      $venueLocation = $this->locationRepo->findById($venue->getIdLocation());
-
-      if ($venueLocation === null || !isset($provinces[$venueLocation->getProvinceLocation()])) {
-        continue;
-      }
-
-      $recommendations[] = $venue;
-      $excludeIds[] = $venue->getIdVenue();
-
-      if (count($recommendations) >= $limit) {
-        break;
-      }
-    }
-
-    return $recommendations;
+    return (new HybridEngine())->rankVenues(
+      $venues,
+      $context,
+      RecommendationConfig::MODE_CATALOG,
+      $limit
+    );
   }
 
-  private function getPersonalRecommendations(
-    array $venueHistory,
-    int $limit
-  ): array {
+  /**
+   * Construye el RecommendationContext para un conjunto de venues candidatos.
+   */
+  private function buildContext(
+    array $venues,
+    ?Location $clientLocation,
+    int $roleId
+  ): RecommendationContext {
 
-    $typeCounts = [];
-    $convertedIds = [];
+    $context = new RecommendationContext();
 
-    foreach ($venueHistory as $history) {
-
-      $venueId = $history->getEntityId();
-
-      if (
-        $history->getAction() === HistoryAction::BOOKING ||
-        $history->getAction() === HistoryAction::PURCHASE
-      ) {
-        $convertedIds[$venueId] = true;
-      }
-
-      $venue = $this->venueService->findById($venueId);
-
-      if ($venue !== null) {
-
-        $type = $venue->getTypeVenue();
-
-        if ($type !== '') {
-
-          if (!isset($typeCounts[$type])) {
-            $typeCounts[$type] = 0;
-          }
-
-          $typeCounts[$type]++;
-        }
-      }
+    if ($clientLocation !== null) {
+      $context->clientLocation = $clientLocation;
     }
 
-    if (empty($typeCounts)) {
-      return [];
+    $venueIds = [];
+    foreach ($venues as $venue) {
+      $venueIds[$venue->getIdVenue()] = true;
     }
+    $venueIds = array_keys($venueIds);
 
-    arsort($typeCounts);
-
-    $topType = array_key_first($typeCounts);
-
-    $venues = $this->venueService->findActive();
-
-    $recommendations = [];
+    $locationCache = [];
+    foreach ($venueIds as $id) {
+      $avg = $this->venueRatingService->getAverage($id);
+      if ($avg !== null) {
+        $context->ratingsByVenue[$id] = round($avg, 1);
+      }
+    }
 
     foreach ($venues as $venue) {
-
-      if ($venue->getTypeVenue() !== $topType) {
+      $locId = $venue->getIdLocation();
+      if ($locId <= 0) {
+        $context->locationByVenue[$venue->getIdVenue()] = null;
         continue;
       }
 
-      if (isset($convertedIds[$venue->getIdVenue()])) {
-        continue;
+      if (!isset($locationCache[$locId])) {
+        $locationCache[$locId] = $this->locationRepo->findById($locId);
       }
-
-      $recommendations[] = $venue;
-
-      if (count($recommendations) >= $limit) {
-        break;
-      }
+      $context->locationByVenue[$venue->getIdVenue()] = $locationCache[$locId];
     }
 
-    return $recommendations;
-  }
-
-  private function getPopularVenues(
-    int $limit,
-    array $excludeIds = []
-  ): array {
-
-    $popularIds = $this->historyRepo->mostInteractedEntityIds(
+    $context->collaborativeScores = $this->historyRepo->interactionWeightedScores(
       self::ENTITY_VENUE,
-      self::POPULARITY_ACTIONS,
-      $limit + count($excludeIds) + 5
+      RecommendationConfig::INTERACTION_WEIGHTS
     );
 
-    $recommendations = [];
-
-    foreach ($popularIds as $venueId) {
-
-      // No incluir venues excluidos
-      if (in_array($venueId, $excludeIds, true)) {
-        continue;
-      }
-
-      $venue = $this->venueService->findById($venueId);
-
-      if ($venue !== null && $venue->getIsActive()) {
-
-        $recommendations[] = $venue;
-      }
-
-      if (count($recommendations) >= $limit) {
-        break;
-      }
+    if ($roleId > 0) {
+      $context->venueHistory = $this->historyRepo->listByRole($roleId);
     }
 
-    return $recommendations;
+    return $context;
   }
 }

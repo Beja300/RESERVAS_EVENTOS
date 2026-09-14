@@ -28,7 +28,9 @@ class VenueService
         ?string $type,
         ?int $capacity,
         float $price,
-        ?string $image
+        ?string $image,
+        ?float $latitude = null,
+        ?float $longitude = null
     ): int {
         if ($capacity !== null && $capacity <= 0) {
             throw new BusinessRuleException("La capacidad del local debe ser mayor a 0.");
@@ -47,7 +49,9 @@ class VenueService
             $canton,
             $district,
             $town,
-            $description
+            $description,
+            $latitude,
+            $longitude
         );
 
         $venue = new Venue(

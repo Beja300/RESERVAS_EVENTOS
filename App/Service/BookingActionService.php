@@ -114,7 +114,7 @@ class BookingActionService
   // =========================================================
   // CANCELAR RESERVA (cliente)
   // =========================================================
-  public function cancel(int $clientId, int $idBooking): void
+  public function cancel(int $clientId, int $roleId, int $idBooking): void
   {
     $this->clientService->assertOwnsBooking($clientId, $idBooking);
     $this->bookingService->cancel($idBooking);
@@ -123,6 +123,7 @@ class BookingActionService
     if ($cancelledBooking !== null) {
       $cancelledVenue = $this->venueRepo->findById($cancelledBooking->getIdLocal());
       if ($cancelledVenue !== null) {
+        $this->historyService->logVenueCancel($roleId, (int) $cancelledBooking->getIdLocal());
         $this->notificationService->notifyOwnerBookingCancelled(
           (int) $cancelledVenue->getIdOwner(),
           (int) $idBooking

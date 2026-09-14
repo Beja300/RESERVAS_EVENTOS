@@ -1,6 +1,6 @@
 <?php
 $pageCss = 'venue/detail';
-$pageJs = ['venue/stars', 'venue/venue-comments', 'venue/service-review'];
+$pageJs = ['venue/stars', 'venue/venue-comments', 'venue/service-review', 'venue/favorite'];
 ?>
 <?php require_once __DIR__ . '/../_header.php';
 if ($venue === null) {
@@ -14,6 +14,16 @@ if ($venue === null) {
   <div>
     <h1 style="margin-top:8px;"><?= e($venue->getNameVenue()) ?></h1>
   </div>
+  <?php if (current_user_type() !== null): ?>
+    <button type="button" id="favoriteBtn" class="btn btn-outline <?= $isFavorite ? 'is-favorite' : '' ?>"
+            data-venue-id="<?= (int) $venue->getIdVenue() ?>"
+            data-favorite="<?= $isFavorite ? '1' : '0' ?>"
+            data-url="<?= e(base_url('venue', 'favorite')) ?>"
+            data-csrf="<?= e(csrf_token()) ?>">
+      <span class="fav-icon"><?= $isFavorite ? '&#9829;' : '&#9825;' ?></span>
+      <span class="fav-label"><?= $isFavorite ? 'Favorito' : 'Favorito' ?></span>
+    </button>
+  <?php endif; ?>
 </div>
 
 <?php if ($owner !== null): ?>

@@ -84,6 +84,13 @@ $filters = $filters ?? [
           <?php if (isset($locationByVenue[$v->getIdVenue()]) && $locationByVenue[$v->getIdVenue()] !== null): ?>
             <p style="color:var(--neutral-500);font-size:0.85rem;margin-top:4px;">
               &#128205; <?= format_venue_location($locationByVenue[$v->getIdVenue()]) ?>
+              <?php if (isset($distanceLabelByVenue[$v->getIdVenue()])): ?>
+                <span class="badge info" style="margin-left:4px;"><?= e($distanceLabelByVenue[$v->getIdVenue()]) ?></span>
+              <?php endif; ?>
+            </p>
+          <?php elseif (isset($distanceLabelByVenue[$v->getIdVenue()])): ?>
+            <p style="color:var(--neutral-500);font-size:0.85rem;margin-top:4px;">
+              <?= e($distanceLabelByVenue[$v->getIdVenue()]) ?>
             </p>
           <?php endif; ?>
           <p style="color:var(--neutral-900);font-weight:700;margin-top:6px;">

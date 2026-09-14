@@ -330,6 +330,15 @@
     this.provinceSel.value = this.provinceCombo.value;
     this.cantonSel.value = this.cantonCombo.value;
     this.districtSel.value = this.districtCombo.value;
+    this.fireChange(this.provinceSel);
+    this.fireChange(this.cantonSel);
+    this.fireChange(this.districtSel);
+  };
+
+  Group.prototype.fireChange = function (select) {
+    if (select) {
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   };
 
   Group.prototype.onProvinceChange = function (province) {
@@ -382,6 +391,7 @@
 
     if (province && this.provinces().indexOf(province) !== -1) {
       this.provinceCombo.setNativeOptions(this.provinces(), province);
+      this.provinceCombo.setValue(province);
       this.cantonCombo.setDisabled(false);
       this.cantonCombo.setItems(this.cantons(province));
       this.cantonCombo.setNativeOptions(this.cantons(province), canton);
