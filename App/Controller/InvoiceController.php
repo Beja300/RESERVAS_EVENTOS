@@ -54,7 +54,7 @@ class InvoiceController
     $booking = $this->bookingRepo->findById($idBooking);
 
     if ($booking === null || $booking->getIdClient() !== $this->currentClient()->getIdClient()) {
-      header('Location: ../../Public/index.php?controller=booking&action=myBookings');
+      header('Location: ' . base_url('booking', 'myBookings'));
       exit;
     }
 
@@ -95,7 +95,7 @@ class InvoiceController
 
       $this->invoiceService->generate($idBooking, $idPaymentMethod, $date);
 
-      header('Location: ../../Public/index.php?controller=invoice&action=detail&bookingId=' . $idBooking);
+      header('Location: ' . base_url('invoice', 'detail', ['bookingId' => $idBooking]));
       exit;
     } catch (BusinessRuleException $e) {
 
@@ -123,7 +123,7 @@ class InvoiceController
     $invoice = $this->invoiceRepo->findByBooking($idBooking);
 
     if ($invoice === null) {
-      header('Location: ../../Public/index.php?controller=booking&action=myBookings');
+      header('Location: ' . base_url('booking', 'myBookings'));
       exit;
     }
 
@@ -131,7 +131,7 @@ class InvoiceController
     $type = $_SESSION['type'] ?? null;
 
     if ($type === 'client' && $booking->getIdClient() !== $this->currentClient()->getIdClient()) {
-      header('Location: ../../Public/index.php?controller=booking&action=myBookings');
+      header('Location: ' . base_url('booking', 'myBookings'));
       exit;
     }
 
@@ -195,7 +195,7 @@ class InvoiceController
   private function requireLogin(): void
   {
     if (($_SESSION['type'] ?? null) === null) {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+      header('Location: ' . base_url('auth', 'showLogin'));
       exit;
     }
   }
@@ -203,7 +203,7 @@ class InvoiceController
   private function requireClient(): void
   {
     if (($_SESSION['type'] ?? null) !== 'client') {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+      header('Location: ' . base_url('auth', 'showLogin'));
       exit;
     }
   }

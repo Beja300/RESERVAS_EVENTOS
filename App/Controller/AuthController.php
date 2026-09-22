@@ -53,19 +53,19 @@ class AuthController
       switch ($result['type']) {
 
         case 'admin':
-          header('Location: ../../Public/index.php?controller=admin&action=dashboard');
+          header('Location: ' . base_url('admin', 'dashboard'));
           break;
 
         case 'client':
-          header('Location: ../../Public/index.php?controller=client&action=dashboard');
+          header('Location: ' . base_url('client', 'dashboard'));
           break;
 
         case 'owner':
-          header('Location: ../../Public/index.php?controller=owner&action=dashboard');
+          header('Location: ' . base_url('owner', 'dashboard'));
           break;
 
         default:
-          header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+          header('Location: ' . base_url('auth', 'showLogin'));
           break;
       }
 
@@ -123,7 +123,7 @@ class AuthController
       $_SESSION['type'] = 'client';
       $_SESSION['user'] = $client;
 
-      header('Location: ../../Public/index.php?controller=client&action=dashboard');
+      header('Location: ' . base_url('client', 'dashboard'));
       exit;
     } catch (BusinessRuleException $e) {
 
@@ -195,7 +195,7 @@ class AuthController
       $_SESSION['type'] = 'owner';
       $_SESSION['user'] = $owner;
 
-      header('Location: ../../Public/index.php?controller=owner&action=dashboard');
+      header('Location: ' . base_url('owner', 'dashboard'));
       exit;
     } catch (BusinessRuleException $e) {
 
@@ -218,7 +218,7 @@ class AuthController
 
     session_destroy();
 
-    header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+    header('Location: ' . base_url('auth', 'showLogin'));
     exit;
   }
 
@@ -230,7 +230,7 @@ class AuthController
   public function cleanDemo(): void
   {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+      header('Location: ' . base_url('auth', 'showLogin'));
       exit;
     }
 
@@ -259,13 +259,13 @@ class AuthController
 
       $connection->exec($sql);
 
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin&reset=ok');
+      header('Location: ' . base_url('auth', 'showLogin', ['reset' => 'ok']));
       exit;
     } catch (\Throwable $e) {
 
       $errorMsg = 'No se pudo restaurar los datos de prueba.';
 
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin&error=' . urlencode($errorMsg));
+      header('Location: ' . base_url('auth', 'showLogin', ['error' => $errorMsg]));
       exit;
     }
   }

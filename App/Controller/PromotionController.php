@@ -112,7 +112,7 @@ class PromotionController
         $minServices
       );
 
-      header('Location: ../../Public/index.php?controller=promotion&action=list&venueId=' . $idVenue);
+      header('Location: ' . base_url('promotion', 'list', ['venueId' => $idVenue]));
       exit;
     } catch (BusinessRuleException $e) {
 
@@ -149,13 +149,13 @@ class PromotionController
 
       $this->promotionService->addService($idPromotion, $idService);
 
-      header('Location: ../../Public/index.php?controller=promotion&action=list&venueId=' . $idVenue);
+      header('Location: ' . base_url('promotion', 'list', ['venueId' => $idVenue]));
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
 
-      header('Location: ../../Public/index.php?controller=promotion&action=list&venueId=' . $idVenue);
+      header('Location: ' . base_url('promotion', 'list', ['venueId' => $idVenue]));
       exit;
     }
   }
@@ -166,7 +166,7 @@ class PromotionController
   private function requireOwner(): void
   {
     if (($_SESSION['type'] ?? null) !== 'owner') {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+      header('Location: ' . base_url('auth', 'showLogin'));
       exit;
     }
   }

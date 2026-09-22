@@ -49,13 +49,13 @@ class NotificationController
 
       $this->notificationService->markAsRead($idNotification, $role->getIdRol());
 
-      header('Location: ../../Public/index.php?controller=notification&action=list');
+      header('Location: ' . base_url('notification', 'list'));
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
 
-      header('Location: ../../Public/index.php?controller=notification&action=list');
+      header('Location: ' . base_url('notification', 'list'));
       exit;
     }
   }
@@ -70,7 +70,7 @@ class NotificationController
 
     $role = $_SESSION['user'];
     $idNotification = (int) ($_GET['id'] ?? 0);
-    $listUrl = '../../Public/index.php?controller=notification&action=list';
+    $listUrl = base_url('notification', 'list');
 
     try {
       $link = $this->notificationService->open($idNotification, $role->getIdRol());
@@ -95,7 +95,7 @@ class NotificationController
 
     $this->notificationService->markAllAsRead($role->getIdRol());
 
-    header('Location: ../../Public/index.php?controller=notification&action=list');
+    header('Location: ' . base_url('notification', 'list'));
     exit;
   }
 
@@ -105,7 +105,7 @@ class NotificationController
   private function requireLogin(): void
   {
     if (($_SESSION['type'] ?? null) === null) {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+      header('Location: ' . base_url('auth', 'showLogin'));
       exit;
     }
   }

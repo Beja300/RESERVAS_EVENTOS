@@ -229,7 +229,7 @@ function renderError(int $code, string $message): void
         . "box-shadow:0 10px 30px rgba(15,23,42,.12);\">"
         . "<div style=\"font-size:3rem;font-weight:800;color:#4f46e5;\">{$code}</div>"
         . "<p style=\"color:#64748b;margin-top:8px;\">{$message}</p>"
-        . "<a href=\"/Public/index.php\" style=\"display:inline-block;margin-top:18px;color:#4f46e5;"
+        . "<a href=\"" . htmlspecialchars(rtrim(dirname($_SERVER['SCRIPT_NAME'], 1), '/') . '/index.php') . "\" style=\"display:inline-block;margin-top:18px;color:#4f46e5;"
         . "text-decoration:none;font-weight:600;\">&larr; Ir al inicio</a>"
         . "</div></body></html>";
     exit;
