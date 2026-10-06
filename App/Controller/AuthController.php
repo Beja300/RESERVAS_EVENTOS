@@ -18,6 +18,8 @@ class AuthController
   // =========================================================
   public function showLogin(): void
   {
+    $hasAdmins = $this->authService->hasAnyAdmin();
+
     require_once __DIR__ . '/../View/Auth/Login.php';
   }
 
@@ -73,8 +75,71 @@ class AuthController
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+      $hasAdmins = $this->authService->hasAnyAdmin();
 
       require_once __DIR__ . '/../View/Auth/Login.php';
+    }
+  }
+
+  // =========================================================
+  // MOSTRAR FORMULARIO DEL PRIMER ADMINISTRADOR (setup)
+  // Público SOLO mientras no exista ningún admin en la BD.
+  // =========================================================
+  public function showSetup(): void
+  {
+    if ($this->authService->hasAnyAdmin()) {
+      header('Location: ' . base_url('auth', 'showLogin'));
+      exit;
+    }
+
+    require_once __DIR__ . '/../View/Auth/Setup.php';
+  }
+
+  // =========================================================
+  // CREAR EL PRIMER ADMINISTRADOR (setup)
+  // Re-verifica que no exista ningún admin antes de crear.
+  // =========================================================
+  public function createFirstAdmin(): void
+  {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      header('Location: ' . base_url('auth', 'showSetup'));
+      exit;
+    }
+
+    if ($this->authService->hasAnyAdmin()) {
+      header('Location: ' . base_url('auth', 'showLogin'));
+      exit;
+    }
+
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $phoneNumber = trim($_POST['phoneNumber'] ?? '') ?: null;
+
+    try {
+      $admin = $this->authService->registerAdmin($name, $email, $password, $phoneNumber);
+
+      if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+      }
+
+      session_regenerate_id(true);
+
+      $_SESSION['type'] = 'admin';
+      $_SESSION['user'] = $admin;
+
+      header('Location: ' . base_url('admin', 'dashboard'));
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+
+      require_once __DIR__ . '/../View/Auth/Setup.php';
+    } catch (\Throwable $e) {
+
+      $error = 'No se pudo crear el administrador. Verifica que el correo no esté en uso.';
+
+      require_once __DIR__ . '/../View/Auth/Setup.php';
     }
   }
 
@@ -250,7 +315,9 @@ class AuthController
       $connection->exec('SET FOREIGN_KEY_CHECKS = 1');
 
       // Paso 2: re-sembrar los datos de prueba.
-      $seedFile = __DIR__ . '/../../DataBase/ScriptsSQL/seed_test_data.sql';
+      // Nota: el seed ya NO incluye administrador; tras el reinicio hay que
+      // volver a crear el primero desde auth/setup.
+      $seedFile = __DIR__ . '/../../DataBase/InitialData/seed_test_data.sql';
       $sql = file_get_contents($seedFile);
 
       if ($sql === false) {

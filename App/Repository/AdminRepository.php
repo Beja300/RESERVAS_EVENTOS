@@ -166,6 +166,21 @@ class AdminRepository
     }
 
     // =========================================================
+    // CONTAR TODOS LOS ADMINS (inactivos incluidos)
+    // =========================================================
+    public function countAll(): int
+    {
+        $sql = "
+            SELECT COUNT(*)
+            FROM tbrole r
+            INNER JOIN tbroleadmin a ON a.tbroleid = r.tbroleid
+        ";
+
+        $stmt = $this->connection->query($sql);
+        return (int) $stmt->fetchColumn();
+    }
+
+    // =========================================================
     // OBTENER TODOS
     // =========================================================
     public function findAll(): array

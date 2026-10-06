@@ -128,6 +128,15 @@ class AuthService
 
 
     // =========================================================
+    // ¿EXISTE AL MENOS UN ADMINISTRADOR?
+    // =========================================================
+    public function hasAnyAdmin(): bool
+    {
+        return $this->adminRepo->countAll() > 0;
+    }
+
+
+    // =========================================================
     // REGISTRAR ADMIN
     // =========================================================
     public function registerAdmin(string $name, string $email, string $password, ?string $phoneNumber = null): Admin

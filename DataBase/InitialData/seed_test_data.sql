@@ -3,8 +3,11 @@
 -- haberse ejecutado antes, sobre una base limpia).
 
 USE dbeventhall;
--- La clave de TODOS los accesos es: Clave123
+-- La clave de los accesos demo (owner/clientes) es: Clave123
 -- (hash bcrypt: $2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W)
+--
+-- IMPORTANTE: este seed NO crea ningún administrador. El primer admin se
+-- crea desde la aplicación (auth/setup) tras importar el esquema y el seed.
 --
 -- Conventional FK naming: cada columna que apunta a otra tabla
 -- lleva exactamente el nombre de la PK de su tabla madre
@@ -15,10 +18,6 @@ USE dbeventhall;
 -- =========================================================
 -- 1) ROLES BASE (identidad de acceso)
 -- =========================================================
-INSERT INTO tbrole (tbrolename, tbroleemail, tbrolepassword, tbrolephone, tbroleactive) VALUES
-('Administrador',     'admin@eventhall.com',   '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '88888887', TRUE);
-SET @adminRoleId = LAST_INSERT_ID();
-
 INSERT INTO tbrole (tbrolename, tbroleemail, tbrolepassword, tbrolephone, tbroleactive) VALUES
 ('María Fernanda',    'owner@eventhall.com',   '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '88888888', TRUE);
 SET @ownerRoleId = LAST_INSERT_ID();
@@ -59,14 +58,6 @@ SET @locHeredia   = 3;
 -- =========================================================
 -- 3) PERFILES Y JUNCTIONS (perfil -> junction -> rol)
 -- =========================================================
--- Admin
-INSERT INTO tbadmin (tbadminname, tbadminimage, tbadminactive) VALUES
-('Administrador del Sistema', NULL, TRUE);
-SET @adminId = LAST_INSERT_ID();
-
-INSERT INTO tbroleadmin (tbroleid, tbadminid, tbroleadminactive) VALUES
-(@adminRoleId, @adminId, TRUE);
-
 -- Owner
 INSERT INTO tbowner (tbownerfirstname, tbownerlastname, tbowneralias, tbowneridentificationnumber, tbownerimage, tbowneractive) VALUES
 ('María Fernanda', 'Rodríguez', 'Mari', '207610598', NULL, TRUE);
@@ -123,7 +114,6 @@ INSERT INTO tbroleclient (tbroleid, tbclientid, tbroleclientactive) VALUES
 -- "nuevo" es el hash vigente; en producción los guarda el servicio
 -- de seguridad al momento del cambio.
 INSERT INTO tbrolpasswordhistorical (tbroleid, tbrolpasswordhistoricalactualpassword, tbrolpasswordhistoricalnewpassword, tbrolpasswordhistoricaldate) VALUES
-(@adminRoleId,       '$2y$12$aBcdEfGhIjKlMnOpQrStUvWxYzAbCdEfGhIjKlMnOpQrStUvWxYz12', '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '2026-06-01 09:15:00'),
 (@ownerRoleId,       '$2y$12$zZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZz12', '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '2026-05-15 18:30:00'),
 (@clientRoleId,      '$2y$12$qQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQq12', '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '2026-07-20 10:05:00');
 
@@ -154,15 +144,16 @@ SET @venue3Id = LAST_INSERT_ID();
 
 -- =========================================================
 -- 5) SERVICIOS (estado 'aprobado' para poder reservarse)
+--    El aprobador queda NULL: el seed no incluye administrador.
 -- =========================================================
 INSERT INTO tbservice (tbvenueid, tbservicename, tbservicetype, tbserviceprice, tbservicestate, tbroleid, tbserviceapprovedon, tbserviceactive) VALUES
-(@venueId, 'Decoración floral',          'Decoración', 150000.00, 'aprobado', @adminRoleId, NOW(), TRUE),
-(@venueId, 'Servicio de banquetes',      'Catering',   250000.00, 'aprobado', @adminRoleId, NOW(), TRUE),
-(@venueId, 'Sonido y luces',             'Producción',  80000.00, 'aprobado', @adminRoleId, NOW(), TRUE),
-(@venue2Id, 'Decoración con jardín',     'Decoración',  90000.00, 'aprobado', @adminRoleId, NOW(), TRUE),
-(@venue2Id, 'Mobiliario rústico',        'Mobiliario',  60000.00, 'aprobado', @adminRoleId, NOW(), TRUE),
-(@venue3Id, 'Banquetes gourmet',         'Catering',    220000.00, 'aprobado', @adminRoleId, NOW(), TRUE),
-(@venue3Id, 'Sonido profesional',        'Producción',   75000.00, 'aprobado', @adminRoleId, NOW(), TRUE);
+(@venueId, 'Decoración floral',          'Decoración', 150000.00, 'aprobado', NULL, NOW(), TRUE),
+(@venueId, 'Servicio de banquetes',      'Catering',   250000.00, 'aprobado', NULL, NOW(), TRUE),
+(@venueId, 'Sonido y luces',             'Producción',  80000.00, 'aprobado', NULL, NOW(), TRUE),
+(@venue2Id, 'Decoración con jardín',     'Decoración',  90000.00, 'aprobado', NULL, NOW(), TRUE),
+(@venue2Id, 'Mobiliario rústico',        'Mobiliario',  60000.00, 'aprobado', NULL, NOW(), TRUE),
+(@venue3Id, 'Banquetes gourmet',         'Catering',    220000.00, 'aprobado', NULL, NOW(), TRUE),
+(@venue3Id, 'Sonido profesional',        'Producción',   75000.00, 'aprobado', NULL, NOW(), TRUE);
 SET @service1 = 1;
 SET @service2 = 2;
 SET @service3 = 3;
@@ -364,20 +355,20 @@ INSERT INTO tbbookingdetail (tbbookingid, tbdetailid, tbbookingdetailactive) VAL
 -- =========================================================
 INSERT INTO tbbookinghistory (tbbookingid, tbroleid, tbbookinghistoryaction, tbbookinghistorydetail, tbbookinghistorydate, tbbookinghistoryactive) VALUES
 (@booking2Id, @clientRoleId, 'creada',   'Cliente crea la reserva.',        '2026-08-01 10:00:00', TRUE),
-(@booking2Id, @adminRoleId,  'confirmada','Admin confirma la reserva.',      '2026-08-02 09:30:00', TRUE),
-(@booking2Id, @adminRoleId,  'pagada',   'Pago aprobado.',                   '2026-08-03 14:00:00', TRUE),
+(@booking2Id, NULL,          'confirmada','Admin confirma la reserva.',      '2026-08-02 09:30:00', TRUE),
+(@booking2Id, NULL,          'pagada',   'Pago aprobado.',                   '2026-08-03 14:00:00', TRUE),
 (@booking3Id, @clientRoleId2,'creada',   'Cliente crea la reserva.',         '2026-08-04 11:20:00', TRUE),
-(@booking3Id, @adminRoleId,  'confirmada','Admin confirma la reserva.',       '2026-08-05 08:10:00', TRUE),
+(@booking3Id, NULL,          'confirmada','Admin confirma la reserva.',       '2026-08-05 08:10:00', TRUE),
 (@booking4Id, @clientRoleId3,'creada',   'Cliente crea la reserva.',         '2026-08-10 15:45:00', TRUE),
-(@booking4Id, @adminRoleId,  'confirmada','Admin confirma la reserva.',       '2026-08-11 10:00:00', TRUE),
+(@booking4Id, NULL,          'confirmada','Admin confirma la reserva.',       '2026-08-11 10:00:00', TRUE),
 (@booking5Id, @clientRoleId4,'creada',   'Cliente crea la reserva.',         '2026-08-12 09:00:00', TRUE),
-(@booking5Id, @adminRoleId,  'confirmada','Admin confirma la reserva.',       '2026-08-13 16:30:00', TRUE),
+(@booking5Id, NULL,          'confirmada','Admin confirma la reserva.',       '2026-08-13 16:30:00', TRUE),
 (@booking6Id, @clientRoleId5,'creada',   'Cliente crea la reserva.',         '2026-08-18 12:00:00', TRUE),
-(@booking6Id, @adminRoleId,  'pagada',   'Pago aprobado.',                   '2026-08-19 17:20:00', TRUE),
+(@booking6Id, NULL,          'pagada',   'Pago aprobado.',                   '2026-08-19 17:20:00', TRUE),
 (@booking7Id, @clientRoleId5,'creada',   'Cliente crea la reserva.',         '2026-08-25 10:40:00', TRUE),
-(@booking7Id, @adminRoleId,  'confirmada','Admin confirma la reserva.',       '2026-08-26 09:15:00', TRUE),
+(@booking7Id, NULL,          'confirmada','Admin confirma la reserva.',       '2026-08-26 09:15:00', TRUE),
 (@booking8Id, @clientRoleId, 'creada',   'Cliente crea la reserva.',         '2026-08-16 13:25:00', TRUE),
-(@booking8Id, @adminRoleId,  'pagada',   'Pago aprobado.',                   '2026-08-17 11:50:00', TRUE);
+(@booking8Id, NULL,          'pagada',   'Pago aprobado.',                   '2026-08-17 11:50:00', TRUE);
 
 -- =========================================================
 -- 10c) SOLICITUD DE REEMBOLSO de la reserva 4 (Luis)
@@ -399,7 +390,7 @@ SET @invoice2Id = LAST_INSERT_ID();
 
 -- Comisión 5% (13500) + IVA 13% (35100); al owner: 270000-13500-35100 = 221400
 INSERT INTO tbeearning (tbbookingid, tbeearningtotal, tbeearningcommission, tbeearningtax, tbeearningowneramount, tbroleid, tbeearningdate, tbeearningactive) VALUES
-(@booking2Id, 270000.00, 13500.00, 35100.00, 221400.00, @adminRoleId, '2026-08-03 14:05:00', TRUE);
+(@booking2Id, 270000.00, 13500.00, 35100.00, 221400.00, NULL, '2026-08-03 14:05:00', TRUE);
 
 -- Booking 6: total = 95000 + 90000 = 185000
 INSERT INTO tbbookingticket (tbbookingid, tbbookingticketfile, tbbookingtickettype, tbpaymentmethodid, tbbookingticketstate, tbbookingticketactive) VALUES
@@ -410,7 +401,7 @@ INSERT INTO tbinvoice (tbbookingid, tbpaymentmethodid, tbinvoicedate, tbinvoices
 
 -- Comisión 5% (9250) + IVA 13% (24050); al owner: 185000-9250-24050 = 151700
 INSERT INTO tbeearning (tbbookingid, tbeearningtotal, tbeearningcommission, tbeearningtax, tbeearningowneramount, tbroleid, tbeearningdate, tbeearningactive) VALUES
-(@booking6Id, 185000.00, 9250.00, 24050.00, 151700.00, @adminRoleId, '2026-08-19 17:25:00', TRUE);
+(@booking6Id, 185000.00, 9250.00, 24050.00, 151700.00, NULL, '2026-08-19 17:25:00', TRUE);
 
 -- Booking 8: total = 95000
 INSERT INTO tbbookingticket (tbbookingid, tbbookingticketfile, tbbookingtickettype, tbpaymentmethodid, tbbookingticketstate, tbbookingticketactive) VALUES
@@ -421,7 +412,7 @@ INSERT INTO tbinvoice (tbbookingid, tbpaymentmethodid, tbinvoicedate, tbinvoices
 
 -- Comisión 5% (4750) + IVA 13% (12350); al owner: 95000-4750-12350 = 77900
 INSERT INTO tbeearning (tbbookingid, tbeearningtotal, tbeearningcommission, tbeearningtax, tbeearningowneramount, tbroleid, tbeearningdate, tbeearningactive) VALUES
-(@booking8Id, 95000.00, 4750.00, 12350.00, 77900.00, @adminRoleId, '2026-08-17 11:55:00', TRUE);
+(@booking8Id, 95000.00, 4750.00, 12350.00, 77900.00, NULL, '2026-08-17 11:55:00', TRUE);
 
 -- =========================================================
 -- 12) CALIFICACIONES (local y servicio)
@@ -444,7 +435,6 @@ INSERT INTO tbuserhistory (tbroleid, tbuserhistoryaction, tbuserhistoryentity, t
 (@clientRoleId, 'booking_created','tbbooking', @booking2Id, '2026-08-01 10:00:00'),
 (@clientRoleId, 'login_failed',   'tbrole', @clientRoleId, '2026-08-06 22:10:00'),
 (@clientRoleId, 'login_success',  'tbrole', @clientRoleId, '2026-08-06 22:11:00'),
-(@adminRoleId,  'login_success',  'tbrole', @adminRoleId, '2026-08-02 09:00:00'),
 (@ownerRoleId,  'login_success',  'tbrole', @ownerRoleId, '2026-08-03 08:30:00'),
 (@clientRoleId2,'login_success',  'tbrole', @clientRoleId2, '2026-08-04 11:15:00'),
 (@clientRoleId3,'login_success',  'tbrole', @clientRoleId3, '2026-08-10 15:40:00');
@@ -459,13 +449,12 @@ INSERT INTO tbownerhistory (tbownerid, tbownerhistoryaction, tbownerhistorydetai
 
 -- =========================================================
 -- 15) NOTIFICACIONES (tbnotification)
---      Demo: una notificación de actividad sospechosa al cliente
---      (por cambiar de teléfono dos veces seguidas) y su copia al
---      admin, más notificaciones normales de estado.
+--      Demo: notificación de actividad sospechosa al cliente
+--      (por cambiar de teléfono dos veces seguidas) y
+--      notificaciones normales de estado.
 -- =========================================================
 INSERT INTO tbnotification (tbroleid, tbnotificationmessage, tbnotificationlink, tbnotificationdate, tbnotificationread, tbnotificationactive) VALUES
 (@clientRoleId, 'Se detectó un cambio de teléfono frecuente. Verifique su cuenta.', 'client/profile.php', '2026-08-15 09:46:00', FALSE, TRUE),
-(@adminRoleId,  'ALERTA: el rol cliente@eventhall.com cambió su teléfono 2 veces en 5 días.', 'admin/user-history.php?role=3', '2026-08-15 09:46:00', FALSE, TRUE),
 (@clientRoleId, 'Su reserva fue confirmada.', 'booking/detail.php?id=2', '2026-08-02 09:31:00', TRUE, TRUE),
 (@clientRoleId2,'Su reserva fue confirmada.', 'booking/detail.php?id=3', '2026-08-05 08:11:00', FALSE, TRUE),
 (@clientRoleId5,'Su reserva fue confirmada.', 'booking/detail.php?id=7', '2026-08-26 09:16:00', FALSE, TRUE);
@@ -530,10 +519,10 @@ INSERT INTO tbownerpayment (tbownerid, tbpaymentmethodid, tbownerpaymentholder, 
 --  y 1 'rechazado' para ver el historial de revisión)
 -- =========================================================
 INSERT INTO tbservice (tbvenueid, tbservicename, tbservicetype, tbserviceprice, tbservicestate, tbroleid, tbserviceapprovedon, tbserviceactive) VALUES
-(@venue4Id, 'Iluminación ambiental',        'Producción',  70000.00,  'aprobado',  @adminRoleId, NOW(), TRUE),
-(@venue4Id, 'Coctelería y bar abierto',     'Catering',    120000.00, 'aprobado',  @adminRoleId, NOW(), TRUE),
+(@venue4Id, 'Iluminación ambiental',        'Producción',  70000.00,  'aprobado',  NULL, NOW(), TRUE),
+(@venue4Id, 'Coctelería y bar abierto',     'Catering',    120000.00, 'aprobado',  NULL, NOW(), TRUE),
 (@venue4Id, 'Mobiliario premium',           'Mobiliario',  80000.00,  'solicitado', NULL, NULL, TRUE),
-(@venue4Id, 'Banda en vivo',                'Producción',  200000.00, 'rechazado', @adminRoleId, NOW(), TRUE);
+(@venue4Id, 'Banda en vivo',                'Producción',  200000.00, 'rechazado', NULL, NOW(), TRUE);
 SET @service8  = 8;
 SET @service9  = 9;
 SET @service10 = 10;
@@ -610,7 +599,7 @@ INSERT INTO tbbookingticket (tbbookingid, tbbookingticketfile, tbbookingticketty
 -- Repartición: subtotal 250000 -> comisión 5% = 12500, IVA 13% = 32500,
 -- total 282500, al propietario 237500 (= subtotal - comisión)
 INSERT INTO tbeearning (tbbookingid, tbeearningtotal, tbeearningcommission, tbeearningtax, tbeearningowneramount, tbroleid, tbeearningactive) VALUES
-(@booking3, 282500.00, 12500.00, 32500.00, 237500.00, @adminRoleId, TRUE);
+(@booking3, 282500.00, 12500.00, 32500.00, 237500.00, NULL, TRUE);
 
 -- PASADA Y CANCELADA (prueba estados y lista)
 INSERT INTO tbbooking (tbclientid, tbvenueid, tbbookingdate, tbbookingenddate, tbbookingeventtype, tbbookingeventdetail, tbbookingstate, tbbookingactive) VALUES
@@ -678,8 +667,8 @@ INSERT INTO tbbookingdetail (tbbookingid, tbdetailid, tbbookingdetailactive) VAL
 -- 22) AUDITORÍA (tbbookinghistory)
 -- =========================================================
 INSERT INTO tbbookinghistory (tbbookingid, tbroleid, tbbookinghistoryaction, tbbookinghistorydetail, tbbookinghistorydate, tbbookinghistoryactive) VALUES
-(@booking2, @adminRoleId,  'REPROGRAMAR',          'Rango anterior: 2026-11-04 - 2026-11-07 -> nuevo rango: 2026-11-05 - 2026-11-07', NOW(), TRUE),
-(@booking3, @adminRoleId,  'REPROGRAMAR',          'Rango anterior: 2026-09-19 - 2026-09-21 -> nuevo rango: 2026-09-20 - 2026-09-21', NOW(), TRUE),
+(@booking2, NULL,          'REPROGRAMAR',          'Rango anterior: 2026-11-04 - 2026-11-07 -> nuevo rango: 2026-11-05 - 2026-11-07', NOW(), TRUE),
+(@booking3, NULL,          'REPROGRAMAR',          'Rango anterior: 2026-09-19 - 2026-09-21 -> nuevo rango: 2026-09-20 - 2026-09-21', NOW(), TRUE),
 (@booking4, @client3RoleId, 'CANCELAR',            'Cancelada por el cliente.', NOW(), TRUE),
 (@booking2, @client2RoleId,'SOLICITUD_REEMBOLSO',  'Solicitado reembolso de la renta del local.', NOW(), TRUE);
 
@@ -707,17 +696,14 @@ INSERT INTO tbservicerating (tbserviceid, tbroleid, tbserviceratingstars, tbserv
 -- =========================================================
 INSERT INTO tbnotification (tbroleid, tbnotificationmessage, tbnotificationlink, tbnotificationdate, tbnotificationread, tbnotificationactive) VALUES
 (@ownerRoleId,    'Recibiste una nueva reserva en tu local: Salón La Quinta.',       'index.php?controller=booking&action=detail&id=2', NOW(), FALSE, TRUE),
-(@adminRoleId,    'Se ha creado una nueva reserva.',                                  'index.php?controller=admin&action=bookingDetail&id=2', NOW(), FALSE, TRUE),
 (@client2RoleId,  'Tu pago fue verificado y tu reserva ha sido aprobada.',           'index.php?controller=booking&action=detail&id=3', NOW(), TRUE, TRUE),
 (@ownerRoleId,    'Recibiste una nueva reserva en tu local: Centro de Eventos La Y.','index.php?controller=booking&action=detail&id=6', NOW(), FALSE, TRUE),
-(@owner2RoleId,   'Recibiste una nueva reserva en tu local: Terraza Bambú.',         'index.php?controller=booking&action=detail&id=7', NOW(), FALSE, TRUE),
-(@adminRoleId,    'Un cliente solicitó un reembolso.',                               'index.php?controller=admin&action=bookingDetail&id=2', NOW(), FALSE, TRUE);
+(@owner2RoleId,   'Recibiste una nueva reserva en tu local: Terraza Bambú.',         'index.php?controller=booking&action=detail&id=7', NOW(), FALSE, TRUE);
 
 -- =========================================================
 -- 26) HISTORIAL DE USUARIOS Y DE PROPIETARIOS
 -- =========================================================
 INSERT INTO tbuserhistory (tbroleid, tbuserhistoryaction, tbuserhistoryentity, tbuserhistoryentityid, tbuserhistorydate) VALUES
-(@adminRoleId,    'VIEW',    'Venue', @venueId,  NOW()),
 (@clientRoleId,   'BOOKING', 'Venue', @venueId,  NOW()),
 (@client2RoleId,  'BOOKING', 'Venue', @venueId,  NOW()),
 (@client2RoleId,  'VIEW',    'Venue', @venue4Id, NOW()),

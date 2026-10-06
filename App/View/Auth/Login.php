@@ -20,6 +20,13 @@
     <h1>Iniciar sesión</h1>
     <p class="subtitle">Accede a tu cuenta para reservar locales y servicios</p>
 
+    <?php if (empty($hasAdmins)): ?>
+      <div class="alert alert-error">
+        No hay administradores en el sistema.
+        <a href="<?= e(base_url('auth', 'showSetup')) ?>">Crea el primero aquí</a>.
+      </div>
+    <?php endif; ?>
+
     <?php if (!empty($error)): ?>
       <div class="alert alert-error"><?= e($error) ?></div>
     <?php endif; ?>

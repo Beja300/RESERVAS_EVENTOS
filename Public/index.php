@@ -197,7 +197,7 @@ $fallbackControllers = [
 // Solo se puede ejecutar una acción listada aquí.
 // =========================================================
 $allowedActions = [
-  'auth'          => ['showLogin', 'login', 'showRegister', 'registerClient', 'registerOwner', 'logout', 'cleanDemo'],
+  'auth'          => ['showLogin', 'login', 'showRegister', 'registerClient', 'registerOwner', 'logout', 'cleanDemo', 'showSetup', 'createFirstAdmin'],
   'service'       => ['list', 'showForm', 'create', 'update', 'pending', 'approve', 'reject', 'detail'],
   'venue'         => ['catalog', 'detail', 'showOwner', 'list', 'showForm', 'create', 'update', 'rate', 'rateService', 'updateComment', 'favorite'],
   'booking'       => ['create', 'showForm', 'myBookings', 'detail', 'addLine', 'cancel', 'pay', 'venueBookings', 'pendingBookings', 'uploadTicket', 'approveTicket', 'rejectTicket', 'requestRefund'],

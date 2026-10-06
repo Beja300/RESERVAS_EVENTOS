@@ -333,7 +333,8 @@ Para agregar una ruta nueva basta añadir una entrada al mapa **y** el nombre en
    ```
    php -S 127.0.0.1:8899 -t Public
    ```
-3. Smoke test por rol (login con los usuarios demo de `DataBase/ScriptsSQL/seed_test_data.sql`):
+3. Smoke test por rol (usuarios demo de `DataBase/InitialData/seed_test_data.sql`;
+   el admin se crea antes en `auth/setup`, ver "Instalación" más abajo):
    - Admin: `admin/dashboard`, `admin/users`, `admin/bookings`, `admin/bookingDetail&id=1`, `admin/commissionConfig`, `service/pending`.
    - Owner: `owner/dashboard`, `owner/profile`, `owner/paymentData`, `venue/list`, `booking/venueBookings&venueId=1`, `service/list&venueId=1`.
    - Cliente: `client/dashboard`, `client/profile`, `booking/myBookings`, `booking/showForm&venueId=1`, `booking/detail&id=1`.
@@ -512,10 +513,40 @@ exclusivo del formulario del local.
 
 1. `find App Public -name '*.php' | xargs -n1 php -l` → sin errores.
 2. `php -S 127.0.0.1:8899 -t Public` y login con los usuarios demo
-   (`owner@eventhall.com`, `cliente@eventhall.com`, `admin@eventhall.com` / `Clave123`).
+   (`owner@eventhall.com`, `cliente@eventhall.com` / `Clave123`; el administrador
+   se crea en `auth/setup` la primera vez, ver "Instalación").
 3. Owner → `venue/showForm`: el formulario muestra el mapa, el buscador y
    `client/vendor/leaflet/leaflet.js` responde 200. Guardar sin marcar el mapa
    responde 422 con el mensaje; marcarlo permite guardar.
 4. Cliente → panel con "Locales alquilados" + "Locales más frecuentes" (X visitas),
    página "Recomendaciones", nav con "Inicio"; perfil con combos de ubicación
    poblados y auto-detección funcionando.
+
+---
+
+## Instalación en una computadora nueva
+
+1. Importar el esquema en MySQL/MariaDB:
+   ```
+   DataBase/ScriptsSQL/dbeventhall.sql
+   ```
+2. (Opcional, para datos demo de clientes/propietarios) importar:
+   ```
+   DataBase/InitialData/seed_test_data.sql
+   ```
+   > El seed **no crea ningún administrador** a propósito: no hay
+   > credenciales por defecto en el repositorio.
+3. Levantar el servidor y abrir el login:
+   ```
+   php -S 127.0.0.1:8899 -t Public
+   # → http://127.0.0.1:8899/Public/index.php?controller=auth&action=showLogin
+   ```
+4. Si la base no tiene administradores, el login muestra un aviso con el enlace
+   **"Crea el primero aquí"** → `auth/setup`. Completar el formulario (nombre,
+   correo, contraseña, teléfono) crea el primer admin y deja la sesión iniciada.
+5. A partir de ahí los administradores adicionales se crean desde el panel
+   (`admin/showAdminForm`). La ruta `auth/setup` queda bloqueada en cuanto
+   existe al menos un administrador.
+
+> Nota: el botón "clean" del login restaura los datos de prueba y **borra
+> también al administrador**; tras usarlo hay que volver a `auth/setup`.
