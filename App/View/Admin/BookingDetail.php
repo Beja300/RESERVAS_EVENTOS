@@ -187,7 +187,7 @@
           }
         ?>
         <div class="form-group" style="max-width:260px;">
-          <label>Nueva fecha de inicio</label>
+          <label>Nueva fecha de inicio <span class="required-mark">*</span></label>
           <input class="form-control" type="date" name="date"
                  value="<?= e($booking->getBookingDate()) ?>"
                  min="<?= e(date('Y-m-d')) ?>"
@@ -209,7 +209,8 @@
         <?= csrf_field() ?>
         <input type="hidden" name="id" value="<?= (int) $booking->getIdBooking() ?>">
         <div class="form-group" style="max-width:300px;">
-          <select class="form-control" name="venueId" required>
+          <label for="newVenueSelect">Nuevo local <span class="required-mark">*</span></label>
+          <select class="form-control" id="newVenueSelect" name="venueId" required>
             <option value="">Seleccionar local...</option>
             <?php foreach ($venues as $v): ?>
               <option value="<?= (int) $v->getIdVenue() ?>" <?= $v->getIdVenue() === $booking->getIdLocal() ? 'disabled' : '' ?>>

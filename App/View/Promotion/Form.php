@@ -19,7 +19,7 @@
       <?= csrf_field() ?>
 
       <div class="form-group">
-        <label for="venueId">Local *</label>
+        <label for="venueId">Local <span class="required-mark">*</span></label>
         <select class="form-control" id="venueId" name="venueId" required>
           <option value="">— Selecciona —</option>
           <?php foreach ($venues as $v): ?>
@@ -31,7 +31,7 @@
       </div>
 
       <div class="form-group">
-        <label for="label">Etiqueta *</label>
+        <label for="label">Etiqueta <span class="required-mark">*</span></label>
         <input class="form-control" type="text" id="label" name="label" required placeholder="Ej. 2x1 en sonido">
       </div>
 
@@ -52,7 +52,7 @@
       </div>
 
       <div class="form-group">
-        <label for="minServices">Mínimo de servicios *</label>
+        <label for="minServices">Mínimo de servicios <span class="required-mark">*</span></label>
         <input class="form-control" type="number" id="minServices" name="minServices" value="1" min="1" required>
       </div>
 

@@ -24,11 +24,11 @@ if ($client === null) {
     <form method="post" action="<?= e(base_url('client', 'updateProfile')) ?>">
       <?= csrf_field() ?>
       <div class="form-group">
-        <label for="name">Nombre</label>
+        <label for="name">Nombre <span class="required-mark">*</span></label>
         <input class="form-control" type="text" id="name" name="name" required value="<?= e($client->getName()) ?>">
       </div>
       <div class="form-group">
-        <label for="email">Correo</label>
+        <label for="email">Correo <span class="required-mark">*</span></label>
         <input class="form-control" type="email" id="email" name="email" required value="<?= e($client->getEmail()) ?>">
       </div>
       <div class="form-group">

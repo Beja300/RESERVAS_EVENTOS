@@ -23,13 +23,13 @@ $u = $user;
     <input type="hidden" name="id" value="<?= (int) $u->getIdRol() ?>">
     <input type="hidden" name="type" value="admin">
     <div class="form-group">
-      <label for="name">Nombre</label>
+      <label for="name">Nombre <span class="required-mark">*</span></label>
       <input class="form-control" type="text" id="name" name="name"
              value="<?= e($_POST['name'] ?? $u->getName()) ?>" required>
       <div class="form-hint">Ej: Laura Fernández</div>
     </div>
     <div class="form-group">
-      <label for="email">Correo electrónico</label>
+      <label for="email">Correo electrónico <span class="required-mark">*</span></label>
       <input class="form-control" type="email" id="email" name="email"
              value="<?= e($_POST['email'] ?? $u->getEmail()) ?>" required>
       <div class="form-hint">Ej: laura.fdez@correo.com</div>

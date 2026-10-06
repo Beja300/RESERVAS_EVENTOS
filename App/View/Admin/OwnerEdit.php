@@ -23,7 +23,7 @@ $u = $user;
     <input type="hidden" name="id" value="<?= (int) $u->getIdRol() ?>">
     <input type="hidden" name="type" value="owner">
     <div class="form-group">
-      <label for="name">Nombre de negocio</label>
+      <label for="name">Nombre de negocio <span class="required-mark">*</span></label>
       <input class="form-control" type="text" id="name" name="name"
              value="<?= e($_POST['name'] ?? $u->getName()) ?>" required>
       <div class="form-hint">Ej: Pastelería Doña Tere</div>
@@ -47,7 +47,7 @@ $u = $user;
       <div class="form-hint">Ej: 1-2345-0678</div>
     </div>
     <div class="form-group">
-      <label for="email">Correo electrónico</label>
+      <label for="email">Correo electrónico <span class="required-mark">*</span></label>
       <input class="form-control" type="email" id="email" name="email"
              value="<?= e($_POST['email'] ?? $u->getEmail()) ?>" required>
       <div class="form-hint">Ej: mariosepe@correo.com</div>

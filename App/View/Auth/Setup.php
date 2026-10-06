@@ -22,19 +22,19 @@
     <form method="post" action="<?= e(base_url('auth', 'createFirstAdmin')) ?>">
       <?= csrf_field() ?>
       <div class="form-group">
-        <label for="name">Nombre</label>
+        <label for="name">Nombre <span class="required-mark">*</span></label>
         <input class="form-control" type="text" id="name" name="name" required autofocus>
         <div class="form-hint">Ej: Laura Fernández</div>
       </div>
 
       <div class="form-group">
-        <label for="email">Correo electrónico</label>
+        <label for="email">Correo electrónico <span class="required-mark">*</span></label>
         <input class="form-control" type="email" id="email" name="email" required>
         <div class="form-hint">Ej: laura.fdez@correo.com</div>
       </div>
 
       <div class="form-group">
-        <label for="password">Contraseña</label>
+        <label for="password">Contraseña <span class="required-mark">*</span></label>
         <div class="password-wrapper">
           <input class="form-control" type="password" id="password" name="password"
                  minlength="8" required>

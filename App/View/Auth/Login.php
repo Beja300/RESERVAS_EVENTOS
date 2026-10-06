@@ -42,14 +42,14 @@
     <form method="post" action="<?= e(base_url('auth', 'login')) ?>">
       <?= csrf_field() ?>
       <div class="form-group">
-        <label for="email">Correo electrónico</label>
+        <label for="email">Correo electrónico <span class="required-mark">*</span></label>
         <input class="form-control" type="email" id="email" name="email"
                value="<?= e($_POST['email'] ?? '') ?>" required autofocus>
         <div class="form-hint">Ej: analucia@correo.com</div>
       </div>
 
       <div class="form-group">
-        <label for="password">Contraseña</label>
+        <label for="password">Contraseña <span class="required-mark">*</span></label>
         <div class="password-wrapper">
           <input class="form-control" type="password" id="password" name="password" required>
           <button class="password-toggle" type="button" id="passwordToggle" aria-label="Mostrar contraseña">Mostrar</button>

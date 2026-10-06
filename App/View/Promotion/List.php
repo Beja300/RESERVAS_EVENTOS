@@ -53,6 +53,7 @@ foreach ($availableServices as $s) {
           <?= csrf_field() ?>
           <input type="hidden" name="promotionId" value="<?= (int) $promo->getIdPromotion() ?>">
           <input type="hidden" name="venueId" value="<?= (int) $idVenue ?>">
+          <label>Servicio <span class="required-mark">*</span></label>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <select class="form-control" name="serviceId" required style="flex:1;min-width:180px;">
               <option value="">— Agregar servicio —</option>

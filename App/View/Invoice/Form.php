@@ -40,7 +40,7 @@ if ($booking === null) {
     <input type="hidden" name="bookingId" value="<?= (int) $booking->getIdBooking() ?>">
 
     <div class="form-group">
-      <label for="paymentMethodId">Método de pago *</label>
+      <label for="paymentMethodId">Método de pago <span class="required-mark">*</span></label>
       <?php if (empty($paymentMethods)): ?>
         <p class="muted">No tienes métodos de pago registrados.</p>
       <?php else: ?>

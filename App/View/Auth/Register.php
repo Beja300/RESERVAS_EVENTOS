@@ -31,19 +31,19 @@
       <!-- Panel Cliente -->
       <div class="tab-panel active" id="panel-client">
         <div class="form-group">
-          <label for="name">Nombre</label>
+          <label for="name">Nombre <span class="required-mark">*</span></label>
           <input class="form-control" type="text" id="name" name="name"
                  value="<?= e($_POST['name'] ?? '') ?>" required>
           <div class="form-hint">Ej: Ana Lucía</div>
         </div>
         <div class="form-group">
-          <label for="email">Correo electrónico</label>
+          <label for="email">Correo electrónico <span class="required-mark">*</span></label>
           <input class="form-control" type="email" id="email" name="email"
                  value="<?= e($_POST['email'] ?? '') ?>" required>
           <div class="form-hint">Ej: analucia@correo.com</div>
         </div>
         <div class="form-group">
-          <label for="password">Contraseña</label>
+          <label for="password">Contraseña <span class="required-mark">*</span></label>
           <div class="password-wrapper">
             <input class="form-control" type="password" id="password" name="password"
                    minlength="8" required>
@@ -62,7 +62,7 @@
       <!-- Panel Propietario -->
       <div class="tab-panel" id="panel-owner">
         <div class="form-group">
-          <label for="ownerFirstName">Nombre</label>
+          <label for="ownerFirstName">Nombre <span class="required-mark">*</span></label>
           <input class="form-control" type="text" id="ownerFirstName" name="ownerFirstName"
                  value="<?= e($_POST['ownerFirstName'] ?? '') ?>" required>
           <div class="form-hint">Ej: María José</div>
@@ -80,7 +80,7 @@
           <div class="form-hint">Ej: Mari</div>
         </div>
         <div class="form-group">
-          <label for="ownerBusinessName">Nombre de negocio</label>
+          <label for="ownerBusinessName">Nombre de negocio <span class="required-mark">*</span></label>
           <input class="form-control" type="text" id="ownerBusinessName" name="ownerBusinessName"
                  value="<?= e($_POST['ownerBusinessName'] ?? '') ?>" required>
           <div class="form-hint">Ej: Salon comunal</div>
@@ -92,13 +92,13 @@
           <div class="form-hint">Ej: 1-2345-0678</div>
         </div>
         <div class="form-group">
-          <label for="ownerEmail">Correo electrónico</label>
+          <label for="ownerEmail">Correo electrónico <span class="required-mark">*</span></label>
           <input class="form-control" type="email" id="ownerEmail" name="email"
                  value="<?= e($_POST['email'] ?? '') ?>" required>
           <div class="form-hint">Ej: mariosepe@correo.com</div>
         </div>
         <div class="form-group">
-          <label for="ownerPassword">Contraseña</label>
+          <label for="ownerPassword">Contraseña <span class="required-mark">*</span></label>
           <div class="password-wrapper">
             <input class="form-control" type="password" id="ownerPassword" name="password"
                    minlength="8" required>

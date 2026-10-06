@@ -19,21 +19,21 @@ $pageJs = ['venue/location'];
     <?= csrf_field() ?>
     <div class="grid grid-3">
       <div class="form-group">
-        <label for="province">Provincia *</label>
+        <label for="province">Provincia <span class="required-mark">*</span></label>
         <select class="form-control" id="province" name="province" data-level="province" required
                 data-value="<?= e($_POST['province'] ?? '') ?>">
           <option value="">— Selecciona —</option>
         </select>
       </div>
       <div class="form-group">
-        <label for="canton">Cantón *</label>
+        <label for="canton">Cantón <span class="required-mark">*</span></label>
         <select class="form-control" id="canton" name="canton" data-level="canton" disabled required
                 data-value="<?= e($_POST['canton'] ?? '') ?>">
           <option value="">— Selecciona —</option>
         </select>
       </div>
       <div class="form-group">
-        <label for="district">Distrito *</label>
+        <label for="district">Distrito <span class="required-mark">*</span></label>
         <select class="form-control" id="district" name="district" data-level="district" disabled required
                 data-value="<?= e($_POST['district'] ?? '') ?>">
           <option value="">— Selecciona —</option>

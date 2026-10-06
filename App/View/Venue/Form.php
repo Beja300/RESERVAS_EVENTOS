@@ -39,7 +39,7 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
     <?php endif; ?>
 
     <div class="form-group">
-      <label for="name">Nombre del local *</label>
+      <label for="name">Nombre del local <span class="required-mark">*</span></label>
       <input class="form-control" type="text" id="name" name="name" required
         value="<?= e($isEdit ? $venue->getNameVenue() : ($_POST['name'] ?? '')) ?>">
     </div>
@@ -58,14 +58,14 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
     </div>
 
     <div class="form-group">
-      <label for="price">Precio de renta por evento *</label>
+      <label for="price">Precio de renta por evento <span class="required-mark">*</span></label>
       <input class="form-control" type="number" id="price" name="price" min="0.01" step="0.01" required
         value="<?= e($isEdit ? number_format($venue->getPriceVenue(), 2, '.', '') : ($_POST['price'] ?? '')) ?>">
       <p class="form-hint">Este precio se incluye siempre en la factura de cada reserva de este local.</p>
     </div>
 
     <div class="form-group">
-      <label for="image">Foto del local <?= $isEdit ? '' : '*' ?></label>
+      <label for="image">Foto del local <?= $isEdit ? '' : '<span class="required-mark">*</span>' ?></label>
       <input class="form-control" type="file" id="image" name="image" accept="image/*"
         <?= $isEdit ? '' : 'required' ?> onchange="var f=this.files[0];var p=document.getElementById('imagePreview');if(f){var r=new FileReader();r.onload=function(e){p.src=e.target.result;p.style.display='block';};r.readAsDataURL(f);}">
       <?php $currentImg = $isEdit ? $venue->getImageVenue() : ($_POST['image'] ?? ''); ?>
@@ -86,21 +86,21 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
 
     <div class="grid grid-3">
       <div class="form-group">
-        <label for="province">Provincia *</label>
+        <label for="province">Provincia <span class="required-mark">*</span></label>
         <select class="form-control" id="province" name="province" data-level="province" required
                 data-value="<?= e($curProvince) ?>">
           <option value="">— Selecciona —</option>
         </select>
       </div>
       <div class="form-group">
-        <label for="canton">Cantón *</label>
+        <label for="canton">Cantón <span class="required-mark">*</span></label>
         <select class="form-control" id="canton" name="canton" data-level="canton" disabled required
                 data-value="<?= e($curCanton) ?>">
           <option value="">— Selecciona —</option>
         </select>
       </div>
       <div class="form-group">
-        <label for="district">Distrito *</label>
+        <label for="district">Distrito <span class="required-mark">*</span></label>
         <select class="form-control" id="district" name="district" data-level="district" disabled required
                 data-value="<?= e($curDistrict) ?>">
           <option value="">— Selecciona —</option>
@@ -120,7 +120,7 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
     </div>
 
     <div class="form-group">
-      <label for="venue-map">Ubicación exacta en el mapa *</label>
+      <label for="venue-map">Ubicación exacta en el mapa <span class="required-mark">*</span></label>
       <div class="geo-search-box">
         <input class="form-control" type="search" id="venue-map-search"
           placeholder="Buscar dirección o cantón (ej. San José)...">

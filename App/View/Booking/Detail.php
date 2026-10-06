@@ -163,7 +163,7 @@ $hasTicket = $ticket !== null;
             style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
         <?= csrf_field() ?>
         <div class="form-group" style="min-width:220px;">
-          <label for="serviceId">Servicio</label>
+          <label for="serviceId">Servicio <span class="required-mark">*</span></label>
           <select class="form-control" id="serviceId" name="serviceId" required>
             <?php foreach ($availableServices as $s): ?>
               <option value="<?= (int) $s->getIdService() ?>">
@@ -251,7 +251,7 @@ $hasTicket = $ticket !== null;
         <?= csrf_field() ?>
         <input type="hidden" name="id" value="<?= (int) $booking->getIdBooking() ?>">
         <div class="form-group">
-          <label for="motivoRefund">Motivo (mínimo 10 caracteres)</label>
+          <label for="motivoRefund">Motivo (mínimo 10 caracteres) <span class="required-mark">*</span></label>
           <textarea class="form-control" id="motivoRefund" name="motivo" rows="3" minlength="10" required></textarea>
         </div>
         <button class="btn btn-outline" type="submit">Enviar solicitud de reembolso</button>

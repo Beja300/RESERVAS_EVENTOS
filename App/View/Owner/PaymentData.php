@@ -36,7 +36,7 @@ $paymentMethods = $paymentMethods ?? [];
     <input type="hidden" name="idOwnerPayment" data-payment-id value="0">
 
     <div class="form-group">
-      <label for="paymentMethodId">Método de pago *</label>
+      <label for="paymentMethodId">Método de pago <span class="required-mark">*</span></label>
       <select class="form-control" id="paymentMethodId" name="paymentMethodId" required>
         <option value="">— Selecciona —</option>
         <?php foreach ($paymentMethods as $pm): ?>

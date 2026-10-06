@@ -19,7 +19,7 @@ require_once __DIR__ . '/../_header.php';
   <form method="post" action="<?= e(base_url('admin', 'createOwner')) ?>">
     <?= csrf_field() ?>
     <div class="form-group">
-      <label for="ownerFirstName">Nombre</label>
+      <label for="ownerFirstName">Nombre <span class="required-mark">*</span></label>
       <input class="form-control" type="text" id="ownerFirstName" name="ownerFirstName" required>
       <div class="form-hint">Ej: María José</div>
     </div>
@@ -34,7 +34,7 @@ require_once __DIR__ . '/../_header.php';
       <div class="form-hint">Ej: Mari</div>
     </div>
     <div class="form-group">
-      <label for="ownerBusinessName">Nombre de negocio</label>
+      <label for="ownerBusinessName">Nombre de negocio <span class="required-mark">*</span></label>
       <input class="form-control" type="text" id="ownerBusinessName" name="ownerBusinessName" required>
       <div class="form-hint">Ej: Pastelería Doña Tere</div>
     </div>
@@ -44,12 +44,12 @@ require_once __DIR__ . '/../_header.php';
       <div class="form-hint">Ej: 1-2345-0678</div>
     </div>
     <div class="form-group">
-      <label for="email">Correo electrónico</label>
+      <label for="email">Correo electrónico <span class="required-mark">*</span></label>
       <input class="form-control" type="email" id="email" name="email" required>
       <div class="form-hint">Ej: mariosepe@correo.com</div>
     </div>
     <div class="form-group">
-      <label for="password">Contraseña</label>
+      <label for="password">Contraseña <span class="required-mark">*</span></label>
       <div class="password-wrapper">
         <input class="form-control" type="password" id="password" name="password"
                minlength="8" required>

@@ -37,7 +37,7 @@ if ($config === null) {
     <?= csrf_field() ?>
 
     <div class="form-group">
-      <label for="percentage">Comisión de la plataforma (%)</label>
+      <label for="percentage">Comisión de la plataforma (%) <span class="required-mark">*</span></label>
       <input class="form-control" type="number" id="percentage" name="percentage"
              min="0" max="100" step="0.01" required
              data-validate-number
@@ -46,7 +46,7 @@ if ($config === null) {
     </div>
 
     <div class="form-group">
-      <label for="tax">IVA (%)</label>
+      <label for="tax">IVA (%) <span class="required-mark">*</span></label>
       <input class="form-control" type="number" id="tax" name="tax"
              min="0" max="100" step="0.01" required
              data-validate-number

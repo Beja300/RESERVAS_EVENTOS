@@ -68,13 +68,13 @@ $curLng    = $location !== null ? ($location->getLongitudeLocation() !== null ? 
     </div>
 
     <div class="form-group">
-      <label for="name">Nombre</label>
+      <label for="name">Nombre <span class="required-mark">*</span></label>
       <input class="form-control" type="text" id="name" name="name" required
              value="<?= e($_POST['name'] ?? $client->getName()) ?>">
     </div>
 
     <div class="form-group">
-      <label for="email">Correo electrónico</label>
+      <label for="email">Correo electrónico <span class="required-mark">*</span></label>
       <input class="form-control" type="email" id="email" name="email" required
              data-validate="email"
              value="<?= e($_POST['email'] ?? $client->getEmail()) ?>">

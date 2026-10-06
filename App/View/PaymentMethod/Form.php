@@ -14,7 +14,7 @@
   <form method="post" action="<?= e(base_url('paymentMethod', 'create')) ?>">
     <?= csrf_field() ?>
     <div class="form-group">
-      <label for="type">Tipo de método de pago *</label>
+      <label for="type">Tipo de método de pago <span class="required-mark">*</span></label>
       <input class="form-control" type="text" id="type" name="type" required
              placeholder="Ej: Tarjeta de crédito, Transferencia, Efectivo..."
              value="<?= e($_POST['type'] ?? '') ?>">

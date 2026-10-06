@@ -64,8 +64,8 @@ if ($owner === null) {
     <h3 class="card-title">Datos del negocio</h3>
 
     <div class="form-group">
-      <label for="name">Nombre de negocio</label>
-      <input class="form-control" type="text" id="name" name="name"
+      <label for="name">Nombre de negocio <span class="required-mark">*</span></label>
+      <input class="form-control" type="text" id="name" name="name" required
              value="<?= e($_POST['name'] ?? $owner->getName()) ?>">
       <div class="form-hint">Ej: Salon comunal</div>
     </div>
@@ -92,7 +92,7 @@ if ($owner === null) {
     </div>
 
     <div class="form-group">
-      <label for="email">Correo electrónico</label>
+      <label for="email">Correo electrónico <span class="required-mark">*</span></label>
       <input class="form-control" type="email" id="email" name="email" required
              data-validate="email"
              value="<?= e($_POST['email'] ?? $owner->getEmail()) ?>">

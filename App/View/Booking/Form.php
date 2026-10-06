@@ -27,7 +27,7 @@ if ($venue === null) {
     <input type="hidden" name="venueId" value="<?= (int) $venue->getIdVenue() ?>">
 
     <div class="form-group">
-      <label for="date">Rango de fechas *</label>
+      <label for="date">Rango de fechas <span class="required-mark">*</span></label>
       <input class="form-control" type="date" id="date" name="date" required min="<?= date('Y-m-d') ?>"
              value="<?= e(trim($_POST['date'] ?? '')) ?>"
              data-booked-dates='<?= e(json_encode($bookedDates ?? [])) ?>'>
@@ -48,7 +48,7 @@ if ($venue === null) {
     </div>
 
     <div class="form-group" id="eventDetailGroup" style="display:<?= ($_POST['eventType'] ?? '') === 'otro' ? '' : 'none' ?>;">
-      <label for="eventDetail">¿De qué trata tu evento? *</label>
+      <label for="eventDetail">¿De qué trata tu evento? <span class="required-mark">*</span></label>
       <textarea class="form-control" id="eventDetail" name="eventDetail" rows="3" maxlength="255"
                 placeholder="Cuéntale al propietario de qué trata tu evento..."><?= e($_POST['eventDetail'] ?? '') ?></textarea>
       <small class="muted">Esta descripción la verá el propietario del local.</small>

@@ -24,7 +24,7 @@ $action = $isEdit ? base_url('service', 'update') : base_url('service', 'create'
     <?php endif; ?>
 
     <div class="form-group">
-      <label for="name">Nombre del servicio *</label>
+      <label for="name">Nombre del servicio <span class="required-mark">*</span></label>
       <input class="form-control" type="text" id="name" name="name" required
              value="<?= e($isEdit ? $service->getNameService() : ($_POST['name'] ?? '')) ?>">
     </div>
@@ -37,7 +37,7 @@ $action = $isEdit ? base_url('service', 'update') : base_url('service', 'create'
     </div>
 
     <div class="form-group">
-      <label for="price">Precio *</label>
+      <label for="price">Precio <span class="required-mark">*</span></label>
       <input class="form-control" type="number" id="price" name="price" step="0.01" min="0.01" required
              value="<?= e($isEdit ? number_format($service->getPriceService(), 2, '.', '') : ($_POST['price'] ?? '')) ?>">
     </div>
