@@ -458,7 +458,7 @@ CREATE TABLE tbcreditpayment (
 -- ---------------------------------------------------------
 -- La rúbrica exige que las reglas de unicidad/duplicados se
 -- controlen desde PHP (Service/Controller), NO mediante
--- restricciones de negocio de MySQL. Este script elimina los
+-- restricciones de negocio de MySQL. Este bloque elimina los
 -- índices UNIQUE que imponían esas reglas a nivel de motor.
 --
 -- La unicidad sigue garantizada en la capa de código:
@@ -467,20 +467,63 @@ CREATE TABLE tbcreditpayment (
 --   - 1:1 rol   -> validaciones de los Services al asignar subtipo
 --   - factura   -> InvoiceService (una factura por reserva)
 --
--- Ejecutar una sola vez sobre bases existentes.
--- Importar DESPUÉS de dbeventhall.sql en instalaciones nuevas ya
--- no es necesario (el esquema ya no declara los UNIQUE).
+-- IDEMPOTENTE Y PORTABLE (MySQL 5.7/8.0 y MariaDB):
+--   * En instalación NUEVA el esquema de arriba ya no declara
+--     UNIQUE: no hay índices que quitar y el import NO se aborta.
+--   * En una base ANTIGUA localiza el índice por tabla+columna
+--     (los nombres cambiaron entre versiones) y lo elimina.
+--   * No usa DELIMITER ni rutinas almacenadas.
 -- =========================================================
 
 USE dbeventhall;
 
--- Índices inline: MySQL los nombra igual que la columna.
-ALTER TABLE tbrole            DROP INDEX tbroleemail;
-ALTER TABLE tbroleadmin       DROP INDEX tbroleid;
-ALTER TABLE tbroleclient      DROP INDEX tbroleid;
-ALTER TABLE tbroleowner       DROP INDEX tbroleid;
-ALTER TABLE tbowner           DROP INDEX tbowneridentificationnumber;
-ALTER TABLE tbinvoice         DROP INDEX tbbookingid;
+-- tbrole.tbroleemail
+SET @idx = (SELECT INDEX_NAME FROM information_schema.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbrole'
+               AND COLUMN_NAME = 'tbroleemail'
+               AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY' LIMIT 1);
+SET @sql = IFNULL(CONCAT('ALTER TABLE tbrole DROP INDEX `', @idx, '`'), 'DO 0');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- tbroleadmin.tbroleid (backups: tbroleadminrolid / tbroleadminroleid)
+SET @idx = (SELECT INDEX_NAME FROM information_schema.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbroleadmin'
+               AND COLUMN_NAME IN ('tbroleid','tbroleadminrolid','tbroleadminroleid')
+               AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY' LIMIT 1);
+SET @sql = IFNULL(CONCAT('ALTER TABLE tbroleadmin DROP INDEX `', @idx, '`'), 'DO 0');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- tbroleclient.tbroleid (backups: tbroleclientrolid / tbroleclientroleid)
+SET @idx = (SELECT INDEX_NAME FROM information_schema.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbroleclient'
+               AND COLUMN_NAME IN ('tbroleid','tbroleclientrolid','tbroleclientroleid')
+               AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY' LIMIT 1);
+SET @sql = IFNULL(CONCAT('ALTER TABLE tbroleclient DROP INDEX `', @idx, '`'), 'DO 0');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- tbroleowner.tbroleid (backups: tbroleownerrolid / tbroleownerroleid)
+SET @idx = (SELECT INDEX_NAME FROM information_schema.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbroleowner'
+               AND COLUMN_NAME IN ('tbroleid','tbroleownerrolid','tbroleownerroleid')
+               AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY' LIMIT 1);
+SET @sql = IFNULL(CONCAT('ALTER TABLE tbroleowner DROP INDEX `', @idx, '`'), 'DO 0');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- tbowner.tbowneridentificationnumber
+SET @idx = (SELECT INDEX_NAME FROM information_schema.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbowner'
+               AND COLUMN_NAME = 'tbowneridentificationnumber'
+               AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY' LIMIT 1);
+SET @sql = IFNULL(CONCAT('ALTER TABLE tbowner DROP INDEX `', @idx, '`'), 'DO 0');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- tbinvoice.tbbookingid (backups: tbinvoicebookingid / tbbookinginvoicebookingid)
+SET @idx = (SELECT INDEX_NAME FROM information_schema.STATISTICS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbinvoice'
+               AND COLUMN_NAME IN ('tbbookingid','tbinvoicebookingid','tbbookinginvoicebookingid')
+               AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY' LIMIT 1);
+SET @sql = IFNULL(CONCAT('ALTER TABLE tbinvoice DROP INDEX `', @idx, '`'), 'DO 0');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 
 -- ========================================
