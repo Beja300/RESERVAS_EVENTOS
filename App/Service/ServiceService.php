@@ -147,6 +147,14 @@ class ServiceService
     }
 
     // =========================================================
+    // TIPOS DE SERVICIO DISTINTOS (para el filtro del catálogo)
+    // =========================================================
+    public function getDistinctTypes(): array
+    {
+        return $this->serviceRepo->distinctTypes();
+    }
+
+    // =========================================================
     // HISTORIAL DE APROBACIÓN/EXPEDIENTE (panel del Admin):
     // servicios ya aprobados o rechazados
     // =========================================================
