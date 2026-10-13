@@ -245,6 +245,8 @@ class BookingAdminService
 
     return $booking;
   }
+
+  private function requirePendingRefund(int $refundRequestId): BookingRefund
   {
     $refund = $this->refundRepo->findById($refundRequestId);
 
