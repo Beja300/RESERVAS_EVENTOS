@@ -182,6 +182,19 @@
         message = 'El teléfono debe tener 8 dígitos.';
       } else if (rules.indexOf('email') !== -1 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
         message = 'Correo electrónico no válido.';
+      } else if (rules.indexOf('password') !== -1 && !/^(?=.*\d).{8,}$/.test(value)) {
+        message = 'La contraseña debe tener al menos 8 caracteres y un número.';
+      } else if (rules.indexOf('url') !== -1 && !/^https?:\/\/[^\s]+$/i.test(value)) {
+        message = 'La URL no es válida (debe iniciar con http:// o https://).';
+      } else if (rules.indexOf('identification') !== -1
+        && !/^\d{1}-\d{4}-\d{4}$/.test(value)
+        && !/^\d{1}-\d{3}-\d{6}$/.test(value)
+        && !/^\d{9,12}$/.test(value.replace(/[\s-]/g, ''))) {
+        message = 'Formato de cédula no válido (ej. 1-2345-0678).';
+      } else if (rules.indexOf('account') !== -1
+        && !/^\d{8}$/.test(value.replace(/[\s-]/g, ''))
+        && !/^[A-Za-z]{2}[\dA-Za-z]{18,22}$/.test(value.replace(/[\s-]/g, ''))) {
+        message = 'Cuenta no válida (8 dígitos SINPE o IBAN).';
       } else if (rules.indexOf('minprice') !== -1 && (isNaN(value) || parseFloat(value) < 0)) {
         message = 'El precio no puede ser negativo.';
       } else if (rules.indexOf('positive') !== -1 && (isNaN(value) || parseFloat(value) <= 0)) {

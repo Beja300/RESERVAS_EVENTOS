@@ -1,3 +1,4 @@
+<?php $pageJs = ['promotion/form']; ?>
 <?php require_once __DIR__ . '/../_header.php'; ?>
 
 <div class="page-head">
@@ -15,12 +16,13 @@
   <?php if (empty($venues)): ?>
     <div class="alert alert-warning">Primero crea un local para poder gestionar promociones.</div>
   <?php else: ?>
-    <form method="post" action="<?= e(base_url('promotion', 'create')) ?>">
+    <form method="post" action="<?= e(base_url('promotion', 'create')) ?>"
+          data-promotion-form data-validate-form>
       <?= csrf_field() ?>
 
       <div class="form-group">
         <label for="venueId">Local *</label>
-        <select class="form-control" id="venueId" name="venueId" required>
+        <select class="form-control" id="venueId" name="venueId" required data-validate="required">
           <option value="">— Selecciona —</option>
           <?php foreach ($venues as $v): ?>
             <option value="<?= (int) $v->getIdVenue() ?>" <?= (int) $idVenue === (int) $v->getIdVenue() ? 'selected' : '' ?>>
@@ -32,7 +34,8 @@
 
       <div class="form-group">
         <label for="label">Etiqueta *</label>
-        <input class="form-control" type="text" id="label" name="label" required placeholder="Ej. 2x1 en sonido">
+        <input class="form-control" type="text" id="label" name="label" required data-validate="required"
+               placeholder="Ej. 2x1 en sonido">
       </div>
 
       <div class="form-group">
@@ -42,18 +45,19 @@
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
         <div class="form-group">
-          <label for="startDate">Fecha inicio</label>
-          <input class="form-control" type="date" id="startDate" name="startDate">
+          <label for="startDate">Fecha inicio *</label>
+          <input class="form-control" type="date" id="startDate" name="startDate" required data-validate="required">
         </div>
         <div class="form-group">
-          <label for="endDate">Fecha fin</label>
-          <input class="form-control" type="date" id="endDate" name="endDate">
+          <label for="endDate">Fecha fin *</label>
+          <input class="form-control" type="date" id="endDate" name="endDate" required data-validate="required">
         </div>
       </div>
 
       <div class="form-group">
         <label for="minServices">Mínimo de servicios *</label>
-        <input class="form-control" type="number" id="minServices" name="minServices" value="1" min="1" required>
+        <input class="form-control" type="number" id="minServices" name="minServices" value="1" min="1" required
+               data-validate="required positive">
       </div>
 
       <button class="btn btn-primary btn-block" type="submit">Crear promoción</button>

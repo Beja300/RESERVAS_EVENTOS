@@ -65,15 +65,25 @@ class OwnerProfileController
 
     try {
       if ($name === '') {
-        $name = $owner->getName();
+        throw new BusinessRuleException('El nombre del negocio es obligatorio.');
+      }
+
+      if ($ownerLastName === '') {
+        throw new BusinessRuleException('Los apellidos son obligatorios.');
+      }
+
+      if ($ownerIdentification === '') {
+        throw new BusinessRuleException('La cédula / identificación es obligatoria.');
+      }
+
+      if ($phoneNumber === null || $phoneNumber === '') {
+        throw new BusinessRuleException('El teléfono es obligatorio.');
       }
 
       $this->profileService->validateUniqueEmail($currentEmail, $email);
       $this->profileService->validatePhone($phoneNumber);
-
-      if ($ownerIdentification !== '') {
-        $this->profileService->validateUniqueIdentification($owner->getIdentificationNumberOwner(), $ownerIdentification);
-      }
+      $this->profileService->validateIdentificationFormat($ownerIdentification);
+      $this->profileService->validateUniqueIdentification($owner->getIdentificationNumberOwner(), $ownerIdentification);
 
       $this->profileService->changePasswordIfRequested($owner, $currentPassword, $newPassword);
 

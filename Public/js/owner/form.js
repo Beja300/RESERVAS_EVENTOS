@@ -1,16 +1,46 @@
 (function () {
     function base() { var p=(window.location.pathname||'').split('/'); p.pop(); return p.join('/'); }
 
-    // Cambio de contraseña (mostrar/ocultar)
+    // Cambio de contraseña (mostrar/ocultar).
+    // Si el usuario activa el cambio, ambos campos pasan a ser obligatorios.
     var pwCheck = document.getElementById('changePasswordCheck');
     var pwFields = document.getElementById('passwordFields');
+
+    function syncPasswordRequirements(checked) {
+      var cur = document.getElementById('currentPassword');
+      var nw = document.getElementById('newPassword');
+
+      if (cur) {
+        if (checked) {
+          cur.setAttribute('required', 'required');
+          cur.setAttribute('data-validate', 'required');
+        } else {
+          cur.removeAttribute('required');
+          cur.removeAttribute('data-validate');
+          cur.classList.remove('is-invalid');
+        }
+      }
+
+      if (nw) {
+        nw.setAttribute('data-validate', checked ? 'required password' : 'password');
+        if (checked) {
+          nw.setAttribute('required', 'required');
+        } else {
+          nw.removeAttribute('required');
+          nw.classList.remove('is-invalid');
+        }
+      }
+    }
+
     if (pwCheck && pwFields) {
+      syncPasswordRequirements(pwCheck.checked);
       pwCheck.addEventListener('change', function () {
         pwFields.style.display = pwCheck.checked ? '' : 'none';
         if (!pwCheck.checked) {
           document.getElementById('currentPassword').value = '';
           document.getElementById('newPassword').value = '';
         }
+        syncPasswordRequirements(pwCheck.checked);
       });
     }
     [['currentPassword', 'currentPasswordToggle'], ['newPassword', 'newPasswordToggle']].forEach(function (pair) {

@@ -32,7 +32,7 @@ class VenueService
         ?float $latitude = null,
         ?float $longitude = null
     ): int {
-        if ($capacity !== null && $capacity <= 0) {
+        if ($capacity === null || $capacity <= 0) {
             throw new BusinessRuleException("La capacidad del local debe ser mayor a 0.");
         }
 
@@ -42,6 +42,10 @@ class VenueService
 
         if (trim($name) === '') {
             throw new BusinessRuleException("El nombre del local es obligatorio.");
+        }
+
+        if (trim((string) $type) === '') {
+            throw new BusinessRuleException("El tipo de local es obligatorio.");
         }
 
         $locationPk = $this->locationService->validateAndCreate(
@@ -79,12 +83,20 @@ class VenueService
         bool $active,
         int $idLocation
     ): void {
-        if ($capacity !== null && $capacity <= 0) {
+        if ($capacity === null || $capacity <= 0) {
             throw new BusinessRuleException("La capacidad del local debe ser mayor a 0.");
         }
 
         if ($price <= 0) {
             throw new BusinessRuleException("El precio de renta del local debe ser mayor a 0.");
+        }
+
+        if (trim($name) === '') {
+            throw new BusinessRuleException("El nombre del local es obligatorio.");
+        }
+
+        if (trim((string) $type) === '') {
+            throw new BusinessRuleException("El tipo de local es obligatorio.");
         }
 
         $venue->setNameVenue($name);

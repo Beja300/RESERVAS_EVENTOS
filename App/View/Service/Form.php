@@ -26,12 +26,14 @@ $action = $isEdit ? base_url('service', 'update') : base_url('service', 'create'
     <div class="form-group">
       <label for="name">Nombre del servicio *</label>
       <input class="form-control" type="text" id="name" name="name" required
+             data-validate="required"
              value="<?= e($isEdit ? $service->getNameService() : ($_POST['name'] ?? '')) ?>">
     </div>
 
     <div class="form-group">
-      <label for="type">Tipo</label>
-      <input class="form-control" type="text" id="type" name="type"
+      <label for="type">Tipo *</label>
+      <input class="form-control" type="text" id="type" name="type" required
+             data-validate="required"
              placeholder="Ej: Catering, DJ, Decoración..."
              value="<?= e($isEdit && $service->getTypeService() !== '' ? $service->getTypeService() : ($_POST['type'] ?? '')) ?>">
     </div>
@@ -39,6 +41,7 @@ $action = $isEdit ? base_url('service', 'update') : base_url('service', 'create'
     <div class="form-group">
       <label for="price">Precio *</label>
       <input class="form-control" type="number" id="price" name="price" step="0.01" min="0.01" required
+             data-validate="required positive"
              value="<?= e($isEdit ? number_format($service->getPriceService(), 2, '.', '') : ($_POST['price'] ?? '')) ?>">
     </div>
 

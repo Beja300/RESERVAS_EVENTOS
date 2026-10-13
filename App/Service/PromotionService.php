@@ -52,6 +52,21 @@ class PromotionService
       throw new BusinessRuleException('El mínimo de servicios debe ser al menos 1.');
     }
 
+    $startDate = trim((string) $startDate);
+    $endDate = trim((string) $endDate);
+
+    if ($startDate === '' || $endDate === '') {
+      throw new BusinessRuleException('Las fechas de inicio y fin son obligatorias.');
+    }
+
+    if (!$this->isValidDate($startDate) || !$this->isValidDate($endDate)) {
+      throw new BusinessRuleException('Las fechas de la promoción no son válidas.');
+    }
+
+    if ($endDate < $startDate) {
+      throw new BusinessRuleException('La fecha de fin no puede ser anterior a la de inicio.');
+    }
+
     return $this->promotionRepo->save(
       new Promotion(
         idPromotion: 0,
@@ -63,6 +78,16 @@ class PromotionService
         minServices: $minServices
       )
     );
+  }
+
+  // =========================================================
+  // VALIDA QUE UNA FECHA TENGA EL FORMATO Y/m/d REAL
+  // =========================================================
+  private function isValidDate(string $date): bool
+  {
+    $parsed = DateTime::createFromFormat('Y-m-d', $date);
+
+    return $parsed !== false && $parsed->format('Y-m-d') === $date;
   }
 
   // =========================================================

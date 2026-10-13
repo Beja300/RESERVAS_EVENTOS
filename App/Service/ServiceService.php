@@ -50,6 +50,10 @@ class ServiceService
             throw new BusinessRuleException("El nombre del servicio es obligatorio.");
         }
 
+        if (trim((string) $type) === '') {
+            throw new BusinessRuleException("El tipo del servicio es obligatorio.");
+        }
+
         // Todo servicio nuevo entra en 'solicitado' -- solo aparece en el
         // catálogo del Cliente después de que el Admin lo aprueba.
         $service = new Service(
@@ -73,6 +77,14 @@ class ServiceService
     {
         if ($price <= 0) {
             throw new BusinessRuleException("El precio del servicio debe ser mayor a 0.");
+        }
+
+        if (trim($name) === '') {
+            throw new BusinessRuleException("El nombre del servicio es obligatorio.");
+        }
+
+        if (trim((string) $type) === '') {
+            throw new BusinessRuleException("El tipo del servicio es obligatorio.");
         }
 
         $service->setNameService($name);
