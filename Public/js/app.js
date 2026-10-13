@@ -167,50 +167,6 @@
     }
   };
 
-  // ---------- Máscaras de entrada (genéricas, data-mask) ----------
-  //   data-mask="digits"        -> solo dígitos (respeta maxlength)
-  //   data-mask="phone"         -> 8 dígitos (XXXXXXXX)
-  //   data-mask="identification"-> cédula CR: d-dddd-dddd
-  App.maskField = function (field) {
-    var mask = field.getAttribute('data-mask');
-    if (!mask) return;
-
-    var caretAtEnd = field.selectionStart === field.value.length;
-    var raw = (field.value || '').replace(/\D/g, '');
-    var out = field.value;
-
-    if (mask === 'digits') {
-      out = raw;
-    } else if (mask === 'phone') {
-      out = raw.slice(0, 8);
-    } else if (mask === 'identification') {
-      raw = raw.slice(0, 9);
-      out = raw;
-      if (raw.length > 5) {
-        out = raw.slice(0, 1) + '-' + raw.slice(1, 5) + '-' + raw.slice(5);
-      } else if (raw.length > 1) {
-        out = raw.slice(0, 1) + '-' + raw.slice(1);
-      }
-    }
-
-    if (out !== field.value) field.value = out;
-
-    if (caretAtEnd) {
-      field.selectionStart = field.selectionEnd = field.value.length;
-    }
-  };
-
-  App.initMasks = function () {
-    var fields = document.querySelectorAll('[data-mask]');
-    for (var i = 0; i < fields.length; i++) {
-      (function (field) {
-        App.maskField(field);
-        field.addEventListener('input', function () { App.maskField(field); });
-        field.addEventListener('blur', function () { App.maskField(field); });
-      })(fields[i]);
-    }
-  };
-
   // ---------- Validación en vivo (genérica, data-validate) ----------
   App.validateField = function (field) {
     var value = (field.value || '').trim();
@@ -226,12 +182,19 @@
         message = 'El teléfono debe tener 8 dígitos.';
       } else if (rules.indexOf('email') !== -1 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
         message = 'Correo electrónico no válido.';
-      } else if (rules.indexOf('identification') !== -1 && !/^\d{9}$/.test(value.replace(/\D/g, ''))) {
-        message = 'La identificación debe tener 9 dígitos.';
-      } else if (rules.indexOf('percent') !== -1 && (isNaN(value) || parseFloat(value) < 0 || parseFloat(value) > 100)) {
-        message = 'El porcentaje debe estar entre 0 y 100.';
-      } else if (rules.indexOf('positiveint') !== -1 && (!/^\d+$/.test(value) || parseInt(value, 10) <= 0)) {
-        message = 'Debe ser un número entero mayor que 0.';
+      } else if (rules.indexOf('password') !== -1 && !/^(?=.*\d).{8,}$/.test(value)) {
+        message = 'La contraseña debe tener al menos 8 caracteres y un número.';
+      } else if (rules.indexOf('url') !== -1 && !/^https?:\/\/[^\s]+$/i.test(value)) {
+        message = 'La URL no es válida (debe iniciar con http:// o https://).';
+      } else if (rules.indexOf('identification') !== -1
+        && !/^\d{1}-\d{4}-\d{4}$/.test(value)
+        && !/^\d{1}-\d{3}-\d{6}$/.test(value)
+        && !/^\d{9,12}$/.test(value.replace(/[\s-]/g, ''))) {
+        message = 'Formato de cédula no válido (ej. 1-2345-0678).';
+      } else if (rules.indexOf('account') !== -1
+        && !/^\d{8}$/.test(value.replace(/[\s-]/g, ''))
+        && !/^[A-Za-z]{2}[\dA-Za-z]{18,22}$/.test(value.replace(/[\s-]/g, ''))) {
+        message = 'Cuenta no válida (8 dígitos SINPE o IBAN).';
       } else if (rules.indexOf('minprice') !== -1 && (isNaN(value) || parseFloat(value) < 0)) {
         message = 'El precio no puede ser negativo.';
       } else if (rules.indexOf('positive') !== -1 && (isNaN(value) || parseFloat(value) <= 0)) {
@@ -285,7 +248,6 @@
     App.initConfirm();
     App.initTableFilter();
     App.initCardFilter();
-    App.initMasks();
     App.initValidation();
   };
 

@@ -50,8 +50,8 @@ class ServiceService
             throw new BusinessRuleException("El nombre del servicio es obligatorio.");
         }
 
-        if ($this->serviceRepo->existsByNameForLocal($venueFk, $name)) {
-            throw new BusinessRuleException("Ya existe un servicio con ese nombre en este local.");
+        if (trim((string) $type) === '') {
+            throw new BusinessRuleException("El tipo del servicio es obligatorio.");
         }
 
         // Todo servicio nuevo entra en 'solicitado' -- solo aparece en el
@@ -83,8 +83,8 @@ class ServiceService
             throw new BusinessRuleException("El nombre del servicio es obligatorio.");
         }
 
-        if ($this->serviceRepo->existsByNameForLocal($service->getIdLocal(), $name, $service->getIdService())) {
-            throw new BusinessRuleException("Ya existe un servicio con ese nombre en este local.");
+        if (trim((string) $type) === '') {
+            throw new BusinessRuleException("El tipo del servicio es obligatorio.");
         }
 
         $service->setNameService($name);
@@ -144,14 +144,6 @@ class ServiceService
     public function findPending(): array
     {
         return $this->serviceRepo->findPending();
-    }
-
-    // =========================================================
-    // CATEGORÍAS DISPONIBLES (tipos de servicio aprobados)
-    // =========================================================
-    public function getDistinctTypes(): array
-    {
-        return $this->serviceRepo->distinctTypes();
     }
 
     // =========================================================

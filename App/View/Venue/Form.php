@@ -39,33 +39,37 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
     <?php endif; ?>
 
     <div class="form-group">
-      <label for="name">Nombre del local <span class="required-mark">*</span></label>
+      <label for="name">Nombre del local *</label>
       <input class="form-control" type="text" id="name" name="name" required
-        value="<?= e($_POST['name'] ?? ($isEdit ? $venue->getNameVenue() : '')) ?>">
+        data-validate="required"
+        value="<?= e($isEdit ? $venue->getNameVenue() : ($_POST['name'] ?? '')) ?>">
     </div>
 
     <div class="form-group">
-      <label for="type">Tipo de local</label>
-      <input class="form-control" type="text" id="type" name="type"
+      <label for="type">Tipo de local *</label>
+      <input class="form-control" type="text" id="type" name="type" required
+        data-validate="required"
         placeholder="Ej: Salón de eventos, Restaurante, Jardín..."
-        value="<?= e($_POST['type'] ?? ($isEdit && $venue->getTypeVenue() !== '' ? $venue->getTypeVenue() : '')) ?>">
+        value="<?= e($isEdit && $venue->getTypeVenue() !== '' ? $venue->getTypeVenue() : ($_POST['type'] ?? '')) ?>">
     </div>
 
     <div class="form-group">
-      <label for="capacity">Capacidad</label>
-      <input class="form-control" type="number" id="capacity" name="capacity" min="1"
-        value="<?= e($_POST['capacity'] ?? ($isEdit ? (string) $venue->getCapacityVenue() : '')) ?>">
+      <label for="capacity">Capacidad *</label>
+      <input class="form-control" type="number" id="capacity" name="capacity" min="1" required
+        data-validate="required positive"
+        value="<?= e($isEdit ? (string) $venue->getCapacityVenue() : ($_POST['capacity'] ?? '')) ?>">
     </div>
 
     <div class="form-group">
-      <label for="price">Precio de renta por evento <span class="required-mark">*</span></label>
+      <label for="price">Precio de renta por evento *</label>
       <input class="form-control" type="number" id="price" name="price" min="0.01" step="0.01" required
+        data-validate="required positive"
         value="<?= e($isEdit ? number_format($venue->getPriceVenue(), 2, '.', '') : ($_POST['price'] ?? '')) ?>">
       <p class="form-hint">Este precio se incluye siempre en la factura de cada reserva de este local.</p>
     </div>
 
     <div class="form-group">
-      <label for="image">Foto del local <?= $isEdit ? '' : '<span class="required-mark">*</span>' ?></label>
+      <label for="image">Foto del local <?= $isEdit ? '' : '*' ?></label>
       <input class="form-control" type="file" id="image" name="image" accept="image/*"
         <?= $isEdit ? '' : 'required' ?> onchange="var f=this.files[0];var p=document.getElementById('imagePreview');if(f){var r=new FileReader();r.onload=function(e){p.src=e.target.result;p.style.display='block';};r.readAsDataURL(f);}">
       <?php $currentImg = $isEdit ? $venue->getImageVenue() : ($_POST['image'] ?? ''); ?>
@@ -86,23 +90,23 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
 
     <div class="grid grid-3">
       <div class="form-group">
-        <label for="province">Provincia <span class="required-mark">*</span></label>
+        <label for="province">Provincia *</label>
         <select class="form-control" id="province" name="province" data-level="province" required
-                data-value="<?= e($curProvince) ?>">
+                data-validate="required" data-value="<?= e($curProvince) ?>">
           <option value="">— Selecciona —</option>
         </select>
       </div>
       <div class="form-group">
-        <label for="canton">Cantón <span class="required-mark">*</span></label>
+        <label for="canton">Cantón *</label>
         <select class="form-control" id="canton" name="canton" data-level="canton" disabled required
-                data-value="<?= e($curCanton) ?>">
+                data-validate="required" data-value="<?= e($curCanton) ?>">
           <option value="">— Selecciona —</option>
         </select>
       </div>
       <div class="form-group">
-        <label for="district">Distrito <span class="required-mark">*</span></label>
+        <label for="district">Distrito *</label>
         <select class="form-control" id="district" name="district" data-level="district" disabled required
-                data-value="<?= e($curDistrict) ?>">
+                data-validate="required" data-value="<?= e($curDistrict) ?>">
           <option value="">— Selecciona —</option>
         </select>
       </div>
@@ -120,7 +124,7 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
     </div>
 
     <div class="form-group">
-      <label for="venue-map">Ubicación exacta en el mapa <span class="required-mark">*</span></label>
+      <label for="venue-map">Ubicación exacta en el mapa *</label>
       <div class="geo-search-box">
         <input class="form-control" type="search" id="venue-map-search"
           placeholder="Buscar dirección o cantón (ej. San José)...">

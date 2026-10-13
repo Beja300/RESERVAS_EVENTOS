@@ -24,27 +24,24 @@ $action = $isEdit ? base_url('service', 'update') : base_url('service', 'create'
     <?php endif; ?>
 
     <div class="form-group">
-      <label for="name">Nombre del servicio <span class="required-mark">*</span></label>
+      <label for="name">Nombre del servicio *</label>
       <input class="form-control" type="text" id="name" name="name" required
-             value="<?= e($_POST['name'] ?? ($isEdit ? $service->getNameService() : '')) ?>">
+             data-validate="required"
+             value="<?= e($isEdit ? $service->getNameService() : ($_POST['name'] ?? '')) ?>">
     </div>
 
     <div class="form-group">
-      <label for="type">Tipo / categoría</label>
-      <input class="form-control" type="text" id="type" name="type" list="serviceTypeOptions"
-             placeholder="Elige o escribe una categoría"
+      <label for="type">Tipo *</label>
+      <input class="form-control" type="text" id="type" name="type" required
+             data-validate="required"
+             placeholder="Ej: Catering, DJ, Decoración..."
              value="<?= e($isEdit && $service->getTypeService() !== '' ? $service->getTypeService() : ($_POST['type'] ?? '')) ?>">
-      <datalist id="serviceTypeOptions">
-        <?php foreach (['Catering', 'Decoración', 'Producción', 'Mobiliario', 'DJ', 'Fotografía', 'Animación', 'Seguridad', 'Transporte', 'Iluminación', 'Sonido'] as $opt): ?>
-          <option value="<?= e($opt) ?>"></option>
-        <?php endforeach; ?>
-      </datalist>
-      <div class="form-hint">Categorías sugeridas; el catálogo se filtra por este valor.</div>
     </div>
 
     <div class="form-group">
-      <label for="price">Precio <span class="required-mark">*</span></label>
+      <label for="price">Precio *</label>
       <input class="form-control" type="number" id="price" name="price" step="0.01" min="0.01" required
+             data-validate="required positive"
              value="<?= e($isEdit ? number_format($service->getPriceService(), 2, '.', '') : ($_POST['price'] ?? '')) ?>">
     </div>
 

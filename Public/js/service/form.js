@@ -4,6 +4,18 @@
   if (form) {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
+
+      var valid = true;
+      form.querySelectorAll('[data-validate]').forEach(function (f) {
+        if (window.App && App.validateField && !App.validateField(f)) valid = false;
+      });
+      if (!valid) {
+        var firstInvalid = form.querySelector('.is-invalid');
+        if (firstInvalid) firstInvalid.focus();
+        window.App && App.toast('Revisa los campos marcados.', 'error');
+        return;
+      }
+
       fetch(form.getAttribute('action'), {
         method: 'POST',
         headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },

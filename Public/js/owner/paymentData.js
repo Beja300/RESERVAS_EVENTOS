@@ -82,6 +82,18 @@
     if (save) {
       save.addEventListener('submit', function (e) {
         e.preventDefault();
+
+        var valid = true;
+        save.querySelectorAll('[data-validate]').forEach(function (f) {
+          if (window.App && App.validateField && !App.validateField(f)) valid = false;
+        });
+        if (!valid) {
+          var first = save.querySelector('.is-invalid');
+          if (first) first.focus();
+          window.App && App.toast('Revisa los campos marcados.', 'error');
+          return;
+        }
+
         post(save.getAttribute('action'), new FormData(save), function (ok, d) {
           window.App && App.toast(d.message, ok ? 'success' : 'error');
           if (ok) setTimeout(function () { window.location.reload(); }, 600);

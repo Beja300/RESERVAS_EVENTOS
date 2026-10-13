@@ -66,6 +66,26 @@ class AuthService
         }
     }
 
+    public function validateEmailFormat(string $email): void
+    {
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new BusinessRuleException("El correo electrónico no es válido.");
+        }
+    }
+
+    public function validateIdentificationFormat(string $identificationNumber): void
+    {
+        $digits = preg_replace('/[\s-]/', '', $identificationNumber);
+
+        $valid = preg_match('/^\d{1}-\d{4}-\d{4}$/', $identificationNumber)
+            || preg_match('/^\d{1}-\d{3}-\d{6}$/', $identificationNumber)
+            || preg_match('/^\d{9,12}$/', $digits);
+
+        if (!$valid) {
+            throw new BusinessRuleException("El formato de la cédula no es válido (ej. 1-2345-0678).");
+        }
+    }
+
 
     // =========================================================
     // REGISTRAR CLIENTE

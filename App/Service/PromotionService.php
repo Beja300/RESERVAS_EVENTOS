@@ -48,15 +48,24 @@ class PromotionService
       throw new BusinessRuleException('La etiqueta de la promoción es obligatoria.');
     }
 
-    if ($this->promotionRepo->existsByLabel($venuePk, $label)) {
-      throw new BusinessRuleException('Ya existe una promoción con esa etiqueta en este local.');
-    }
-
     if ($minServices < 1) {
       throw new BusinessRuleException('El mínimo de servicios debe ser al menos 1.');
     }
 
-    $this->validateDates($startDate, $endDate);
+    $startDate = trim((string) $startDate);
+    $endDate = trim((string) $endDate);
+
+    if ($startDate === '' || $endDate === '') {
+      throw new BusinessRuleException('Las fechas de inicio y fin son obligatorias.');
+    }
+
+    if (!$this->isValidDate($startDate) || !$this->isValidDate($endDate)) {
+      throw new BusinessRuleException('Las fechas de la promoción no son válidas.');
+    }
+
+    if ($endDate < $startDate) {
+      throw new BusinessRuleException('La fecha de fin no puede ser anterior a la de inicio.');
+    }
 
     return $this->promotionRepo->save(
       new Promotion(
@@ -72,100 +81,13 @@ class PromotionService
   }
 
   // =========================================================
-  // BUSCAR UNA PROMOCIÓN POR ID (incluye inactivas)
+  // VALIDA QUE UNA FECHA TENGA EL FORMATO Y/m/d REAL
   // =========================================================
-  public function find(int $promotionPk): ?Promotion
+  private function isValidDate(string $date): bool
   {
-    return $this->promotionRepo->findById($promotionPk);
-  }
+    $parsed = DateTime::createFromFormat('Y-m-d', $date);
 
-  // =========================================================
-  // ACTUALIZAR PROMOCIÓN (activa/desactiva incluido)
-  // =========================================================
-  public function update(
-    int $promotionPk,
-    string $label,
-    ?string $description,
-    ?string $startDate,
-    ?string $endDate,
-    int $minServices,
-    bool $isActive
-  ): void {
-    $promotion = $this->promotionRepo->findById($promotionPk);
-
-    if ($promotion === null) {
-      throw new BusinessRuleException('La promoción no existe.');
-    }
-
-    if (trim($label) === '') {
-      throw new BusinessRuleException('La etiqueta de la promoción es obligatoria.');
-    }
-
-    if ($this->promotionRepo->existsByLabel($promotion->getIdVenue(), $label, $promotionPk)) {
-      throw new BusinessRuleException('Ya existe una promoción con esa etiqueta en este local.');
-    }
-
-    if ($minServices < 1) {
-      throw new BusinessRuleException('El mínimo de servicios debe ser al menos 1.');
-    }
-
-    $this->validateDates($startDate, $endDate);
-
-    # validate
-    $linked = $this->promotionServiceRepo->findByPromotion($promotionPk);
-    if ($minServices > count($linked)) {
-      throw new BusinessRuleException('El mínimo de servicios no puede ser mayor al número de servicios vinculados a la promoción.');
-    }
-
-    $promotion->setLabel(trim($label));
-    $promotion->setDescription($description ?? '');
-    $promotion->setStartDate($startDate);
-    $promotion->setEndDate($endDate);
-    $promotion->setMinServices($minServices);
-    $promotion->setIsActive($isActive);
-
-    $this->promotionRepo->update($promotion);
-  }
-
-  // =========================================================
-  // VALIDACIÓN DE FECHAS DE UNA PROMOCIÓN
-  // (formato real, fin >= inicio y ninguna supera un año)
-  // =========================================================
-  private function validateDates(?string $startDate, ?string $endDate): void
-  {
-    $start = ($startDate === null || trim($startDate) === '') ? null : trim($startDate);
-    $end   = ($endDate === null || trim($endDate) === '') ? null : trim($endDate);
-
-    if ($start !== null && !$this->isRealDate($start)) {
-      throw new BusinessRuleException('La fecha de inicio de la promoción no es válida.');
-    }
-
-    if ($end !== null && !$this->isRealDate($end)) {
-      throw new BusinessRuleException('La fecha de fin de la promoción no es válida.');
-    }
-
-    if ($start !== null && $end !== null && $end < $start) {
-      throw new BusinessRuleException('La fecha de fin no puede ser anterior a la de inicio.');
-    }
-
-    $max = date('Y-m-d', strtotime('+1 year'));
-
-    if ($start !== null && $start > $max) {
-      throw new BusinessRuleException('La fecha de inicio no puede superar un año desde hoy.');
-    }
-
-    if ($end !== null && $end > $max) {
-      throw new BusinessRuleException('La fecha de fin no puede superar un año desde hoy.');
-    }
-  }
-
-  private function isRealDate(string $value): bool
-  {
-    if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m)) {
-      return false;
-    }
-
-    return checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
+    return $parsed !== false && $parsed->format('Y-m-d') === $date;
   }
 
   // =========================================================

@@ -21,21 +21,21 @@ class OwnerPaymentService
       throw new BusinessRuleException('Selecciona un método de pago.');
     }
 
-    if ($active && trim($holder) === '') {
+    if (trim($holder) === '') {
       throw new BusinessRuleException('El titular es obligatorio para este método de cobro.');
     }
 
-    $accountTrimmed = trim((string) $account);
+    if (trim($account) === '') {
+      throw new BusinessRuleException('La cuenta bancaria o teléfono SINPE es obligatoria.');
+    }
+
+    $this->assertValidAccount($account);
 
     if ($ownerPaymentPk > 0) {
       $op = $this->repo->findById($ownerPaymentPk);
 
       if ($op === null || $op->getIdOwner() !== $ownerPk) {
         throw new BusinessRuleException('Este método de cobro no existe.');
-      }
-
-      if ($accountTrimmed !== '' && $this->repo->existsByAccount($ownerPk, $paymentMethodPk, $accountTrimmed, $ownerPaymentPk)) {
-        throw new BusinessRuleException('Ya existe una cuenta registrada para este método de pago.');
       }
 
       $op->setIdPaymentMethod($paymentMethodPk);
@@ -49,17 +49,10 @@ class OwnerPaymentService
       return $op->getIdOwnerPayment();
     }
 
-    if ($accountTrimmed !== '' && $this->repo->existsByAccount($ownerPk, $paymentMethodPk, $accountTrimmed)) {
-      throw new BusinessRuleException('Ya existe una cuenta registrada para este método de pago.');
-    }
-
     $existing = $this->repo->findByOwnerAndMethod($ownerPk, $paymentMethodPk);
 
     if ($existing !== null) {
       $op = $this->repo->findById((int) $existing['tbownerpaymentid']);
-      if ($accountTrimmed !== '' && $this->repo->existsByAccount($ownerPk, $paymentMethodPk, $accountTrimmed, $op->getIdOwnerPayment())) {
-        throw new BusinessRuleException('Ya existe una cuenta registrada para este método de pago.');
-      }
       $op->setHolder($holder);
       $op->setAccount($account);
       $op->setInstructions($instructions);
@@ -100,5 +93,20 @@ class OwnerPaymentService
     }
 
     $this->repo->delete($ownerPaymentPk);
+  }
+
+  // =========================================================
+  // LA CUENTA DEBE SER UN SINPE MÓVIL (8 DÍGITOS) O UN IBAN.
+  // =========================================================
+  private function assertValidAccount(string $account): void
+  {
+    $normalized = preg_replace('/[\s-]/', '', $account);
+
+    $isSinpe = preg_match('/^\d{8}$/', $normalized) === 1;
+    $isIban = preg_match('/^[A-Za-z]{2}[\dA-Za-z]{18,22}$/', $normalized) === 1;
+
+    if (!$isSinpe && !$isIban) {
+      throw new BusinessRuleException('La cuenta debe ser un teléfono SINPE de 8 dígitos o un IBAN válido.');
+    }
   }
 }

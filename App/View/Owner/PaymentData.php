@@ -36,8 +36,9 @@ $paymentMethods = $paymentMethods ?? [];
     <input type="hidden" name="idOwnerPayment" data-payment-id value="0">
 
     <div class="form-group">
-      <label for="paymentMethodId">Método de pago <span class="required-mark">*</span></label>
-      <select class="form-control" id="paymentMethodId" name="paymentMethodId" required>
+      <label for="paymentMethodId">Método de pago *</label>
+      <select class="form-control" id="paymentMethodId" name="paymentMethodId" required
+              data-validate="required">
         <option value="">— Selecciona —</option>
         <?php foreach ($paymentMethods as $pm): ?>
           <option value="<?= (int) $pm->getIdPaymentMethod() ?>"><?= e($pm->getPaymentMethod()) ?></option>
@@ -46,15 +47,17 @@ $paymentMethods = $paymentMethods ?? [];
     </div>
 
     <div class="form-group">
-      <label for="holder">Titular / nombre</label>
-      <input class="form-control" type="text" id="holder" name="holder"
+      <label for="holder">Titular / nombre *</label>
+      <input class="form-control" type="text" id="holder" name="holder" required
+             data-validate="required"
              placeholder="Ej: Salón La Quinta S.A.">
     </div>
 
     <div class="form-group">
-      <label for="account">Cuenta bancaria / teléfono SINPE</label>
-      <input class="form-control" type="text" id="account" name="account"
-             placeholder="Ej: CR12 1234 5678 9012 3456 7">
+      <label for="account">Cuenta bancaria / teléfono SINPE *</label>
+      <input class="form-control" type="text" id="account" name="account" required
+             data-validate="required account"
+             placeholder="Ej: 88887777 o CR12 1234 5678 9012 3456 7">
     </div>
 
     <div class="form-group">
