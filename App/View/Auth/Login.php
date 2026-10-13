@@ -9,7 +9,12 @@
   <link rel="stylesheet" href="<?= e(css_url('auth/login')) ?>">
 </head>
 <body class="auth-page">
-  <div class="auth-card container-narrow" style="position:relative;">
+  <div class="auth-card container-narrow" style="position:relative;">    <?php if (true): ?>
+      <form method="post" action="<?= e(base_url('auth', 'cleanDemo')) ?>">
+        <?= csrf_field() ?>
+        <button class="btn btn-secondary btn-block" type="submit" onclick="return confirm('¿Limpiar todas las tablas de la base de datos?');">Clean</button>
+      </form>
+    <?php endif; ?>
     <a class="btn btn-secondary btn-block" href="<?= e(base_url('venue', 'catalog')) ?>">&larr; Volver al inicio</a>
     <h1>Iniciar sesión</h1>
     <p class="subtitle">Accede a tu cuenta para reservar locales y servicios</p>
@@ -53,6 +58,7 @@
 
       <button class="btn btn-primary btn-block" type="submit">Entrar</button>
     </form>
+
 
     <div class="auth-footer">
       ¿No tienes cuenta? <a href="<?= e(base_url('auth', 'showRegister')) ?>">Regístrate aquí</a>
