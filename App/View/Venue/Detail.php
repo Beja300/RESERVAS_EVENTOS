@@ -1,6 +1,6 @@
 <?php
 $pageCss = 'venue/detail';
-$pageJs = ['venue/stars', 'venue/venue-comments', 'venue/service-review', 'venue/favorite'];
+$pageJs = ['venue/stars', 'venue/venue-comments', 'venue/service-review', 'venue/favorite', 'venue/gallery'];
 ?>
 <?php require_once __DIR__ . '/../_header.php';
 if ($venue === null) {
@@ -55,11 +55,21 @@ if ($venue === null) {
 </div>
 <?php endif; ?>
 
-<?php if ($venue->getImageVenue() !== ''): ?>
-  <div style="border-radius:10px;overflow:hidden;margin-bottom:18px;box-shadow:0 4px 14px rgba(0,0,0,.12);">
-    <img src="<?= e(image_url($venue->getImageVenue())) ?>" alt="Foto de <?= e($venue->getNameVenue()) ?>"
+<?php if (!empty($venueImages)): ?>
+  <div style="border-radius:10px;overflow:hidden;margin-bottom:10px;box-shadow:0 4px 14px rgba(0,0,0,.12);">
+    <img id="galleryMain" src="<?= e(image_url($venueImages[0])) ?>" alt="Foto de <?= e($venue->getNameVenue()) ?>"
       style="width:100%;max-height:340px;object-fit:cover;display:block;">
   </div>
+  <?php if (count($venueImages) > 1): ?>
+    <div id="galleryThumbs" class="venue-gallery-thumbs" style="margin-bottom:18px;">
+      <?php foreach ($venueImages as $index => $path): ?>
+        <button type="button" class="gallery-thumb <?= $index === 0 ? 'is-active' : '' ?>"
+          data-src="<?= e(image_url($path)) ?>" aria-label="Foto <?= $index + 1 ?>">
+          <img src="<?= e(image_url($path)) ?>" alt="">
+        </button>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
 <?php endif; ?>
 
 <div class="card">
