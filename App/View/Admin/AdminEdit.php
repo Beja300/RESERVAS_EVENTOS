@@ -37,7 +37,7 @@ $u = $user;
       <div class="form-hint">Ej: laura.fdez@correo.com</div>
     </div>
     <div class="form-group">
-      <label for="phoneNumber">Teléfono</label>
+      <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
       <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
              value="<?= e($_POST['phoneNumber'] ?? $u->getPhoneNumber() ?? '') ?>"
              data-validate="phone" inputmode="numeric" pattern="\d{8}" maxlength="8" placeholder="8 dígitos">

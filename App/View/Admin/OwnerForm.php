@@ -61,7 +61,7 @@ require_once __DIR__ . '/../_header.php';
       <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
     </div>
     <div class="form-group">
-      <label for="phoneNumber">Teléfono</label>
+      <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
       <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
              data-validate="phone" inputmode="numeric" pattern="\d{8}" maxlength="8" placeholder="8 dígitos">
       <div class="form-hint">Ej: 8888-7777</div>

@@ -113,13 +113,13 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
     </div>
 
     <div class="form-group">
-      <label for="town">Pueblo</label>
-      <input class="form-control" type="text" id="town" name="town"
+      <label for="town">Pueblo <span class="required-mark">*</span></label>
+      <input class="form-control" type="text" id="town" name="town" required
         value="<?= e($curTown ?? '') ?>">
     </div>
     <div class="form-group">
-      <label for="description">Descripción</label>
-      <input class="form-control" type="text" id="description" name="description"
+      <label for="description">Descripción <span class="required-mark">*</span></label>
+      <input class="form-control" type="text" id="description" name="description" required
         value="<?= e($curDesc ?? '') ?>">
     </div>
 
