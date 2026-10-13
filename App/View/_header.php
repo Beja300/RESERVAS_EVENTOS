@@ -54,6 +54,7 @@ if ($userType !== null && isset($_SESSION['user']) && is_object($_SESSION['user'
         <a href="<?= e(base_url('venue', 'catalog')) ?>">Explorar locales</a>
         <a href="<?= e(base_url('client', 'recommendations')) ?>">Recomendaciones</a>
         <a href="<?= e(base_url('client', 'favorites')) ?>">Mis favoritos</a>
+        <a href="<?= e(base_url('booking', 'myBookings')) ?>">Mis reservas</a>
         <a href="<?= e(base_url('invoice', 'list')) ?>">Mis facturas</a>
         <a href="<?= e(base_url('credit', 'clientList')) ?>">Mis créditos</a>
         <?= $notificationNav ?>
