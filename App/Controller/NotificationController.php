@@ -72,6 +72,7 @@ class NotificationController
 
     try {
       $link = $this->notificationService->open($idNotification, $role->getIdRol());
+      $link = $this->normalizeLink($link);
 
       header('Location: ' . ($link !== null && $link !== '' ? $link : $listUrl));
       exit;
@@ -79,6 +80,31 @@ class NotificationController
       header('Location: ' . $listUrl);
       exit;
     }
+  }
+
+  // Normaliza enlaces legacy (rutas directas previas al router) al formato
+  // actual index.php?controller=..&action=..; si no es reconocible devuelve
+  // null para que el flujo caiga a la lista de notificaciones.
+  private function normalizeLink(?string $link): ?string
+  {
+    if ($link === null || $link === '') {
+      return null;
+    }
+
+    if (preg_match('#^booking/detail\.php\?id=(\d+)$#', $link, $matches)) {
+      return 'index.php?controller=booking&action=detail&id=' . $matches[1];
+    }
+
+    if (trim($link) === 'client/profile.php') {
+      return 'index.php?controller=client&action=profile';
+    }
+
+    // Formatos ya compatibles con el router (index.php?controller=... o URL absoluta).
+    if (str_starts_with($link, 'index.php?') || str_starts_with($link, 'http://') || str_starts_with($link, 'https://')) {
+      return $link;
+    }
+
+    return null;
   }
 
   // =========================================================
