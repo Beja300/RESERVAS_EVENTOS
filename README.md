@@ -550,3 +550,24 @@ exclusivo del formulario del local.
 
 > Nota: el botón "clean" del login restaura los datos de prueba y **borra
 > también al administrador**; tras usarlo hay que volver a `auth/setup`.
+---
+
+## Cambios recientes — Sprint 3 (verificación de rúbrica)
+
+### Validaciones y formato (servidor)
+- **Formato de correo electrónico**: validación estricta con `filter_var(FILTER_VALIDATE_EMAIL)` en `AuthService::validateEmailFormat()`, aplicada en registro (cliente/propietario/admin), edición de perfil y auditoría de cambio de correo (`ProfileService`, `RoleSecurityService`). Se valida antes de verificar unicidad.
+- **Fecha real en reagenda**: `BookingAdminService::reschedule()` ahora verifica fecha real (`checkdate`) y rechaza fechas inválidas (ej. 2026-02-31).
+- **Fecha de factura**: el formulario (`Invoice/Form.php`) incluye campo `date` (por defecto hoy). `InvoiceService::generate()` valida fecha real + no futura y usa la fecha enviada (en lugar de hardcodear la fecha actual).
+
+### Integridad y unicidad (PHP)
+- **Comisión/IVA**: validación numérica estricta (`is_numeric`) en `CommissionConfigService` y `AdminFinanceController` antes de aplicar rangos 0–100.
+- **Métodos de pago**: `PaymentMethodService::validateTypeIsUnique()` ahora revisa globalmente (activos + inactivos), evitando duplicados de un tipo previamente desactivado.
+- **Promociones**: `PromotionRepository::existsByLabel()` verifica etiqueta única por local (case-insensitive). `PromotionService` valida unicidad en creación y actualización.
+- **Cuentas de cobro del propietario**: `OwnerPaymentRepository::existsByAccount()` evita duplicados de número/cuenta por (owner, método de pago), con validación en `OwnerPaymentService`.
+- **Coherencia de promoción**: `PromotionService::update()` rechaza `minServices` mayor al número de servicios vinculados a la promoción.
+
+### Seguridad, permisos y experiencia de usuario
+- **POST-only en mutaciones**: se añade `require_post()` a acciones mutantes que anteriormente aceptaban GET (`AdminBookingController`: approvePayment, rejectPayment, cancelBooking, rescheduleBooking, changeBookingVenue, refundBooking, rejectRefundBooking; `ClientBookingController`: cancel, requestRefund; `NotificationController`: markAsRead, markAllAsRead). `open` de notificaciones permanece como GET (navegación).
+- **Persistencia de datos en formularios**: prioridad a `$_POST` ante errores de validación en edición de local/servicio (`Venue/Form.php`, `Service/Form.php`); se añaden valores por defecto desde `$_POST` en formularios de creación/edición de admin/cliente/propietario (`Admin/*Form.php`, `Admin/*Edit.php`, `Auth/Setup.php`).
+- **Limpieza de código**: se eliminaron `session_start()` redundantes en `InvoiceController`, `PromotionController`, `NotificationController`, `PaymentMethodController` (la sesión ya se inicia en el front controller).
+- **Mejoras de validación cliente**: atributos `data-validate="email"` y `data-validate="phone"` añadidos en formularios relevantes (`Auth/Register.php`, `Auth/Setup.php`, `Admin/*Form/Edit`, `Client/Form.php`).
