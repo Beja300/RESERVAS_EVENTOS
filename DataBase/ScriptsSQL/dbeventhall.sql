@@ -1,9 +1,3 @@
-
-
--- ========================================
--- dbeventhall.sql
--- ========================================
-
 CREATE DATABASE IF NOT EXISTS dbeventhall;
 
 USE dbeventhall;
@@ -449,99 +443,6 @@ CREATE TABLE tbcreditpayment (
 ) ENGINE=InnoDB;
 
 
--- ========================================
--- migrate_remove_business_unique.sql
--- ========================================
-
--- =========================================================
--- MIGRACIÓN: quitar restricciones UNIQUE de negocio de MySQL
--- ---------------------------------------------------------
--- La rúbrica exige que las reglas de unicidad/duplicados se
--- controlen desde PHP (Service/Controller), NO mediante
--- restricciones de negocio de MySQL. Este bloque elimina los
--- índices UNIQUE que imponían esas reglas a nivel de motor.
---
--- La unicidad sigue garantizada en la capa de código:
---   - correo    -> AuthService::validateEmailIsUnique
---   - cédula    -> AuthService::validateIdentificationIsUnique
---   - 1:1 rol   -> validaciones de los Services al asignar subtipo
---   - factura   -> InvoiceService (una factura por reserva)
---
--- IDEMPOTENTE Y PORTABLE (MySQL 5.7/8.0 y MariaDB):
---   * En instalación NUEVA el esquema de arriba ya no declara
---     UNIQUE: no hay índices que quitar y el import NO se aborta.
---   * En una base ANTIGUA localiza el índice por tabla+columna
---     (los nombres cambiaron entre versiones) y lo elimina.
---   * No usa DELIMITER ni rutinas almacenadas.
--- =========================================================
-
-USE dbeventhall;
-
--- tbrole.tbroleemail
-SET @idx = (SELECT INDEX_NAME FROM information_schema.STATISTICS
-             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbrole'
-               AND COLUMN_NAME = 'tbroleemail'
-               AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY' LIMIT 1);
-SET @sql = IFNULL(CONCAT('ALTER TABLE tbrole DROP INDEX `', @idx, '`'), 'DO 0');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-
--- tbroleadmin.tbroleid (backups: tbroleadminrolid / tbroleadminroleid)
-SET @idx = (SELECT INDEX_NAME FROM information_schema.STATISTICS
-             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbroleadmin'
-               AND COLUMN_NAME IN ('tbroleid','tbroleadminrolid','tbroleadminroleid')
-               AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY' LIMIT 1);
-SET @sql = IFNULL(CONCAT('ALTER TABLE tbroleadmin DROP INDEX `', @idx, '`'), 'DO 0');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-
--- tbroleclient.tbroleid (backups: tbroleclientrolid / tbroleclientroleid)
-SET @idx = (SELECT INDEX_NAME FROM information_schema.STATISTICS
-             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbroleclient'
-               AND COLUMN_NAME IN ('tbroleid','tbroleclientrolid','tbroleclientroleid')
-               AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY' LIMIT 1);
-SET @sql = IFNULL(CONCAT('ALTER TABLE tbroleclient DROP INDEX `', @idx, '`'), 'DO 0');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-
--- tbroleowner.tbroleid (backups: tbroleownerrolid / tbroleownerroleid)
-SET @idx = (SELECT INDEX_NAME FROM information_schema.STATISTICS
-             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbroleowner'
-               AND COLUMN_NAME IN ('tbroleid','tbroleownerrolid','tbroleownerroleid')
-               AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY' LIMIT 1);
-SET @sql = IFNULL(CONCAT('ALTER TABLE tbroleowner DROP INDEX `', @idx, '`'), 'DO 0');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-
--- tbowner.tbowneridentificationnumber
-SET @idx = (SELECT INDEX_NAME FROM information_schema.STATISTICS
-             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbowner'
-               AND COLUMN_NAME = 'tbowneridentificationnumber'
-               AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY' LIMIT 1);
-SET @sql = IFNULL(CONCAT('ALTER TABLE tbowner DROP INDEX `', @idx, '`'), 'DO 0');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-
--- tbinvoice.tbbookingid (backups: tbinvoicebookingid / tbbookinginvoicebookingid)
-SET @idx = (SELECT INDEX_NAME FROM information_schema.STATISTICS
-             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbinvoice'
-               AND COLUMN_NAME IN ('tbbookingid','tbinvoicebookingid','tbbookinginvoicebookingid')
-               AND NON_UNIQUE = 0 AND INDEX_NAME <> 'PRIMARY' LIMIT 1);
-SET @sql = IFNULL(CONCAT('ALTER TABLE tbinvoice DROP INDEX `', @idx, '`'), 'DO 0');
-PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
-
-
--- ========================================
--- migrate_credit_module.sql
--- ========================================
-
--- =========================================================
--- MIGRACIÓN: módulo de crédito y cuentas por cobrar/pagar
--- ---------------------------------------------------------
--- Crea las tablas nuevas del módulo P5 sobre una base ya
--- instalada, sin tocar los datos existentes.
---
--- Ejecutar una sola vez sobre bases existentes. En instalaciones
--- nuevas NO es necesario (dbeventhall.sql ya las incluye).
--- =========================================================
-
-USE dbeventhall;
-
 CREATE TABLE IF NOT EXISTS tbcreditconfig (
     tbcreditconfigid INT AUTO_INCREMENT PRIMARY KEY,
     tbownerid INT NOT NULL,
@@ -572,4 +473,12 @@ CREATE TABLE IF NOT EXISTS tbcreditpayment (
     tbroleid INT,
     tbcreditpaymentdate DATETIME DEFAULT CURRENT_TIMESTAMP,
     tbcreditpaymentactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS tbvenueimage (
+    tbvenueimageid INT AUTO_INCREMENT PRIMARY KEY,
+    tbvenueid INT NOT NULL,
+    tbvenueimagepath VARCHAR(255) NOT NULL,
+    tbvenueimagesort INT NOT NULL DEFAULT 0,
+    tbvenueimageactive TINYINT(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB;
