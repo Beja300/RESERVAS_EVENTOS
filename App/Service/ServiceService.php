@@ -54,6 +54,10 @@ class ServiceService
             throw new BusinessRuleException("El tipo del servicio es obligatorio.");
         }
 
+        if ($this->serviceRepo->existsByNameForLocal($venueFk, $name)) {
+            throw new BusinessRuleException("Ya existe un servicio con ese nombre en este local.");
+        }
+
         // Todo servicio nuevo entra en 'solicitado' -- solo aparece en el
         // catálogo del Cliente después de que el Admin lo aprueba.
         $service = new Service(
@@ -87,7 +91,15 @@ class ServiceService
             throw new BusinessRuleException("El tipo del servicio es obligatorio.");
         }
 
+        if ($this->serviceRepo->existsByNameForLocal($venueFk, $name)) {
+            throw new BusinessRuleException("Ya existe un servicio con ese nombre en este local.");
+        }
+
         $service->setNameService($name);
+        if ($this->serviceRepo->existsByNameForLocal($service->getIdLocal(), $name, $service->getIdService())) {
+            throw new BusinessRuleException("Ya existe un servicio con ese nombre en este local.");
+        }
+
         $service->setTypeService($type);
         $service->setPriceService($price);
         $service->setIsActive($active);

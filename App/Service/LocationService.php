@@ -116,18 +116,31 @@ class LocationService
             $existing = $this->locationRepo->findIdByCanton($province, $canton);
         }
 
-        if ($existing !== null) {
-            $current = $this->locationRepo->findById($existing);
-            if ($current !== null
-                && $latitude !== null
-                && $longitude !== null
-                && ($current->getLatitudeLocation() !== $latitude || $current->getLongitudeLocation() !== $longitude)
-            ) {
-                $this->locationRepo->updateCoordinates($existing, $latitude, $longitude);
-            }
+            if ($existing !== null) {
+      $current = $this->locationRepo->findById($existing);
 
-            return $existing;
+      if ($current !== null) {
+        $latChanged = ($latitude !== null && $longitude !== null)
+          && ($current->getLatitudeLocation() !== $latitude || $current->getLongitudeLocation() !== $longitude);
+        $townChanged = (($current->getTownLocation() ?? null) !== ($town ?? null));
+        $descChanged = (($current->getDescriptionLocation() ?? null) !== ($description ?? null));
+
+        if ($latChanged || $townChanged || $descChanged) {
+          $this->locationRepo->update(new Location(
+            idLocation: $existing,
+            provinceLocation: $current->getProvinceLocation(),
+            cantonLocation: $current->getCantonLocation(),
+            districtLocation: $current->getDistrictLocation(),
+            townLocation: $town,
+            descriptionLocation: $description,
+            latitudeLocation: $latitude,
+            longitudeLocation: $longitude
+          ));
         }
+      }
+
+      return $existing;
+    }
 
         return $this->validateAndCreate($province, $canton, $district, $town, $description, $latitude, $longitude);
     }

@@ -282,3 +282,4 @@ class BookingAdminService
 
     return checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
   }
+}
