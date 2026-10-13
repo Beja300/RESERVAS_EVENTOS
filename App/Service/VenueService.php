@@ -3,17 +3,20 @@
 require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/LocationService.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
+require_once __DIR__ . '/../Repository/VenueImageRepository.php';
 require_once __DIR__ . '/../Model/Venue.php';
 
 class VenueService
 {
     private VenueRepository $venueRepo;
+    private VenueImageRepository $venueImageRepo;
     private LocationService $locationService;
 
 
     public function __construct(PDO $connection)
     {
         $this->venueRepo = new VenueRepository($connection);
+        $this->venueImageRepo = new VenueImageRepository($connection);
         $this->locationService = new LocationService(new LocationRepository($connection));
     }
 
@@ -108,6 +111,24 @@ class VenueService
         $venue->setIsActive($active);
 
         $this->venueRepo->update($venue);
+    }
+
+    // =========================================================
+    // GALERÍA: imágenes adicionales del local (la portada va en
+    // tbvenue.tbvenueimage y es la primera de $paths).
+    // =========================================================
+    public function galleryByVenue(int $idVenue): array
+    {
+        return $this->venueImageRepo->findByVenue($idVenue);
+    }
+
+    public function replaceGallery(int $idVenue, array $paths): void
+    {
+        $this->venueImageRepo->deleteByVenue($idVenue);
+
+        if (!empty($paths)) {
+            $this->venueImageRepo->saveBatch($idVenue, $paths);
+        }
     }
 
     // =========================================================
