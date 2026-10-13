@@ -19,8 +19,8 @@ class VenueRatingRepository
   {
     $sql = "
       INSERT INTO tbvenuerating (
-        tbvenueratingvenueid,
-        tbvenueratingroleid,
+        tbvenueid,
+        tbroleid,
         tbvenueratingstars,
         tbvenueratingcomment
       )
@@ -74,8 +74,8 @@ return (int) $this->connection->lastInsertId();
     $sql = "
       SELECT
         tbvenueratingid,
-        tbvenueratingvenueid,
-        tbvenueratingroleid,
+        tbvenueid,
+        tbroleid,
         tbvenueratingstars,
         tbvenueratingcomment
       FROM tbvenuerating
@@ -97,13 +97,13 @@ return (int) $this->connection->lastInsertId();
     $sql = "
       SELECT
         tbvenueratingid,
-        tbvenueratingvenueid,
-        tbvenueratingroleid,
+        tbvenueid,
+        tbroleid,
         tbvenueratingstars,
         tbvenueratingcomment
       FROM tbvenuerating
-      WHERE tbvenueratingvenueid = :idVenue
-        AND tbvenueratingroleid = :idRole
+      WHERE tbvenueid = :idVenue
+        AND tbroleid = :idRole
         AND tbvenueratingactive = true
       LIMIT 1
     ";
@@ -127,12 +127,12 @@ return (int) $this->connection->lastInsertId();
     $sql = "
       SELECT
         tbvenueratingid,
-        tbvenueratingvenueid,
-        tbvenueratingroleid,
+        tbvenueid,
+        tbroleid,
         tbvenueratingstars,
         tbvenueratingcomment
       FROM tbvenuerating
-      WHERE tbvenueratingvenueid = :idVenue
+      WHERE tbvenueid = :idVenue
         AND tbvenueratingactive = true
       ORDER BY tbvenueratingid DESC
     ";
@@ -151,13 +151,13 @@ return (int) $this->connection->lastInsertId();
     $sql = "
       SELECT
         vr.tbvenueratingid,
-        vr.tbvenueratingroleid,
+        vr.tbroleid,
         vr.tbvenueratingstars,
         vr.tbvenueratingcomment,
         r.tbrolename
       FROM tbvenuerating vr
-      INNER JOIN tbrole r ON r.tbroleid = vr.tbvenueratingroleid
-      WHERE vr.tbvenueratingvenueid = :idVenue
+      INNER JOIN tbrole r ON r.tbroleid = vr.tbroleid
+      WHERE vr.tbvenueid = :idVenue
         AND vr.tbvenueratingactive = true
       ORDER BY vr.tbvenueratingid DESC
     ";
@@ -176,7 +176,7 @@ return (int) $this->connection->lastInsertId();
     $sql = "
       SELECT AVG(tbvenueratingstars) AS average
       FROM tbvenuerating
-      WHERE tbvenueratingvenueid = :idVenue
+      WHERE tbvenueid = :idVenue
         AND tbvenueratingactive = true
     ";
 
@@ -197,8 +197,8 @@ return (int) $this->connection->lastInsertId();
       SELECT AVG(vr.tbvenueratingstars) AS average
       FROM tbvenuerating vr
       INNER JOIN tbvenue v
-        ON v.tbvenueid = vr.tbvenueratingvenueid
-      WHERE v.tbvenueownerid = :idOwner
+        ON v.tbvenueid = vr.tbvenueid
+      WHERE v.tbownerid = :idOwner
         AND vr.tbvenueratingactive = true
     ";
 
@@ -218,7 +218,7 @@ return (int) $this->connection->lastInsertId();
     $sql = "
       SELECT COUNT(*) AS total
       FROM tbvenuerating
-      WHERE tbvenueratingvenueid = :idVenue
+      WHERE tbvenueid = :idVenue
         AND tbvenueratingactive = true
     ";
 
@@ -228,6 +228,31 @@ return (int) $this->connection->lastInsertId();
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
     return (int) $row['total'];
+  }
+
+  // =========================================================
+  // DESGLOSE POR ESTRELLAS DE UN LOCAL (1..5 -> cantidades)
+  // =========================================================
+  public function findBreakdownByVenue(int $idVenue): array
+  {
+    $sql = "
+      SELECT tbvenueratingstars AS stars, COUNT(*) AS total
+      FROM tbvenuerating
+      WHERE tbvenueid = :idVenue
+        AND tbvenueratingactive = true
+      GROUP BY tbvenueratingstars
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([':idVenue' => $idVenue]);
+
+    $breakdown = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+      $breakdown[(int) $row['stars']] = (int) $row['total'];
+    }
+
+    return $breakdown;
   }
 
   // =========================================================
@@ -273,8 +298,8 @@ return (int) $this->connection->lastInsertId();
   {
     return new VenueRating(
       idVenueRating: (int) $row['tbvenueratingid'],
-      idVenue: (int) $row['tbvenueratingvenueid'],
-      idRole: (int) $row['tbvenueratingroleid'],
+      idVenue: (int) $row['tbvenueid'],
+      idRole: (int) $row['tbroleid'],
       stars: (int) $row['tbvenueratingstars'],
       comment: $row['tbvenueratingcomment'] ?? ''
     );

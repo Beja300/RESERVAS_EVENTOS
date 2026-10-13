@@ -38,16 +38,17 @@ class DetailRepository
 
   // =========================================================
   // INSERTAR LA RENTA DEL LOCAL como línea base de la reserva.
+  // $quantity = número de días rentados (precio se acumula por día).
   // Sin transacción propia: el llamador (BookingService) la envuelve.
   // =========================================================
-  public function addVenueLine(int $bookingPk, Venue $venue): int
+  public function addVenueLine(int $bookingPk, Venue $venue, int $quantity = 1): int
   {
     $detail = new Detail(
       idDetail: 0,
       idClientBooking: $bookingPk,
       idLocalService: 0,
       idVenue: $venue->getIdVenue(),
-      quantityDetail: 1,
+      quantityDetail: $quantity,
       unitPrice: $venue->getPriceVenue(),
       discount: 0.0,
       isActiveDetail: true
@@ -64,8 +65,8 @@ class DetailRepository
   {
     $sqlDetail = "
                 INSERT INTO tbdetail (
-                    tbdetailserviceid,
-                    tbdetailvenueid,
+                    tbserviceid,
+                    tbvenueid,
                     tbdetailquantity,
                     tbdetailunitprice,
                     tbdetaildiscount,
@@ -96,8 +97,8 @@ class DetailRepository
 
     $sqlJunction = "
                 INSERT INTO tbbookingdetail (
-                    tbbookingdetailbookingid,
-                    tbbookingdetaildetailid,
+                    tbbookingid,
+                    tbdetailid,
                     tbbookingdetailactive
                 )
                 VALUES (
@@ -127,9 +128,9 @@ class DetailRepository
     $sql = "
             SELECT
                 d.tbdetailid AS tbbookingdetailid,
-                b.tbbookingdetailbookingid AS tbbookingdetailbookingid,
-                d.tbdetailserviceid AS tbbookingdetaildetailid,
-                d.tbdetailvenueid AS tbbookingdetailvenueid,
+                b.tbbookingid AS tbbookingid,
+                d.tbserviceid AS tbdetailid,
+                d.tbvenueid AS tbbookingdetailvenueid,
                 d.tbdetailquantity AS tbbookingdetailquantity,
                 d.tbdetailunitprice AS tbbookingdetailunitprice,
                 d.tbdetaildiscount AS tbbookingdetaildiscount,
@@ -138,9 +139,9 @@ class DetailRepository
             FROM tbbookingdetail b
 
             INNER JOIN tbdetail d
-                ON d.tbdetailid = b.tbbookingdetaildetailid
+                ON d.tbdetailid = b.tbdetailid
 
-            WHERE b.tbbookingdetailbookingid = :idClientBooking
+            WHERE b.tbbookingid = :idClientBooking
               AND b.tbbookingdetailactive = true
               AND d.tbdetailactive = true
 
@@ -159,16 +160,16 @@ class DetailRepository
 
   // =========================================================
   // LÍNEA DE RENTA DEL LOCAL de una reserva (la que tiene
-  // tbdetailvenueid > 0). Devuelve null si no existe.
+  // tbvenueid > 0). Devuelve null si no existe.
   // =========================================================
   public function findVenueLine(int $idClientBooking): ?Detail
   {
     $sql = "
             SELECT
                 d.tbdetailid AS tbbookingdetailid,
-                b.tbbookingdetailbookingid AS tbbookingdetailbookingid,
-                d.tbdetailserviceid AS tbbookingdetaildetailid,
-                d.tbdetailvenueid AS tbbookingdetailvenueid,
+                b.tbbookingid AS tbbookingid,
+                d.tbserviceid AS tbdetailid,
+                d.tbvenueid AS tbbookingdetailvenueid,
                 d.tbdetailquantity AS tbbookingdetailquantity,
                 d.tbdetailunitprice AS tbbookingdetailunitprice,
                 d.tbdetaildiscount AS tbbookingdetaildiscount,
@@ -177,13 +178,13 @@ class DetailRepository
             FROM tbbookingdetail b
 
             INNER JOIN tbdetail d
-                ON d.tbdetailid = b.tbbookingdetaildetailid
+                ON d.tbdetailid = b.tbdetailid
 
-            WHERE b.tbbookingdetailbookingid = :idClientBooking
+            WHERE b.tbbookingid = :idClientBooking
               AND b.tbbookingdetailactive = true
               AND d.tbdetailactive = true
-              AND d.tbdetailvenueid IS NOT NULL
-              AND d.tbdetailvenueid > 0
+              AND d.tbvenueid IS NOT NULL
+              AND d.tbvenueid > 0
 
             LIMIT 1
         ";
@@ -206,7 +207,7 @@ class DetailRepository
   {
     $sql = "
             UPDATE tbdetail
-            SET tbdetailvenueid = :venueId,
+            SET tbvenueid = :venueId,
                 tbdetailunitprice = :unitPrice
             WHERE tbdetailid = :detailId
         ";
@@ -234,15 +235,15 @@ class DetailRepository
             FROM tbbookingdetail b
 
             INNER JOIN tbdetail d
-                ON d.tbdetailid = b.tbbookingdetaildetailid
+                ON d.tbdetailid = b.tbdetailid
 
             INNER JOIN tbservice s
-                ON s.tbserviceid = d.tbdetailserviceid
+                ON s.tbserviceid = d.tbserviceid
 
             WHERE b.tbbookingdetailactive = true
               AND d.tbdetailactive = true
 
-            GROUP BY d.tbdetailserviceid, s.tbservicename
+            GROUP BY d.tbserviceid, s.tbservicename
 
             ORDER BY totalQuantity DESC
 
@@ -256,6 +257,54 @@ class DetailRepository
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
 
+  // =========================================================
+  // SERVICIOS MÁS SOLICITADOS DE UN OWNER (todos sus locales,
+  // en un mes dado) -- para el dashboard del propietario
+  // =========================================================
+  public function topServicesByOwner(int $idOwner, string $yearMonth, int $limit = 3): array
+  {
+    $sql = "
+            SELECT
+                s.tbservicename AS name,
+                SUM(d.tbdetailquantity) AS totalQuantity
+
+            FROM tbbookingdetail bd
+
+            INNER JOIN tbdetail d
+                ON d.tbdetailid = bd.tbdetailid
+
+            INNER JOIN tbservice s
+                ON s.tbserviceid = d.tbserviceid
+
+            INNER JOIN tbbooking bk
+                ON bk.tbbookingid = bd.tbbookingid
+
+            INNER JOIN tbvenue v
+                ON v.tbvenueid = bk.tbvenueid
+
+            WHERE v.tbownerid = :idOwner
+              AND bk.tbbookingdate LIKE :yearMonth
+              AND bd.tbbookingdetailactive = true
+              AND d.tbdetailactive = true
+
+            GROUP BY d.tbserviceid, s.tbservicename
+
+            ORDER BY totalQuantity DESC
+
+            LIMIT :limit
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->bindValue(':idOwner',   $idOwner,   PDO::PARAM_INT);
+    $stmt->bindValue(':yearMonth', $yearMonth . '%');
+    $stmt->bindValue(':limit',     $limit,     PDO::PARAM_INT);
+
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+  }
+
 
   // =========================================================
   // MAPEO FILA -> OBJETO
@@ -264,8 +313,8 @@ private function mapRow(array $row): Detail
     {
         return new Detail(
           idDetail: (int) $row['tbbookingdetailid'],
-          idClientBooking: (int) $row['tbbookingdetailbookingid'],
-          idLocalService: (int) $row['tbbookingdetaildetailid'],
+          idClientBooking: (int) $row['tbbookingid'],
+          idLocalService: (int) $row['tbdetailid'],
           idVenue: (int) ($row['tbbookingdetailvenueid'] ?? 0),
           quantityDetail: (int) $row['tbbookingdetailquantity'],
           unitPrice: (float) $row['tbbookingdetailunitprice'],

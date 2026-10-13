@@ -6,25 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Registrarse · Reservas de Eventos</title>
   <link rel="stylesheet" href="<?= e(css_url()) ?>">
-  <style>
-    .tabs { display: flex; gap: 8px; margin-bottom: 22px; }
-    .tabs button {
-      flex: 1; padding: 10px; border: 1.5px solid var(--neutral-300);
-      background: #fff; border-radius: 9px; font-weight: 600; cursor: pointer;
-      color: var(--neutral-500); font-family: inherit;
-    }
-    .tabs button.active { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
-    .password-wrapper { position: relative; }
-    .password-wrapper .form-control { padding-right: 44px; }
-    .password-toggle {
-      position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
-      border: none; background: none; cursor: pointer; color: var(--neutral-500);
-      font-size: 0.85rem; font-weight: 600; padding: 4px 8px; font-family: inherit;
-    }
-    .password-toggle:hover { color: var(--primary); }
-  </style>
+  <link rel="stylesheet" href="<?= e(css_url('auth/register')) ?>">
 </head>
 <body class="auth-page">
   <div class="auth-card container-narrow">
@@ -49,19 +31,19 @@
       <!-- Panel Cliente -->
       <div class="tab-panel active" id="panel-client">
         <div class="form-group">
-          <label for="name">Nombre</label>
+          <label for="name">Nombre <span class="required-mark">*</span></label>
           <input class="form-control" type="text" id="name" name="name"
                  value="<?= e($_POST['name'] ?? '') ?>" required>
           <div class="form-hint">Ej: Ana Lucía</div>
         </div>
         <div class="form-group">
-          <label for="email">Correo electrónico</label>
-          <input class="form-control" type="email" id="email" name="email"
+          <label for="email">Correo electrónico <span class="required-mark">*</span></label>
+          <input class="form-control" type="email" id="email" name="email" data-validate="email"
                  value="<?= e($_POST['email'] ?? '') ?>" required>
           <div class="form-hint">Ej: analucia@correo.com</div>
         </div>
         <div class="form-group">
-          <label for="password">Contraseña</label>
+          <label for="password">Contraseña <span class="required-mark">*</span></label>
           <div class="password-wrapper">
             <input class="form-control" type="password" id="password" name="password"
                    minlength="8" required>
@@ -71,7 +53,7 @@
         </div>
         <div class="form-group">
           <label for="phoneNumber">Teléfono</label>
-          <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
+          <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone"
                  value="<?= e($_POST['phoneNumber'] ?? '') ?>" maxlength="8" placeholder="8 dígitos">
           <div class="form-hint">Ej: 8888-7777</div>
         </div>
@@ -80,7 +62,7 @@
       <!-- Panel Propietario -->
       <div class="tab-panel" id="panel-owner">
         <div class="form-group">
-          <label for="ownerFirstName">Nombre</label>
+          <label for="ownerFirstName">Nombre <span class="required-mark">*</span></label>
           <input class="form-control" type="text" id="ownerFirstName" name="ownerFirstName"
                  value="<?= e($_POST['ownerFirstName'] ?? '') ?>" required>
           <div class="form-hint">Ej: María José</div>
@@ -98,25 +80,25 @@
           <div class="form-hint">Ej: Mari</div>
         </div>
         <div class="form-group">
-          <label for="ownerBusinessName">Nombre de negocio</label>
+          <label for="ownerBusinessName">Nombre de negocio <span class="required-mark">*</span></label>
           <input class="form-control" type="text" id="ownerBusinessName" name="ownerBusinessName"
                  value="<?= e($_POST['ownerBusinessName'] ?? '') ?>" required>
           <div class="form-hint">Ej: Salon comunal</div>
         </div>
         <div class="form-group">
           <label for="ownerIdentification">Cédula / identificación</label>
-          <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification"
+          <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification" data-mask="identification" data-validate="identification"
                  value="<?= e($_POST['ownerIdentification'] ?? '') ?>">
           <div class="form-hint">Ej: 1-2345-0678</div>
         </div>
         <div class="form-group">
-          <label for="ownerEmail">Correo electrónico</label>
-          <input class="form-control" type="email" id="ownerEmail" name="email"
+          <label for="ownerEmail">Correo electrónico <span class="required-mark">*</span></label>
+          <input class="form-control" type="email" id="ownerEmail" name="email" data-validate="email"
                  value="<?= e($_POST['email'] ?? '') ?>" required>
           <div class="form-hint">Ej: mariosepe@correo.com</div>
         </div>
         <div class="form-group">
-          <label for="ownerPassword">Contraseña</label>
+          <label for="ownerPassword">Contraseña <span class="required-mark">*</span></label>
           <div class="password-wrapper">
             <input class="form-control" type="password" id="ownerPassword" name="password"
                    minlength="8" required>
@@ -126,7 +108,7 @@
         </div>
         <div class="form-group">
           <label for="ownerPhone">Teléfono</label>
-          <input class="form-control" type="tel" id="ownerPhone" name="phoneNumber"
+          <input class="form-control" type="tel" id="ownerPhone" name="phoneNumber" data-mask="phone" data-validate="phone"
                  value="<?= e($_POST['phoneNumber'] ?? '') ?>" maxlength="8" placeholder="8 dígitos">
           <div class="form-hint">Ej: 8888-7777</div>
         </div>
@@ -141,23 +123,8 @@
   </div>
 
   <script src="<?= e(js_url()) ?>"></script>
-  <script src="<?= e(js_url('auth-register')) ?>"></script>
-  <script>
-    (function () {
-      [['password', 'passwordToggle'], ['ownerPassword', 'ownerPasswordToggle']].forEach(function (pair) {
-        var input = document.getElementById(pair[0]);
-        var toggle = document.getElementById(pair[1]);
-
-        toggle.addEventListener('click', function () {
-          var show = input.type === 'password';
-          input.type = show ? 'text' : 'password';
-          toggle.textContent = show ? 'Ocultar' : 'Mostrar';
-          toggle.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
-          input.focus();
-        });
-      });
-    })();
-  </script>
+  <script src="<?= e(js_url('auth/auth-register')) ?>"></script>
+  <script src="<?= e(js_url('auth/register')) ?>"></script>
   <script>document.addEventListener('DOMContentLoaded', App.init);</script>
 </body>
 </html>

@@ -24,6 +24,7 @@
           <th>Distrito</th>
           <th>Pueblo</th>
           <th>Descripción</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody>
@@ -35,6 +36,7 @@
             <td><?= e($loc->getDistrictLocation()) ?></td>
             <td><?= $loc->getTownLocation() ? e($loc->getTownLocation()) : '—' ?></td>
             <td><?= $loc->getDescriptionLocation() ? e($loc->getDescriptionLocation()) : '—' ?></td>
+            <td><a href="<?= e(base_url('location', 'edit', ['id' => $loc->getIdLocation()])) ?>">Editar</a></td>
           </tr>
         <?php endforeach; ?>
       </tbody>

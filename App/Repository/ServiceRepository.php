@@ -29,10 +29,10 @@ class ServiceRepository
          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbservice' AND COLUMN_NAME = :col"
       );
 
-      foreach (['tbserviceapprovedby', 'tbserviceapprovedon'] as $column) {
+      foreach (['tbroleid', 'tbserviceapprovedon'] as $column) {
         $stmt->execute([':col' => $column]);
         if ((int) $stmt->fetchColumn() === 0) {
-          $type = $column === 'tbserviceapprovedby' ? 'INT NULL' : 'DATETIME NULL';
+          $type = $column === 'tbroleid' ? 'INT NULL' : 'DATETIME NULL';
           $this->connection->exec("ALTER TABLE tbservice ADD COLUMN {$column} {$type}");
         }
       }
@@ -51,7 +51,7 @@ class ServiceRepository
   {
     $sql = "
             INSERT INTO tbservice (
-                tbservicelocalid,
+                tbvenueid,
                 tbservicename,
                 tbservicetype,
                 tbserviceprice,
@@ -91,12 +91,12 @@ class ServiceRepository
     $sql = "
             SELECT
                 tbserviceid,
-                tbservicelocalid,
+                tbvenueid,
                 tbservicename,
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceapprovedby,
+                tbroleid,
                 tbserviceapprovedon,
                 tbserviceactive
 
@@ -126,20 +126,21 @@ class ServiceRepository
     $sql = "
             SELECT
                 tbserviceid,
-                tbservicelocalid,
+                tbvenueid,
                 tbservicename,
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceapprovedby,
+                tbroleid,
                 tbserviceapprovedon,
                 tbserviceactive
 
             FROM tbservice
 
-            WHERE tbservicelocalid = :idLocal
+            WHERE tbvenueid = :idLocal
               AND tbservicestate = 'aprobado'
               AND tbserviceactive = true
+            ORDER BY tbservicename ASC
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -161,18 +162,19 @@ class ServiceRepository
     $sql = "
             SELECT
                 tbserviceid,
-                tbservicelocalid,
+                tbvenueid,
                 tbservicename,
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceapprovedby,
+                tbroleid,
                 tbserviceapprovedon,
                 tbserviceactive
 
             FROM tbservice
 
             WHERE tbservicestate = 'solicitado'
+            ORDER BY tbservicename ASC
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -201,8 +203,8 @@ class ServiceRepository
                 r.tbrolename    AS approvedByName,
                 s.tbserviceapprovedon
             FROM tbservice s
-            LEFT JOIN tbvenue v ON v.tbvenueid = s.tbservicelocalid
-            LEFT JOIN tbrole r ON r.tbroleid = s.tbserviceapprovedby
+            LEFT JOIN tbvenue v ON v.tbvenueid = s.tbvenueid
+            LEFT JOIN tbrole r ON r.tbroleid = s.tbroleid
             WHERE s.tbservicestate IN ('aprobado', 'rechazado')
             ORDER BY s.tbserviceapprovedon DESC, s.tbserviceid DESC
         ";
@@ -223,18 +225,19 @@ class ServiceRepository
     $sql = "
             SELECT
                 tbserviceid,
-                tbservicelocalid,
+                tbvenueid,
                 tbservicename,
                 tbservicetype,
                 tbserviceprice,
                 tbservicestate,
-                tbserviceapprovedby,
+                tbroleid,
                 tbserviceapprovedon,
                 tbserviceactive
 
             FROM tbservice
 
-            WHERE tbservicelocalid = :idLocal
+            WHERE tbvenueid = :idLocal
+            ORDER BY tbservicename ASC
         ";
 
     $stmt = $this->connection->prepare($sql);
@@ -244,6 +247,32 @@ class ServiceRepository
     ]);
 
     return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+  }
+
+
+  // =========================================================
+  // ¿YA EXISTE UN SERVICIO CON ESE NOMBRE EN EL MISMO LOCAL?
+  // (control de duplicados desde PHP, case-insensitive)
+  // =========================================================
+  public function existsByNameForLocal(int $idLocal, string $name, ?int $excludeId = null): bool
+  {
+    $sql = "
+      SELECT COUNT(*) FROM tbservice
+      WHERE tbvenueid = :idLocal
+        AND LOWER(TRIM(tbservicename)) = LOWER(:name)
+    ";
+
+    $params = [':idLocal' => $idLocal, ':name' => trim($name)];
+
+    if ($excludeId !== null) {
+      $sql .= " AND tbserviceid <> :excludeId";
+      $params[':excludeId'] = $excludeId;
+    }
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute($params);
+
+    return (int) $stmt->fetchColumn() > 0;
   }
 
 
@@ -274,7 +303,28 @@ class ServiceRepository
     $sql = "
             UPDATE tbservice
             SET tbservicestate = 'aprobado',
-                tbserviceapprovedby = :approvedByRoleId,
+                tbroleid = :approvedByRoleId,
+                tbserviceapprovedon = NOW()
+            WHERE tbserviceid = :idService
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    return $stmt->execute([
+      ':approvedByRoleId' => $approvedByRoleId,
+      ':idService'        => $idService
+    ]);
+  }
+
+  // =========================================================
+  // RECHAZAR: cambia el estado y registra quién lo rechazó y cuándo
+  // =========================================================
+  public function reject(int $idService, int $approvedByRoleId): bool
+  {
+    $sql = "
+            UPDATE tbservice
+            SET tbservicestate = 'rechazado',
+                tbroleid = :approvedByRoleId,
                 tbserviceapprovedon = NOW()
             WHERE tbserviceid = :idService
         ";
@@ -316,19 +366,45 @@ class ServiceRepository
 
 
   // =========================================================
+  // CATEGORÍAS (tipos) DISTINTAS DE SERVICIOS APROBADOS
+  // Se usan para el filtro de categorización del catálogo.
+  // =========================================================
+  public function distinctTypes(): array
+  {
+    $sql = "
+      SELECT DISTINCT tbservicetype
+      FROM tbservice
+      WHERE tbserviceactive = true
+        AND tbservicestate = 'aprobado'
+        AND tbservicetype IS NOT NULL
+        AND TRIM(tbservicetype) <> ''
+      ORDER BY tbservicetype ASC
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute();
+
+    return array_map(
+      static fn(array $row): string => (string) $row['tbservicetype'],
+      $stmt->fetchAll(PDO::FETCH_ASSOC)
+    );
+  }
+
+
+  // =========================================================
   // MAPEO FILA -> OBJETO
   // =========================================================
   private function mapRow(array $row): Service
   {
     return new Service(
       idService: (int) $row['tbserviceid'],
-      idLocal: (int) $row['tbservicelocalid'],
+      idLocal: (int) $row['tbvenueid'],
       nameService: $row['tbservicename'],
       typeService: $row['tbservicetype'],
       priceService: (float) $row['tbserviceprice'],
       stateService: $row['tbservicestate'],
       isActive: $this->toBool($row['tbserviceactive']),
-      approvedBy: ($row['tbserviceapprovedby'] ?? null) !== null ? (int) $row['tbserviceapprovedby'] : null,
+      approvedBy: ($row['tbroleid'] ?? null) !== null ? (int) $row['tbroleid'] : null,
       approvedOn: $row['tbserviceapprovedon'] ?? null
     );
   }

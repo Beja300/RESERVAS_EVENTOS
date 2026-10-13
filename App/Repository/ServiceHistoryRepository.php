@@ -19,7 +19,7 @@ class ServiceHistoryRepository
   {
     $sql = "
       INSERT INTO tbservicehistory (
-        tbservicehistoryserviceid,
+        tbserviceid,
         tbservicehistoryprice,
         tbservicehistoryvalidfrom
       )
@@ -49,11 +49,11 @@ class ServiceHistoryRepository
     $sql = "
       SELECT
         tbservicehistoryid,
-        tbservicehistoryserviceid,
+        tbserviceid,
         tbservicehistoryprice,
         tbservicehistoryvalidfrom
       FROM tbservicehistory
-      WHERE tbservicehistoryserviceid = :idService
+      WHERE tbserviceid = :idService
         AND tbservicehistoryactive = true
       ORDER BY tbservicehistoryvalidfrom ASC
     ";
@@ -72,7 +72,7 @@ class ServiceHistoryRepository
     $sql = "
       SELECT tbservicehistoryprice
       FROM tbservicehistory
-      WHERE tbservicehistoryserviceid = :idService
+      WHERE tbserviceid = :idService
         AND tbservicehistoryvalidfrom <= :date
         AND tbservicehistoryactive = true
       ORDER BY tbservicehistoryvalidfrom DESC
@@ -97,7 +97,7 @@ class ServiceHistoryRepository
   {
     return new ServiceHistory(
       idServiceHistory: (int) $row['tbservicehistoryid'],
-      idService: (int) $row['tbservicehistoryserviceid'],
+      idService: (int) $row['tbserviceid'],
       price: (float) $row['tbservicehistoryprice'],
       validFrom: $row['tbservicehistoryvalidfrom']
     );

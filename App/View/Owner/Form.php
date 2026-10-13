@@ -1,3 +1,5 @@
+<?php $pageCss = 'owner/form';
+      $pageJs = ['owner/form']; ?>
 <?php require_once __DIR__ . '/../_header.php';
 
 $owner = $owner ?? ($_SESSION['user'] ?? null);
@@ -55,22 +57,24 @@ if ($owner === null) {
     <div class="form-group">
       <label>O bien, imagen por URL</label>
       <input class="form-control" type="text" id="imageUrl" name="imageUrl"
-             placeholder="https://..."
+             placeholder="https://..." data-validate="url"
              value="<?= e(trim($_POST['imageUrl'] ?? '')) ?>">
     </div>
 
     <h3 class="card-title">Datos del negocio</h3>
 
     <div class="form-group">
-      <label for="name">Nombre de negocio</label>
-      <input class="form-control" type="text" id="name" name="name"
+      <label for="name">Nombre de negocio *</label>
+      <input class="form-control" type="text" id="name" name="name" required
+             data-validate="required"
              value="<?= e($_POST['name'] ?? $owner->getName()) ?>">
       <div class="form-hint">Ej: Salon comunal</div>
     </div>
 
     <div class="form-group">
-      <label for="ownerLastName">Apellidos</label>
-      <input class="form-control" type="text" id="ownerLastName" name="ownerLastName"
+      <label for="ownerLastName">Apellidos *</label>
+      <input class="form-control" type="text" id="ownerLastName" name="ownerLastName" required
+             data-validate="required"
              value="<?= e($_POST['ownerLastName'] ?? $owner->getLastNameOwner()) ?>">
       <div class="form-hint">Ej: Pérez Rodríguez</div>
     </div>
@@ -83,31 +87,32 @@ if ($owner === null) {
     </div>
 
     <div class="form-group">
-      <label for="ownerIdentification">Cédula / identificación</label>
-      <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification"
+      <label for="ownerIdentification">Cédula / identificación *</label>
+      <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification" required
+             data-validate="required identification"
              value="<?= e($_POST['ownerIdentification'] ?? $owner->getIdentificationNumberOwner()) ?>">
       <div class="form-hint">Ej: 1-2345-0678</div>
     </div>
 
     <div class="form-group">
-      <label for="email">Correo electrónico</label>
+      <label for="email">Correo electrónico *</label>
       <input class="form-control" type="email" id="email" name="email" required
-             data-validate="email"
+             data-validate="required email"
              value="<?= e($_POST['email'] ?? $owner->getEmail()) ?>">
     </div>
 
     <div class="form-group">
-      <label for="phoneNumber">Teléfono</label>
-      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
-             data-validate="phone"
+      <label for="phoneNumber">Teléfono *</label>
+      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" required
+             data-validate="required phone"
              maxlength="8" value="<?= e($_POST['phoneNumber'] ?? $owner->getPhoneNumber() ?? '') ?>">
       <div class="form-hint">Ej: 8888-7777</div>
     </div>
 
-    <?php $showPasswordFields = !empty($_POST['currentPassword']) || !empty($_POST['newPassword']); ?>
+    <?php $showPasswordFields = !empty($_POST['changePassword']); ?>
     <h3 class="card-title" style="margin-top:22px;">Cambiar contraseña</h3>
     <label class="checkbox" style="margin-bottom:12px;">
-      <input type="checkbox" id="changePasswordCheck" <?= $showPasswordFields ? 'checked' : '' ?>>
+      <input type="checkbox" id="changePasswordCheck" name="changePassword" value="1" <?= $showPasswordFields ? 'checked' : '' ?>>
       Quiero cambiar mi contraseña
     </label>
 
@@ -115,7 +120,7 @@ if ($owner === null) {
       <div class="form-group">
         <label for="currentPassword">Contraseña actual</label>
         <div class="password-wrapper">
-          <input class="form-control" type="password" id="currentPassword" name="currentPassword" autocomplete="current-password">
+          <input class="form-control" type="password" id="currentPassword" name="currentPassword" autocomplete="current-password" data-password-required-field>
           <button class="password-toggle" type="button" id="currentPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
         </div>
       </div>
@@ -123,7 +128,7 @@ if ($owner === null) {
       <div class="form-group">
         <label for="newPassword">Contraseña nueva</label>
         <div class="password-wrapper">
-          <input class="form-control" type="password" id="newPassword" name="newPassword" minlength="8" autocomplete="new-password">
+          <input class="form-control" type="password" id="newPassword" name="newPassword" minlength="8" autocomplete="new-password" data-password-required-field data-validate="password">
           <button class="password-toggle" type="button" id="newPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
         </div>
         <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
@@ -156,5 +161,4 @@ if ($owner === null) {
   </form>
 </div>
 
-<script src="<?= e(js_url('owner/form')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

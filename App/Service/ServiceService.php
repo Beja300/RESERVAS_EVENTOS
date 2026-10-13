@@ -35,9 +35,9 @@ class ServiceService
         $this->serviceRepo->approve($servicePk, $approvedByRoleId ?? 0);
     }
 
-    public function reject(int $servicePk): void
+    public function reject(int $servicePk, ?int $approvedByRoleId = null): void
     {
-        $this->serviceRepo->updateState($servicePk, 'rechazado');
+        $this->serviceRepo->reject($servicePk, $approvedByRoleId ?? 0);
     }
 
     public function validateAndCreate(int $venueFk, string $name, float $price, ?string $type = null): int
@@ -48,6 +48,14 @@ class ServiceService
 
         if (trim($name) === '') {
             throw new BusinessRuleException("El nombre del servicio es obligatorio.");
+        }
+
+        if (trim((string) $type) === '') {
+            throw new BusinessRuleException("El tipo del servicio es obligatorio.");
+        }
+
+        if ($this->serviceRepo->existsByNameForLocal($venueFk, $name)) {
+            throw new BusinessRuleException("Ya existe un servicio con ese nombre en este local.");
         }
 
         // Todo servicio nuevo entra en 'solicitado' -- solo aparece en el
@@ -75,7 +83,23 @@ class ServiceService
             throw new BusinessRuleException("El precio del servicio debe ser mayor a 0.");
         }
 
+        if (trim($name) === '') {
+            throw new BusinessRuleException("El nombre del servicio es obligatorio.");
+        }
+
+        if (trim((string) $type) === '') {
+            throw new BusinessRuleException("El tipo del servicio es obligatorio.");
+        }
+
+        if ($this->serviceRepo->existsByNameForLocal($venueFk, $name)) {
+            throw new BusinessRuleException("Ya existe un servicio con ese nombre en este local.");
+        }
+
         $service->setNameService($name);
+        if ($this->serviceRepo->existsByNameForLocal($service->getIdLocal(), $name, $service->getIdService())) {
+            throw new BusinessRuleException("Ya existe un servicio con ese nombre en este local.");
+        }
+
         $service->setTypeService($type);
         $service->setPriceService($price);
         $service->setIsActive($active);
@@ -132,6 +156,14 @@ class ServiceService
     public function findPending(): array
     {
         return $this->serviceRepo->findPending();
+    }
+
+    // =========================================================
+    // TIPOS DE SERVICIO DISTINTOS (para el filtro del catálogo)
+    // =========================================================
+    public function getDistinctTypes(): array
+    {
+        return $this->serviceRepo->distinctTypes();
     }
 
     // =========================================================

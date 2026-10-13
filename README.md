@@ -246,3 +246,329 @@ justifican un `Service` dedicado — por ejemplo `ReservaService.php`,
 # REGLA JS
 La regla general: JS es para experiencia de usuario en el navegador, nunca para lógica de negocio real — todo lo que ya puedes validar en PHP (Service/Controller) se debe volver a validar ahí, porque cualquiera puede desactivar JS o manipular el HTML.
 **/
+
+---
+# HISTORIAL DE TRABAJO RECIENTE 13 de septiembre
+
+> Sección informativa para el siguiente desarrollador: qué cambió, dónde está
+> cada cosa y cómo verificar que todo sigue funcionando.
+
+## 1) Ordenamiento lexicográfico en listas
+
+Se estandarizó el orden de las listas por **nombres/ubicaciones** para que se
+vean ordenadas de forma natural (sin importar mayúsculas, tildes ni números).
+
+### Dónde se implementó
+- `App/Service/OrderingService.php` — nuevo servicio con tres comparadores:
+  - `OrderingService::strings($a, $b)` → nombres con acentos/case-insensitive.
+  - `OrderingService::sequences($a, $b)` → orden natural de secuencias (ej. "Local 2" antes de "Local 10").
+  - `OrderingService::locations($a, $b)` → ubicaciones por provincia → cantón → distrito.
+- Catálogo de locales (`VenueCatalogController::sortCatalogVenues`): orden
+  cercanía al cliente → rating → ubicación (lexicográfico) → nombre (natural).
+- `HistoryService::recommendVenuesByLocation()` ordena por ubicación.
+- `ORDER BY` agregados en repositorios: `VenueRepository::findByOwner`,
+  `ServiceRepository` (findAvailableByLocal / findByLocal / findPending),
+  `ClientRepository::findAll`, `OwnerRepository::findAll`,
+  `AdminRepository::findAll`, `LocationRepository::findAll`.
+
+### Cómo verificar
+- `/tmp/opencode/test_sort_catalog.php` (test de integración del catálogo):
+  espera el orden `[2, 3, 6, 5, 4, 1]`. Resultado actual: **OK**.
+
+## 2) Refactorización de controladores (controllers más pequeños)
+
+Se dividieron los 6 controladores grandes en **17 controladores** por rol/función.
+**Las URLs no cambian** (sigue siendo `Public/index.php?controller=X&action=Y`).
+
+### Controllers creados
+
+| Antes (eliminado) | Después (nuevo) |
+|---|---|
+| `ServiceController` | `OwnerServiceController`, `AdminServiceController` |
+| `ClientController` | `ClientDashboardController`, `ClientProfileController` |
+| `OwnerController` | `OwnerDashboardController`, `OwnerProfileController`, `OwnerPaymentController` |
+| `VenueController` | `VenueCatalogController`, `OwnerVenueController` |
+| `BookingController` | `ClientBookingController`, `OwnerBookingController`, `BookingDetailController` |
+| `AdminController` | `AdminDashboardController`, `AdminProfileController`, `AdminUserController`, `AdminBookingController`, `AdminFinanceController` |
+
+### Servicios nuevos (reglas de negocio que vivían en los controllers)
+- `App/Service/BookingActionService.php` — crear/cancelar/pagar/subir comprobante/aprobar-rechazar comprobante de reservas.
+- `App/Service/BookingDetailService.php` — arma el detalle de una reserva (cliente/owner) para la vista.
+- `App/Service/OwnerDashboardService.php` y `App/Service/AdminDashboardService.php` — métricas de los dashboards.
+- `App/Service/ImageStorageService.php` — subida/borrado de archivos (fotos de perfil, locales, comprobantes). Usa `resource/{subdir}/` bajo `Public/`.
+- `App/Service/ProfileService.php` — validaciones de perfil, cambio de contraseña y auditoría de credenciales.
+- `App/Service/LocationService::findOrCreateByParts()` — reutiliza o crea una ubicación en un solo paso.
+
+### Helpers globales (`App/View/_helpers.php`)
+`input()`, `require_login()`, `require_role()`, `redirect_to()`, `respond_or_redirect()`,
+`parse_year_month()`, `venue_comments_html()`, `service_comments_html()`.
+Ya existían: `base_url`, `is_ajax`, `respond_json`, `render_partial`, `csrf_*`, `e`, `image_url`, `css_url`, `js_url`, `format_venue_location`, `current_user_type`.
+
+> Regla para el siguiente desarrollador: **no volver a crear controllers de cientos de líneas**.
+> Guardias de rol → `require_role('client'|'owner'|'admin')`. Redirects → `redirect_to()`. Respuestas AJAX/POST → `respond_or_redirect()`.
+> Lógica de negocio → en `App/Service/`, nunca en el controller.
+
+### Routing (`Public/index.php`)
+La lista plana `$controllers`/`$allowedActions` se reemplazó por una **tabla de rutas por acción**:
+`$routeMap['controller.action'] = ['Clase', 'método']`. Los controllers no divididos quedan en `$fallbackControllers`.
+Para agregar una ruta nueva basta añadir una entrada al mapa **y** el nombre en `$allowedActions`.
+
+### Bugs corregidos en el proceso
+- `uploadTicket` ahora valida la extensión y el tamaño **antes** de mover el archivo.
+- `activateUser` y `deactivateUser` tienen try/catch y mensajes de error.
+- `cleanTestData` se ejecuta dentro de una transacción (rollback si algo falla).
+- `approveTicket` (owner) redirige bien a `booking/detail`.
+- `ServiceController::approve/reject` ahora inyectan `HistoryService` y en `reject` también se registra `logAction` (simetría con `approve`).
+- Se eliminaron `session_start()` redundantes (el front controller ya inicia sesión).
+- Los catch de formularios recargan sus datos antes de re-renderizar la vista.
+
+## Cómo verificar el proyecto tras estos cambios
+
+1. Sintaxis de todos los archivos:
+   ```
+   find App Public -name '*.php' | xargs -n1 php -l
+   ```
+   Resultado esperado: ningún error en los 163 archivos.
+2. Levantar el servidor local:
+   ```
+   php -S 127.0.0.1:8899 -t Public
+   ```
+3. Smoke test por rol (usuarios demo de `DataBase/InitialData/seed_test_data.sql`;
+   el admin se crea antes en `auth/setup`, ver "Instalación" más abajo):
+   - Admin: `admin/dashboard`, `admin/users`, `admin/bookings`, `admin/bookingDetail&id=1`, `admin/commissionConfig`, `service/pending`.
+   - Owner: `owner/dashboard`, `owner/profile`, `owner/paymentData`, `venue/list`, `booking/venueBookings&venueId=1`, `service/list&venueId=1`.
+   - Cliente: `client/dashboard`, `client/profile`, `booking/myBookings`, `booking/showForm&venueId=1`, `booking/detail&id=1`.
+   - Público: `venue/catalog`, `venue/detail&id=1` → 200. Acciones de rol sin sesión → 302.
+   - POST sin `csrf_token` → 403. Acción inexistente → 404.
+4. Orden del catálogo: `php /tmp/opencode/test_sort_catalog.php` → debe devolver `[2, 3, 6, 5, 4, 1]`.
+
+> NOTA: los controladores antiguos (`ServiceController`, `VenueController`, `BookingController`,
+> `AdminController`, `ClientController`, `OwnerController`) **fueron eliminados**. Si el front
+> controller deja de resolver algo, revisar `$routeMap` en `Public/index.php`, no restaurar los viejos.
+
+---
+
+## Recomendaciones y posicionamiento de locales (híbrido por reglas)
+
+Objetivo original: ordenar el catálogo por **mejor calificación y cercanía al cliente**
+(primero por distrito, luego por distancia real con la **fórmula de Haversine**). Sobre esa base
+se agregó registro de interacciones de comportamiento y un **motor de recomendación híbrido por
+reglas + distancia geográfica**, con la arquitectura lista para incorporar ML en el futuro.
+
+### Coordenadas (DB y modelos)
+
+- `DataBase/ScriptsSQL/migrate_recommendations.sql` → `ALTER TABLE tblocation` agrega
+  `tblocationlatitude` y `tblocationlongitude` (`DECIMAL(10,7) NULL`).
+- `DataBase/ScriptsSQL/dbeventhall.sql` ahora incluye ambas columnas en `tblocation`.
+- `App/Model/Location.php` → propiedades `latitudeLocation` / `longitudeLocation` con getters/setters.
+- `App/Repository/LocationRepository.php` → `save`, `findById`, `findAll`, `mapRow` manejan lat/lng;
+  nuevo `updateCoordinates($idLocation, $latitude, $longitude)`.
+- `App/Service/LocationService.php` → `validateAndCreate` / `findOrCreateByParts` aceptan
+  lat/lng opcionales, validan rangos (−90..90 / −180..180) y exigen ambas juntas
+  (`assertValidCoordinates`); al reutilizar una ubicación existente actualiza las coordenadas.
+- `App/Service/VenueService.php::validateAndCreate` y `App/Controller/OwnerVenueController.php`
+  (create/update) persisten lat/lng del local; `App/View/Venue/Form.php` incluye inputs opcionales.
+- `App/Controller/ClientProfileController.php` + `App/View/Client/Profile.php` + 
+  `Public/js/client/dashboard.js` guardan lat/lng del cliente (manual o geolocalización).
+- Decisión: las coordenadas son **opcionales** y se piden/guardan en segundo plano; en `DataBase/Backup/*.sql`
+  **no** se tocó nada.
+
+### GeoService (distancia)
+
+`App/Service/GeoService.php`:
+- `haversineKm(...)` con radio terrestre 6371 km.
+- `distanceKm(?Location, ?Location)` → `null` si faltan coordenadas.
+- `proximityScore(...)` → `1/(1+d)` con coordenadas; sin ellas, fallback por niveles:
+  mismo distrito = 1.0, mismo cantón = 0.7, misma provincia = 0.4, otra provincia = 0.1;
+  sin ubicación de cliente o local = 0.5 neutro.
+- `distanceLabel(...)` → `"a X km"` (1 decimal) o `"a X m"` (> ignorar razón de preferencia).
+
+### Registro de interacciones (tbuserhistory)
+
+- `HistoryAction` suma `CANCEL` y `RATING` (ya existían `VIEW`, `SEARCH`, `FAVORITE`, `BOOKING`, `PURCHASE`).
+- `HistoryService` agrega `logVenueCancel`, `logVenueRating`, `logVenueFavorite`, `logVenueUnfavorite`, `isFavorite`, `favoriteVenueIdsByRole`.
+- Cancelaciones del cliente (`BookingActionService::cancel`) y del admin
+  (`AdminBookingController::cancelBooking` y `refundBooking`) registran `CANCEL`.
+- Calificaciones del local (`VenueCatalogController::rate` / `updateComment`) registran `RATING`.
+- `Admin/UserHistory.php` muestra las etiquetas "Canceló" y "Calificó".
+
+### Favoritos (feature completo)
+
+- Toggle por AJAX: `VenueCatalogController::favorite()` + ruta `venue.favorite` en `Public/index.php`.
+- Botón ❤️ en `App/View/Venue/Detail.php` con `Public/js/venue/favorite.js` y estilos en `Public/css/venue/detail.css`.
+- Página "Mis favoritos": ruta `client.favorites` → `ClientDashboardController::favorites()`
+  + `App/View/Client/Favorites.php`, enlazada en `App/View/_header.php`.
+- Al marcar FAVORITE se agrega `tbuserhistory`; al desmarcar se borra (`deleteFavorite`).
+
+### Motor de recomendación híbrido (App/Service/Recommendation/)
+
+Por reglas y distancia geográfica (sin ML), preparado para ML futuro:
+
+- `RecommendationConfig` → pesos por modo e `INTERACTION_WEIGHTS`
+  (SEARCH=1, VIEW=1, FAVORITE=4, BOOKING=7, PURCHASE=10, RATING=6, CANCEL=−4).
+- `RecommendationContext` → candidatos + ubicaciones + ratings + colab + historial del rol.
+- `RecommendationStrategy` (interfaz) + estrategias:
+  - `LocationStrategy` (geo), `RatingStrategy`, `ContentStrategy` (afinidad por tipo de local),
+    `CollaborativeStrategy` (popularidad global ponderada).
+- `HybridEngine::rankVenues()` → normaliza cada señal a [0,1] y las combina con el peso del modo:
+  catálogo `geo=0.40 rating=0.25 content=0.20 colab=0.15`; cerca de ti `geo=0.60 rating=0.20 content=0.05 colab=0.15`.
+  Las señales sin datos quedan en 0 (no deforman el ranking). Empate → rating, luego nombre.
+- `HistoryService` delega en el motor: `recommendForUser`, `recommendNear`, `rankVenuesForCatalog`
+  (reemplazan a `recommendVenues`, `recommendVenuesByLocation` y a `sortCatalogVenues`/`nearTier`).
+- `App/Repository/HistoryRepository.php` → `interactionWeightedScores` para el puntaje colaborativo
+  y helpers de favoritos (`hasFavorite`, `deleteFavorite`, `favoriteVenueIdsByRole`).
+- TODO(ML): agregar una estrategia "ml" en `HybridEngine` y su peso en `RecommendationConfig`.
+
+### Cómo se ve en la UI
+
+- `App/View/Venue/Catalog.php` y `App/View/Client/Dashboard.php` muestran la etiqueta
+  **"a X km"** en las tarjetas cuando cliente y local tienen coordenadas
+  (`$distanceLabelByVenue` calculado con `GeoService::distanceLabel`).
+
+### Verificación
+
+1. Sintaxis de todos los archivos PHP (`find App Public -name '*.php' | xargs -n1 php -l`).
+2. Levantar `php -S 127.0.0.1:8899 -t Public`.
+3. Probar: catálogo ordenado híbrido, badges "a X km", favoritos (marcar/desmarcar), panel
+   "Mis favoritos", historial con CANCEL/RATING, y "Recomendados para ti"/"Locales cerca de ti"
+   en `client/dashboard`.
+
+---
+
+# HISTORIAL DE TRABAJO RECIENTE 13 de septiembre (2.ª tanda)
+
+> Continuación de la sección anterior. Qué cambió en esta tanda y cómo verificar.
+
+## 1) Combos de ubicación vacíos (provincia/cantón/distrito) — corregido
+
+El formulario de perfil del cliente y del local mostraban los `<select>` de
+provincia/cantón/distrito vacíos o se borraban al editar. Causas y solución:
+
+- `App/View/Client/Profile.php` — el pie de página no cargaba
+  `Public/js/venue/location.js` (`$pageJs`), por eso nunca se poblaban los combos.
+  Ahora `$pageJs = ['client/profile', 'venue/location']`.
+- `Public/js/venue/location.js::applyPreselection()` — no hacía
+  `provinceCombo.setValue(province)` y `syncNative()` dejaba el `<select>`
+  nativo en blanco, rompiendo los `required` (impedía guardar aunque solo se
+  cambiara la foto). Ahora se preselecciona con `setValue`.
+
+## 2) Latitud/longitud no editables (auto-detección)
+
+Decisión de diseño: **el usuario no teclea lat/lng a mano**; se obtienen de la
+ubicación del navegador (o por IP como respaldo).
+
+- `Public/js/geo.js` — nuevo: `navigator.geolocation` con respaldo
+  `api/geolocate` (IP vía `ip-api.com`). Rellena los hidden `#latitude/#longitude`.
+- `App/View/Client/Profile.php` y `App/View/Venue/Form.php` dejaron de mostrar
+  inputs numéricos; solo hay hidden + texto de solo lectura + botón
+  "Detectar ubicación" (`data-geo-auto="1"` solo si aún no hay coordenadas).
+- `App/Controller/ApiController.php::geolocate` devuelve `{ok, lat, lng}`
+  (y provincia/cantón/distrito por IP).
+
+## 3) Dashboard e navegación del cliente
+
+- Etiqueta del nav unificada: **"Inicio"** en dashboards de cliente, propietario y admin.
+- Se eliminó **"Mis reservas"** del nav del cliente (las reservas se muestran
+  en el panel). Se agregó el link **"Recomendaciones"** → `client/recommendations`.
+- `App/View/Client/Dashboard.php` reescrito:
+  - Div 1 "Locales alquilados": últimas 5 reservas (nombre, fechas, estado) + "Ver todas →".
+  - Div 2 "Locales más frecuentes": los locales que el cliente **más ha visto**
+    (historial `tbuserhistory` con `HistoryAction::VIEW`), no por reservas.
+    Badge "X visitas" + "Ver local".
+  - Módulo geo ligero: detecta y guarda la posición del cliente desde el panel.
+- `App/View/Client/Recommendations.php` — nuevo: concentra "Recomendados para ti",
+  "Locales cerca de ti" y el módulo geo completo.
+- `App/Repository/HistoryRepository.php::mostViewedVenueIdsByRole()`
+  → `[idVenue => nº de vistas]` ordenado por visitas (solo `VIEW` de `Venue`).
+- `Public/index.php` → ruta y allowlist `client.recommendations`.
+
+## 4) Ubicación del local con mapa (Leaflet + OpenStreetMap)
+
+El formulario del local (crear/editar) **ya no usa la auto-detección**: el
+propietario marca la ubicación en un mapa tipo "Google Maps".
+
+- `Public/vendor/leaflet/` — Leaflet 1.9.4 descargado localmente
+  (`leaflet.css`, `leaflet.js`, `images/`). Las teselas usan OpenStreetMap
+  y la búsqueda usa Nominatim (requieren internet en el navegador).
+- `Public/js/venue/location-map.js` — nuevo:
+  - Clic/arrastre del marcador → hidden `#latitude/#longitude` (6 decimales).
+  - Búsqueda de dirección/cantón (Nominatim, `countrycodes=cr`).
+  - Re-centrado automático al elegir provincia/cantón (si aún no hay punto marcado).
+  - Validación cliente: bloquea el envío sin marcar el mapa.
+- `Public/js/venue/location.js` — `syncNative()` dispara el evento `change`
+  en los `<select>` nativos (setear `.value` por JS no lo emite), necesario
+  para el re-centrado del mapa por cantón.
+- `App/View/Venue/Form.php` — carga Leaflet, `$pageCss = 'venue/form'`,
+  `$pageJs = ['venue/form', 'venue/location', 'venue/location-map']` (sin `geo`),
+  y el bloque del mapa reemplaza la auto-detección.
+- `Public/css/venue/form.css` — estilos del mapa y del dropdown de búsqueda.
+- `App/Controller/OwnerVenueController.php` — `requireCoordinates()` en
+  `create()` y `update()`: las coordenadas ahora son **obligatorias**
+  (error: "Debes marcar la ubicación exacta del local en el mapa.").
+
+El perfil del cliente conserva la auto-detección de `geo.js`; el mapa es
+exclusivo del formulario del local.
+
+## Cómo verificar esta tanda
+
+1. `find App Public -name '*.php' | xargs -n1 php -l` → sin errores.
+2. `php -S 127.0.0.1:8899 -t Public` y login con los usuarios demo
+   (`owner@eventhall.com`, `cliente@eventhall.com` / `Clave123`; el administrador
+   se crea en `auth/setup` la primera vez, ver "Instalación").
+3. Owner → `venue/showForm`: el formulario muestra el mapa, el buscador y
+   `client/vendor/leaflet/leaflet.js` responde 200. Guardar sin marcar el mapa
+   responde 422 con el mensaje; marcarlo permite guardar.
+4. Cliente → panel con "Locales alquilados" + "Locales más frecuentes" (X visitas),
+   página "Recomendaciones", nav con "Inicio"; perfil con combos de ubicación
+   poblados y auto-detección funcionando.
+
+---
+
+## Instalación en una computadora nueva
+
+1. Importar el esquema en MySQL/MariaDB:
+   ```
+   DataBase/ScriptsSQL/dbeventhall.sql
+   ```
+2. (Opcional, para datos demo de clientes/propietarios) importar:
+   ```
+   DataBase/InitialData/seed_test_data.sql
+   ```
+   > El seed **no crea ningún administrador** a propósito: no hay
+   > credenciales por defecto en el repositorio.
+3. Levantar el servidor y abrir el login:
+   ```
+   php -S 127.0.0.1:8899 -t Public
+   # → http://127.0.0.1:8899/Public/index.php?controller=auth&action=showLogin
+   ```
+4. Si la base no tiene administradores, el login muestra un aviso con el enlace
+   **"Crea el primero aquí"** → `auth/setup`. Completar el formulario (nombre,
+   correo, contraseña, teléfono) crea el primer admin y deja la sesión iniciada.
+5. A partir de ahí los administradores adicionales se crean desde el panel
+   (`admin/showAdminForm`). La ruta `auth/setup` queda bloqueada en cuanto
+   existe al menos un administrador.
+
+> Nota: el botón "clean" del login restaura los datos de prueba y **borra
+> también al administrador**; tras usarlo hay que volver a `auth/setup`.
+---
+
+## Cambios recientes — Sprint 3 (verificación de rúbrica)
+
+### Validaciones y formato (servidor)
+- **Formato de correo electrónico**: validación estricta con `filter_var(FILTER_VALIDATE_EMAIL)` en `AuthService::validateEmailFormat()`, aplicada en registro (cliente/propietario/admin), edición de perfil y auditoría de cambio de correo (`ProfileService`, `RoleSecurityService`). Se valida antes de verificar unicidad.
+- **Fecha real en reagenda**: `BookingAdminService::reschedule()` ahora verifica fecha real (`checkdate`) y rechaza fechas inválidas (ej. 2026-02-31).
+- **Fecha de factura**: el formulario (`Invoice/Form.php`) incluye campo `date` (por defecto hoy). `InvoiceService::generate()` valida fecha real + no futura y usa la fecha enviada (en lugar de hardcodear la fecha actual).
+
+### Integridad y unicidad (PHP)
+- **Comisión/IVA**: validación numérica estricta (`is_numeric`) en `CommissionConfigService` y `AdminFinanceController` antes de aplicar rangos 0–100.
+- **Métodos de pago**: `PaymentMethodService::validateTypeIsUnique()` ahora revisa globalmente (activos + inactivos), evitando duplicados de un tipo previamente desactivado.
+- **Promociones**: `PromotionRepository::existsByLabel()` verifica etiqueta única por local (case-insensitive). `PromotionService` valida unicidad en creación y actualización.
+- **Cuentas de cobro del propietario**: `OwnerPaymentRepository::existsByAccount()` evita duplicados de número/cuenta por (owner, método de pago), con validación en `OwnerPaymentService`.
+- **Coherencia de promoción**: `PromotionService::update()` rechaza `minServices` mayor al número de servicios vinculados a la promoción.
+
+### Seguridad, permisos y experiencia de usuario
+- **POST-only en mutaciones**: se añade `require_post()` a acciones mutantes que anteriormente aceptaban GET (`AdminBookingController`: approvePayment, rejectPayment, cancelBooking, rescheduleBooking, changeBookingVenue, refundBooking, rejectRefundBooking; `ClientBookingController`: cancel, requestRefund; `NotificationController`: markAsRead, markAllAsRead). `open` de notificaciones permanece como GET (navegación).
+- **Persistencia de datos en formularios**: prioridad a `$_POST` ante errores de validación en edición de local/servicio (`Venue/Form.php`, `Service/Form.php`); se añaden valores por defecto desde `$_POST` en formularios de creación/edición de admin/cliente/propietario (`Admin/*Form.php`, `Admin/*Edit.php`, `Auth/Setup.php`).
+- **Limpieza de código**: se eliminaron `session_start()` redundantes en `InvoiceController`, `PromotionController`, `NotificationController`, `PaymentMethodController` (la sesión ya se inicia en el front controller).
+- **Mejoras de validación cliente**: atributos `data-validate="email"` y `data-validate="phone"` añadidos en formularios relevantes (`Auth/Register.php`, `Auth/Setup.php`, `Admin/*Form/Edit`, `Client/Form.php`).
+- **Servicios por local**: `ServiceService::validateAndCreate()` y `validateAndUpdate()` validan que no exista otro servicio con el mismo nombre en el mismo local (`ServiceRepository::existsByNameForLocal`).

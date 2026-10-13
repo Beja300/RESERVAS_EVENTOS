@@ -15,11 +15,19 @@ if ($booking === null) {
 
 <div class="card form-card" style="max-width:560px;">
   <div class="detail-grid" style="margin-bottom:20px;">
-    <div class="detail-item"><div class="k">Reserva</div><div class="v">#<?= (int) $booking->getIdBooking() ?></div></div>
-    <div class="detail-item"><div class="k">Fecha</div><div class="v"><?= e(date('d/m/Y', strtotime($booking->getBookingDate()))) ?></div></div>
+<div class="detail-item"><div class="k">Reserva</div><div class="v">#<?= (int) $booking->getIdBooking() ?></div></div>
+    <div class="detail-item"><div class="k">Local</div><div class="v"><?= $venue !== null ? e($venue->getNameVenue()) : ('#' . (int) $booking->getIdLocal()) ?></div></div>
+    <div class="detail-item"><div class="k">Fechas</div><div class="v">
+      <?php
+        $startLabel = date('d/m/Y', strtotime($booking->getBookingDate()));
+        $endLabel = $booking->getBookingEndDate() !== null
+          ? ' — ' . date('d/m/Y', strtotime($booking->getBookingEndDate()))
+          : '';
+      ?>
+      <?= e($startLabel . $endLabel) ?>
+    </div>
     <div class="detail-item"><div class="k">Subtotal</div><div class="v">&#8353; <?= number_format($totals['subtotal'], 2) ?></div></div>
-    <div class="detail-item"><div class="k">Comisión (5%)</div><div class="v">&#8353; <?= number_format($totals['commission'], 2) ?></div></div>
-    <div class="detail-item"><div class="k">IVA (13%)</div><div class="v">&#8353; <?= number_format($totals['tax'], 2) ?></div></div>
+    <div class="detail-item"><div class="k">IVA (<?= e(number_format($totals['taxPct'] ?? 0, 2)) ?>%)</div><div class="v">&#8353; <?= number_format($totals['tax'], 2) ?></div></div>
     <div class="detail-item"><div class="k">Total a pagar</div><div class="v"><strong>&#8353; <?= number_format($total, 2) ?></strong></div></div>
   </div>
 
@@ -32,7 +40,12 @@ if ($booking === null) {
     <input type="hidden" name="bookingId" value="<?= (int) $booking->getIdBooking() ?>">
 
     <div class="form-group">
-      <label for="paymentMethodId">Método de pago *</label>
+      <label for="date">Fecha de emisión <span class="required-mark">*</span></label>
+      <input class="form-control" type="date" id="date" name="date" value="<?= $_POST['date'] ?? date('Y-m-d') ?>" required>
+    </div>
+
+    <div class="form-group">
+      <label for="paymentMethodId">Método de pago <span class="required-mark">*</span></label>
       <?php if (empty($paymentMethods)): ?>
         <p class="muted">No tienes métodos de pago registrados.</p>
       <?php else: ?>

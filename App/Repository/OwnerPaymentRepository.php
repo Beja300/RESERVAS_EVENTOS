@@ -20,8 +20,8 @@ class OwnerPaymentRepository
   {
     $sql = "
       INSERT INTO tbownerpayment (
-        tbownerpaymentownerid,
-        tbownerpaymentpaymentmethodid,
+        tbownerid,
+        tbpaymentmethodid,
         tbownerpaymentholder,
         tbownerpaymentaccount,
         tbownerpaymentinstructions,
@@ -59,7 +59,7 @@ class OwnerPaymentRepository
     $sql = "
       UPDATE tbownerpayment
       SET
-        tbownerpaymentpaymentmethodid = :idPaymentMethod,
+        tbpaymentmethodid = :idPaymentMethod,
         tbownerpaymentholder = :holder,
         tbownerpaymentaccount = :account,
         tbownerpaymentinstructions = :instructions,
@@ -87,8 +87,8 @@ class OwnerPaymentRepository
     $sql = "
       SELECT
         op.tbownerpaymentid,
-        op.tbownerpaymentownerid,
-        op.tbownerpaymentpaymentmethodid,
+        op.tbownerid,
+        op.tbpaymentmethodid,
         pm.tbpaymentmethodtype,
         op.tbownerpaymentholder,
         op.tbownerpaymentaccount,
@@ -96,7 +96,7 @@ class OwnerPaymentRepository
         op.tbownerpaymentactive
       FROM tbownerpayment op
       INNER JOIN tbpaymentmethod pm
-        ON pm.tbpaymentmethodid = op.tbownerpaymentpaymentmethodid
+        ON pm.tbpaymentmethodid = op.tbpaymentmethodid
       WHERE op.tbownerpaymentid = :idOwnerPayment
       LIMIT 1
     ";
@@ -117,8 +117,8 @@ class OwnerPaymentRepository
     $sql = "
       SELECT
         op.tbownerpaymentid,
-        op.tbownerpaymentownerid,
-        op.tbownerpaymentpaymentmethodid,
+        op.tbownerid,
+        op.tbpaymentmethodid,
         pm.tbpaymentmethodtype,
         op.tbownerpaymentholder,
         op.tbownerpaymentaccount,
@@ -126,8 +126,8 @@ class OwnerPaymentRepository
         op.tbownerpaymentactive
       FROM tbownerpayment op
       INNER JOIN tbpaymentmethod pm
-        ON pm.tbpaymentmethodid = op.tbownerpaymentpaymentmethodid
-      WHERE op.tbownerpaymentownerid = :idOwner
+        ON pm.tbpaymentmethodid = op.tbpaymentmethodid
+      WHERE op.tbownerid = :idOwner
       ORDER BY pm.tbpaymentmethodtype ASC
     ";
 
@@ -140,6 +140,34 @@ class OwnerPaymentRepository
   // =========================================================
   // BUSCAR POR OWNER Y MÉTODO DE PAGO (ambos activos)
   // =========================================================
+  public function existsByAccount(int $idOwner, int $idPaymentMethod, string $account, int $excludeId = 0): bool
+  {
+    $account = trim($account);
+    if ($account === '') {
+      return false;
+    }
+
+    $sql = "
+      SELECT COUNT(*) as cnt
+      FROM tbownerpayment
+      WHERE tbownerid = :idOwner
+        AND tbpaymentmethodid = :idPaymentMethod
+        AND LOWER(TRIM(tbownerpaymentaccount)) = LOWER(:account)
+        AND (:excludeId = 0 OR tbownerpaymentid <> :excludeId)
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([
+      ':idOwner' => $idOwner,
+      ':idPaymentMethod' => $idPaymentMethod,
+      ':account' => $account,
+      ':excludeId' => $excludeId,
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return !empty($row) && (int) $row['cnt'] > 0;
+  }
+
   public function findByOwnerAndMethod(int $idOwner, int $idPaymentMethod): ?array
   {
     $rows = $this->findByOwner($idOwner);
@@ -176,8 +204,8 @@ class OwnerPaymentRepository
   {
     return new OwnerPayment(
       idOwnerPayment: (int) $row['tbownerpaymentid'],
-      idOwner: (int) $row['tbownerpaymentownerid'],
-      idPaymentMethod: (int) $row['tbownerpaymentpaymentmethodid'],
+      idOwner: (int) $row['tbownerid'],
+      idPaymentMethod: (int) $row['tbpaymentmethodid'],
       paymentMethod: $row['tbpaymentmethodtype'] ?? '',
       holder: $row['tbownerpaymentholder'] ?? '',
       account: $row['tbownerpaymentaccount'] ?? '',

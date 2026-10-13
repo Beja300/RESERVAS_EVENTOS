@@ -52,7 +52,17 @@
  * ---------------------------------------------------------------------
  */
 
+// =========================================================
+// MANEJO DE ERRORES
+// Nunca mostrar detalles de PHP/SQL al usuario final: se registran
+// en el log del servidor y se responde con un mensaje claro y genérico.
+// =========================================================
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+
 require_once __DIR__ . '/../Configuration/DataBase.php';
+require_once __DIR__ . '/../App/Service/BusinessRuleException.php';
 
 // Las sesiones pueden contener objetos serializados ($_SESSION['user'] es
 // un objeto Client/Owner/Admin). Para que PHP pueda deserializarlos es
@@ -84,22 +94,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // =========================================================
-// MAPEO DE CONTROLLERS
+// TABLA DE RUTAS (controller/action -> Clase y método)
+// -------------------------------------------------------
+// Cada acción conserva su URL histórica. Los controladores se dividieron
+// por rol/función (p. ej. "venue/catalog" vive en VenueCatalogController y
+// "venue/list" en OwnerVenueController) manteniendo los mismos parámetros.
 // =========================================================
-$controllers = [
+$routeMap = [
+  // ---------- service ----------
+  'service.list'       => ['OwnerServiceController', 'list'],
+  'service.showForm'   => ['OwnerServiceController', 'showForm'],
+  'service.create'     => ['OwnerServiceController', 'create'],
+  'service.update'     => ['OwnerServiceController', 'update'],
+  'service.pending'    => ['AdminServiceController', 'pending'],
+  'service.approve'    => ['AdminServiceController', 'approve'],
+  'service.reject'     => ['AdminServiceController', 'reject'],
+  'service.detail'     => ['AdminServiceController', 'detail'],
+
+  // ---------- venue ----------
+  'venue.catalog'      => ['VenueCatalogController', 'catalog'],
+  'venue.detail'       => ['VenueCatalogController', 'detail'],
+  'venue.showOwner'    => ['VenueCatalogController', 'showOwner'],
+  'venue.rate'         => ['VenueCatalogController', 'rate'],
+  'venue.rateService'  => ['VenueCatalogController', 'rateService'],
+  'venue.updateComment'=> ['VenueCatalogController', 'updateComment'],
+  'venue.favorite'     => ['VenueCatalogController', 'favorite'],
+  'venue.list'         => ['OwnerVenueController', 'list'],
+  'venue.showForm'     => ['OwnerVenueController', 'showForm'],
+  'venue.create'       => ['OwnerVenueController', 'create'],
+  'venue.update'       => ['OwnerVenueController', 'update'],
+
+  // ---------- booking ----------
+  'booking.create'        => ['ClientBookingController', 'create'],
+  'booking.showForm'      => ['ClientBookingController', 'showForm'],
+  'booking.myBookings'    => ['ClientBookingController', 'myBookings'],
+  'booking.addLine'       => ['ClientBookingController', 'addLine'],
+  'booking.cancel'        => ['ClientBookingController', 'cancel'],
+  'booking.requestRefund' => ['ClientBookingController', 'requestRefund'],
+  'booking.pay'           => ['ClientBookingController', 'pay'],
+  'booking.uploadTicket'  => ['ClientBookingController', 'uploadTicket'],
+  'booking.detail'        => ['BookingDetailController', 'detail'],
+  'booking.venueBookings' => ['OwnerBookingController', 'venueBookings'],
+  'booking.pendingBookings' => ['OwnerBookingController', 'pendingBookings'],
+  'booking.approveTicket' => ['OwnerBookingController', 'approveTicket'],
+  'booking.rejectTicket'  => ['OwnerBookingController', 'rejectTicket'],
+
+  // ---------- client ----------
+  'client.dashboard'       => ['ClientDashboardController', 'dashboard'],
+  'client.recommendations' => ['ClientDashboardController', 'recommendations'],
+  'client.favorites'       => ['ClientDashboardController', 'favorites'],
+  'client.profile'         => ['ClientProfileController', 'profile'],
+  'client.updateProfile'   => ['ClientProfileController', 'updateProfile'],
+  'client.updateLocation'  => ['ClientProfileController', 'updateLocation'],
+  'client.removePhoto'     => ['ClientProfileController', 'removePhoto'],
+  'client.deactivateAccount' => ['ClientProfileController', 'deactivateAccount'],
+
+  // ---------- owner ----------
+  'owner.dashboard'       => ['OwnerDashboardController', 'dashboard'],
+  'owner.profile'         => ['OwnerProfileController', 'profile'],
+  'owner.updateProfile'   => ['OwnerProfileController', 'updateProfile'],
+  'owner.removePhoto'     => ['OwnerProfileController', 'removePhoto'],
+  'owner.deactivateAccount' => ['OwnerProfileController', 'deactivateAccount'],
+  'owner.paymentData'     => ['OwnerPaymentController', 'paymentData'],
+  'owner.savePayment'     => ['OwnerPaymentController', 'savePayment'],
+  'owner.removePayment'   => ['OwnerPaymentController', 'removePayment'],
+
+  // ---------- admin ----------
+  'admin.dashboard'             => ['AdminDashboardController', 'dashboard'],
+  'admin.users'                 => ['AdminUserController', 'users'],
+  'admin.activateUser'          => ['AdminUserController', 'activateUser'],
+  'admin.deactivateUser'        => ['AdminUserController', 'deactivateUser'],
+  'admin.showAdminForm'         => ['AdminUserController', 'showAdminForm'],
+  'admin.createAdmin'           => ['AdminUserController', 'createAdmin'],
+  'admin.showClientForm'        => ['AdminUserController', 'showClientForm'],
+  'admin.createClient'          => ['AdminUserController', 'createClient'],
+  'admin.showOwnerForm'         => ['AdminUserController', 'showOwnerForm'],
+  'admin.createOwner'           => ['AdminUserController', 'createOwner'],
+  'admin.showEditForm'          => ['AdminUserController', 'showEditForm'],
+  'admin.updateUser'            => ['AdminUserController', 'updateUser'],
+  'admin.bookings'              => ['AdminBookingController', 'bookings'],
+  'admin.userHistory'           => ['AdminBookingController', 'userHistory'],
+  'admin.bookingDetail'         => ['AdminBookingController', 'bookingDetail'],
+  'admin.approvePayment'        => ['AdminBookingController', 'approvePayment'],
+  'admin.rejectPayment'         => ['AdminBookingController', 'rejectPayment'],
+  'admin.cancelBooking'         => ['AdminBookingController', 'cancelBooking'],
+  'admin.rescheduleBooking'     => ['AdminBookingController', 'rescheduleBooking'],
+  'admin.changeBookingVenue'    => ['AdminBookingController', 'changeBookingVenue'],
+  'admin.refundBooking'         => ['AdminBookingController', 'refundBooking'],
+  'admin.rejectRefundBooking'   => ['AdminBookingController', 'rejectRefundBooking'],
+  'admin.profile'               => ['AdminProfileController', 'profile'],
+  'admin.updateProfile'         => ['AdminProfileController', 'updateProfile'],
+  'admin.removePhoto'           => ['AdminProfileController', 'removePhoto'],
+  'admin.deactivateAccount'     => ['AdminProfileController', 'deactivateAccount'],
+  'admin.commissionConfig'      => ['AdminFinanceController', 'commissionConfig'],
+  'admin.saveCommissionConfig'  => ['AdminFinanceController', 'saveCommissionConfig'],
+  'admin.cleanTestData'         => ['AdminFinanceController', 'cleanTestData'],
+];
+
+// Controladores no divididos (misma clase para todas sus acciones).
+$fallbackControllers = [
   'auth'          => 'AuthController',
-  'service'       => 'ServiceController',
-  'venue'         => 'VenueController',
-  'booking'       => 'BookingController',
-  'admin'         => 'AdminController',
-  'client'        => 'ClientController',
-  'owner'         => 'OwnerController',
   'invoice'       => 'InvoiceController',
   'paymentmethod' => 'PaymentMethodController',
   'location'      => 'LocationController',
   'notification'  => 'NotificationController',
   'promotion'     => 'PromotionController',
   'api'           => 'ApiController',
+  'credit'        => 'CreditController',
 ];
 
 // =========================================================
@@ -107,19 +208,20 @@ $controllers = [
 // Solo se puede ejecutar una acción listada aquí.
 // =========================================================
 $allowedActions = [
-  'auth'          => ['showLogin', 'login', 'showRegister', 'registerClient', 'registerOwner', 'logout'],
+  'auth'          => ['showLogin', 'login', 'showRegister', 'registerClient', 'registerOwner', 'logout', 'cleanDemo', 'showSetup', 'createFirstAdmin'],
   'service'       => ['list', 'showForm', 'create', 'update', 'pending', 'approve', 'reject', 'detail'],
-  'venue'         => ['catalog', 'detail', 'showOwner', 'list', 'showForm', 'create', 'update', 'rate', 'rateService', 'updateComment'],
-  'booking'       => ['create', 'showForm', 'myBookings', 'detail', 'addLine', 'cancel', 'pay', 'venueBookings', 'uploadTicket', 'approveTicket', 'rejectTicket', 'requestRefund'],
-  'admin'         => ['dashboard', 'users', 'activateUser', 'deactivateUser', 'bookings', 'approvePayment', 'rejectPayment', 'cleanTestData', 'showAdminForm', 'createAdmin', 'showClientForm', 'createClient', 'showOwnerForm', 'createOwner', 'showEditForm', 'updateUser', 'bookingDetail', 'cancelBooking', 'rescheduleBooking', 'changeBookingVenue', 'refundBooking', 'rejectRefundBooking'],
-  'client'        => ['dashboard', 'profile', 'updateProfile', 'deactivateAccount'],
+  'venue'         => ['catalog', 'detail', 'showOwner', 'list', 'showForm', 'create', 'update', 'rate', 'rateService', 'updateComment', 'favorite'],
+  'booking'       => ['create', 'showForm', 'myBookings', 'detail', 'addLine', 'cancel', 'pay', 'venueBookings', 'pendingBookings', 'uploadTicket', 'approveTicket', 'rejectTicket', 'requestRefund'],
+  'admin'         => ['dashboard', 'users', 'activateUser', 'deactivateUser', 'bookings', 'userHistory', 'profile', 'updateProfile', 'removePhoto', 'deactivateAccount', 'approvePayment', 'rejectPayment', 'cleanTestData', 'showAdminForm', 'createAdmin', 'showClientForm', 'createClient', 'showOwnerForm', 'createOwner', 'showEditForm', 'updateUser', 'bookingDetail', 'cancelBooking', 'rescheduleBooking', 'changeBookingVenue', 'refundBooking', 'rejectRefundBooking', 'commissionConfig', 'saveCommissionConfig'],
+  'client'        => ['dashboard', 'recommendations', 'favorites', 'profile', 'updateProfile', 'updateLocation', 'removePhoto', 'deactivateAccount'],
   'owner'         => ['dashboard', 'profile', 'updateProfile', 'removePhoto', 'deactivateAccount', 'paymentData', 'savePayment', 'removePayment'],
   'invoice'       => ['showForm', 'generate', 'detail', 'list'],
   'paymentmethod' => ['list', 'showForm', 'create', 'edit', 'update', 'delete'],
-  'location'      => ['list', 'showForm', 'create'],
+  'location'      => ['list', 'showForm', 'create', 'edit', 'update'],
   'notification'  => ['list', 'markAsRead', 'markAllAsRead', 'open'],
-  'promotion'     => ['list', 'showForm', 'create', 'addService'],
-  'api'           => ['locations', 'venueComments', 'serviceComments'],
+  'promotion'     => ['list', 'showForm', 'create', 'edit', 'update', 'addService'],
+  'api'           => ['locations', 'geolocate', 'venueComments', 'serviceComments'],
+  'credit'        => ['ownerConfig', 'saveConfig', 'ownerList', 'clientList', 'request', 'pay', 'detail', 'adminList'],
 ];
 
 // Ruta por defecto (acceso a /Public/index.php sin parámetros)
@@ -139,11 +241,72 @@ function renderError(int $code, string $message): void
         . "box-shadow:0 10px 30px rgba(15,23,42,.12);\">"
         . "<div style=\"font-size:3rem;font-weight:800;color:#4f46e5;\">{$code}</div>"
         . "<p style=\"color:#64748b;margin-top:8px;\">{$message}</p>"
-        . "<a href=\"/Public/index.php\" style=\"display:inline-block;margin-top:18px;color:#4f46e5;"
+        . "<a href=\"" . htmlspecialchars(rtrim(dirname($_SERVER['SCRIPT_NAME'], 1), '/') . '/index.php') . "\" style=\"display:inline-block;margin-top:18px;color:#4f46e5;"
         . "text-decoration:none;font-weight:600;\">&larr; Ir al inicio</a>"
         . "</div></body></html>";
     exit;
 }
+
+// =========================================================
+// HANDLERS GLOBALES
+// -------------------------------------------------------
+// - set_error_handler: convierte warnings/notices en excepciones para
+//   que nunca se impriman crudos en la respuesta.
+// - set_exception_handler: categoriza el error (validación vs servidor),
+//   lo registra en el log y responde de forma amigable (HTML o JSON).
+// =========================================================
+set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
+    if (!(error_reporting() & $severity)) {
+        return false;
+    }
+
+    // Avisos menores (notices/deprecations) se registran pero NO se convierten
+    // en excepción: son benignos y no deben tumbar la petición.
+    if (in_array($severity, [E_NOTICE, E_USER_NOTICE, E_DEPRECATED, E_USER_DEPRECATED], true)) {
+        error_log(sprintf('[EventHall] Aviso: %s en %s:%d', $message, $file, $line));
+        return true;
+    }
+
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
+set_exception_handler(static function (\Throwable $e): void {
+    $isValidation = $e instanceof BusinessRuleException;
+    $status = $isValidation ? 422 : 500;
+
+    error_log(sprintf(
+        '[EventHall] %s: %s en %s:%d',
+        $isValidation ? 'Validación' : 'Error',
+        $e->getMessage(),
+        $e->getFile(),
+        $e->getLine()
+    ));
+
+    $isAjaxRequest = function_exists('is_ajax') && is_ajax();
+
+    if ($isValidation) {
+        $message = $e->getMessage();
+    } else {
+        $message = 'Ocurrió un error inesperado. Intenta de nuevo o contacta al administrador.';
+    }
+
+    if ($isAjaxRequest && function_exists('respond_json') && !headers_sent()) {
+        respond_json(['ok' => false, 'error' => $message], $status);
+    }
+
+    if (php_sapi_name() === 'cli') {
+        http_response_code($status);
+        exit($message);
+    }
+
+    // Si ya se envió salida no podemos cambiar el código HTTP ni las
+    // cabeceras; solo registramos y cortamos la respuesta.
+    if (headers_sent()) {
+        exit($message);
+    }
+
+    renderError($status, $message);
+});
 
 // =========================================================
 // LEER PARÁMETROS DE RUTA
@@ -152,7 +315,7 @@ $controllerKey = strtolower(trim($_GET['controller'] ?? $defaultController));
 $action        = ($_GET['action'] ?? $defaultAction);
 
 // Validar que el controlador exista en el mapa.
-if (!isset($controllers[$controllerKey])) {
+if (!isset($fallbackControllers[$controllerKey]) && !isset($allowedActions[$controllerKey])) {
     renderError(404, 'Controlador no encontrado.');
 }
 
@@ -161,7 +324,17 @@ if (!isset($allowedActions[$controllerKey]) || !in_array($action, $allowedAction
     renderError(404, 'Acción no encontrada.');
 }
 
-$controllerClass = $controllers[$controllerKey];
+$mapped = $fallbackControllers[$controllerKey] ?? null;
+
+if ($mapped !== null) {
+    $controllerClass = $mapped;
+    $method = $action;
+} elseif (isset($routeMap[$controllerKey . '.' . $action])) {
+    [$controllerClass, $method] = $routeMap[$controllerKey . '.' . $action];
+} else {
+    renderError(404, 'Acción no encontrada.');
+}
+
 $controllerFile  = __DIR__ . '/../App/Controller/' . $controllerClass . '.php';
 
 if (!file_exists($controllerFile)) {
@@ -176,4 +349,4 @@ if (!class_exists($controllerClass)) {
 
 // Crear la instancia y ejecutar la acción (el controller valida sesión y roles).
 $controller = new $controllerClass();
-$controller->$action();
+$controller->$method();

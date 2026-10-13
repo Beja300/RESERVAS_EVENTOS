@@ -1,3 +1,5 @@
+<?php $pageCss = 'client/profile';
+      $pageJs = ['client/profile', 'venue/location', 'geo']; ?>
 <?php require_once __DIR__ . '/../_header.php';
 
 $client = $client ?? ($_SESSION['user'] ?? null);
@@ -8,11 +10,37 @@ if ($client === null) {
 }
 
 $location = $location ?? null;
+$suspicious = $suspicious ?? ['password' => 0, 'phone' => 0, 'email' => 0];
+$curLat    = $location !== null ? ($location->getLatitudeLocation()  !== null ? (string) $location->getLatitudeLocation()  : '') : ($_POST['latitude']  ?? '');
+$curLng    = $location !== null ? ($location->getLongitudeLocation() !== null ? (string) $location->getLongitudeLocation() : '') : ($_POST['longitude'] ?? '');
 ?>
 
 <div class="page-head">
   <div>
     <h1>Mi perfil</h1>
+  </div>
+</div>
+
+<?php if (isset($_GET['updated'])): ?>
+  <div class="alert alert-success">Tus datos se actualizaron correctamente.</div>
+<?php elseif (isset($_GET['removed'])): ?>
+  <div class="alert alert-success">Foto de perfil eliminada.</div>
+<?php endif; ?>
+
+<div class="card form-card" style="max-width:620px;margin-bottom:16px;">
+  <h3 class="card-title">Foto de perfil</h3>
+  <div style="text-align:center;">
+    <img id="clientPhotoPreview" src="<?= $client->getImageClient() !== '' ? e(image_url($client->getImageClient())) : '' ?>"
+         alt="Foto de perfil"
+         style="display:<?= $client->getImageClient() !== '' ? 'inline-block' : 'none' ?>;width:128px;height:128px;border-radius:50%;object-fit:cover;vertical-align:middle;box-shadow:0 0 0 6px #fff,0 0 0 7px var(--neutral-200),0 6px 16px rgba(0,0,0,.18);margin-bottom:14px;">
+    <?php if ($client->getImageClient() !== ''): ?>
+      <form method="post" action="<?= e(base_url('client', 'removePhoto')) ?>" data-ajax-client-photo>
+        <?= csrf_field() ?>
+        <button class="btn btn-sm btn-warning" type="submit">Eliminar foto</button>
+      </form>
+    <?php else: ?>
+      <p class="muted" style="margin:0;">Aún no tienes foto de perfil.</p>
+    <?php endif; ?>
   </div>
 </div>
 
@@ -26,14 +54,9 @@ $location = $location ?? null;
     <?= csrf_field() ?>
 
     <div class="form-group" style="margin-bottom:16px;">
-      <label>Foto de perfil</label>
-      <div style="text-align:center;margin-bottom:12px;">
-        <img id="clientPhotoPreview"
-             src="<?= $client->getImageClient() !== '' ? e(image_url($client->getImageClient())) : '' ?>"
-             alt="Foto de perfil"
-             style="display:<?= $client->getImageClient() !== '' ? 'inline-block' : 'none' ?>;width:128px;height:128px;border-radius:50%;object-fit:cover;vertical-align:middle;box-shadow:0 0 0 6px #fff,0 0 0 7px var(--neutral-200),0 6px 16px rgba(0,0,0,.18);">
-      </div>
-      <input class="form-control" type="file" id="image" name="image" accept="image/*" data-photo-input="clientPhotoPreview">
+      <label>Cambiar foto de perfil</label>
+      <input class="form-control" type="file" id="image" name="image" accept="image/*"
+             data-photo-input="clientPhotoPreview">
       <small class="muted">Sube una foto (jpg, png, webp, gif; máx. 2 MB).</small>
     </div>
 
@@ -45,23 +68,50 @@ $location = $location ?? null;
     </div>
 
     <div class="form-group">
-      <label for="name">Nombre</label>
+      <label for="name">Nombre <span class="required-mark">*</span></label>
       <input class="form-control" type="text" id="name" name="name" required
-             value="<?= e($client->getName()) ?>">
+             value="<?= e($_POST['name'] ?? $client->getName()) ?>">
     </div>
 
     <div class="form-group">
-      <label for="email">Correo electrónico</label>
+      <label for="email">Correo electrónico <span class="required-mark">*</span></label>
       <input class="form-control" type="email" id="email" name="email" required
              data-validate="email"
-             value="<?= e($client->getEmail()) ?>">
+             value="<?= e($_POST['email'] ?? $client->getEmail()) ?>">
     </div>
 
     <div class="form-group">
       <label for="phoneNumber">Teléfono</label>
-      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
+      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone"
              data-validate="phone"
-             maxlength="8" value="<?= e($client->getPhoneNumber() ?? '') ?>">
+             maxlength="8" value="<?= e($_POST['phoneNumber'] ?? $client->getPhoneNumber() ?? '') ?>">
+      <div class="form-hint">Ej: 8888-7777</div>
+    </div>
+
+    <?php $showPasswordFields = !empty($_POST['changePassword']); ?>
+    <h3 class="card-title" style="margin-top:22px;">Cambiar contraseña</h3>
+    <label class="checkbox" style="margin-bottom:12px;">
+      <input type="checkbox" id="changePasswordCheck" name="changePassword" value="1" <?= $showPasswordFields ? 'checked' : '' ?>>
+      Quiero cambiar mi contraseña
+    </label>
+
+    <div id="passwordFields" <?= $showPasswordFields ? '' : 'style="display:none;"' ?>>
+      <div class="form-group">
+        <label for="currentPassword">Contraseña actual</label>
+        <div class="password-wrapper">
+          <input class="form-control" type="password" id="currentPassword" name="currentPassword" autocomplete="current-password">
+          <button class="password-toggle" type="button" id="currentPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="newPassword">Contraseña nueva</label>
+        <div class="password-wrapper">
+          <input class="form-control" type="password" id="newPassword" name="newPassword" minlength="8" autocomplete="new-password">
+          <button class="password-toggle" type="button" id="newPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+        </div>
+        <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
+      </div>
     </div>
 
     <hr style="border:none;border-top:1px solid var(--neutral-200);margin:18px 0;">
@@ -102,8 +152,46 @@ $location = $location ?? null;
              value="<?= e($location !== null ? $location->getDescriptionLocation() : ($_POST['description'] ?? '')) ?>">
     </div>
 
+    <div class="form-group">
+      <label for="geo-status">Ubicación (latitud / longitud)</label>
+      <div id="geo-status" data-geo-auto="<?= ($curLat === '') || ($curLng === '') ? '1' : '0' ?>">
+        <span id="geo-display" class="<?= $curLat !== '' && $curLng !== '' ? '' : 'muted' ?>">
+          <?php if ($curLat !== '' && $curLng !== ''): ?>
+            Lat <?= e($curLat) ?> · Lon <?= e($curLng) ?>
+          <?php else: ?>
+            Se detectará automáticamente
+          <?php endif; ?>
+        </span>
+      </div>
+      <input type="hidden" name="latitude" id="latitude" value="<?= e($curLat ?? '') ?>">
+      <input type="hidden" name="longitude" id="longitude" value="<?= e($curLng ?? '') ?>">
+      <button type="button" id="geo-detect-btn" class="btn btn-outline btn-sm">Detectar ubicación</button>
+      <p class="form-hint">La latitud/longitud se obtiene automáticamente de tu ubicación o por IP; no es editable.</p>
+    </div>
+
     <button class="btn btn-primary" type="submit">Guardar cambios</button>
   </form>
+</div>
+
+<div class="card form-card" style="max-width:620px;margin-top:18px;">
+  <h3 class="card-title">Actividad sospechosa</h3>
+  <?php $hasSuspicious = ($suspicious['password'] ?? 0) > 0 || ($suspicious['phone'] ?? 0) > 0 || ($suspicious['email'] ?? 0) > 0; ?>
+  <?php if (!$hasSuspicious): ?>
+    <p class="muted" style="margin:0;">No se ha registrado actividad sospechosa en tu cuenta.</p>
+  <?php else: ?>
+    <ul class="suspicious-list">
+      <?php if (($suspicious['password'] ?? 0) > 0): ?>
+        <li class="suspicious-item">Cambios de contraseña excesivos detectados: <span class="badge danger"><?= (int) $suspicious['password'] ?></span> en los últimos 30 días.</li>
+      <?php endif; ?>
+      <?php if (($suspicious['phone'] ?? 0) > 0): ?>
+        <li class="suspicious-item">Cambios de teléfono excesivos detectados: <span class="badge danger"><?= (int) $suspicious['phone'] ?></span> en los últimos 6 meses.</li>
+      <?php endif; ?>
+      <?php if (($suspicious['email'] ?? 0) > 0): ?>
+        <li class="suspicious-item">Cambios de correo excesivos detectados: <span class="badge danger"><?= (int) $suspicious['email'] ?></span> en los últimos 30 días.</li>
+      <?php endif; ?>
+    </ul>
+    <p class="muted" style="margin:12px 0 0;">Se ha notificado a los administradores sobre estos cambios.</p>
+  <?php endif; ?>
 </div>
 
 <div class="card" style="max-width:620px;margin-top:18px;border-color:var(--danger-light);">
@@ -119,67 +207,4 @@ $location = $location ?? null;
   </form>
 </div>
 
-<script>
-  (function () {
-    function base() { var p=(window.location.pathname||'').split('/'); p.pop(); return p.join('/'); }
-
-    // Vista previa de la foto antes de subirla.
-    var photoInput = document.querySelector('[data-photo-input]');
-    if (photoInput) {
-      var prevImg = document.getElementById(photoInput.getAttribute('data-photo-input'));
-      photoInput.addEventListener('change', function () {
-        if (photoInput.files && photoInput.files[0] && prevImg) {
-          prevImg.src = URL.createObjectURL(photoInput.files[0]);
-          prevImg.style.display = 'inline-block';
-        }
-      });
-    }
-
-    // Actualizar perfil (AJAX).
-    var pForm = document.querySelector('form[data-ajax-client-profile]');
-    if (pForm) {
-      pForm.addEventListener('submit', function (e) {
-        var fields = pForm.querySelectorAll('[data-validate]');
-        for (var i = 0; i < fields.length; i++) {
-          if (fields[i].classList.contains('is-invalid')) { return; }
-        }
-        e.preventDefault();
-        fetch(pForm.getAttribute('action'), {
-          method: 'POST',
-          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-          body: new FormData(pForm)
-        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
-          .then(function (r) {
-            window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
-            if (r.ok) setTimeout(function () { window.location.reload(); }, 700);
-          });
-      });
-    }
-
-    // Desactivar cuenta (AJAX), sin condiciones (el cliente siempre puede).
-    var deact = document.querySelector('form[data-ajax-client-deactivate]');
-    if (deact) {
-      deact.addEventListener('submit', function (e) {
-        e.preventDefault();
-        window.App && App.confirmModal(
-          '¿Seguro que deseas desactivar tu cuenta? No podrás acceder hasta que un administrador la reactive.',
-          'Desactivar cuenta'
-        ).then(function (ok) {
-          if (!ok) return;
-          fetch(deact.getAttribute('action'), {
-            method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-            body: new FormData(deact)
-          }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
-            .then(function (r) {
-              window.App && App.toast(r.data.message || 'Cuenta desactivada.', r.ok ? 'success' : 'error');
-              if (r.ok) setTimeout(function () { window.location.href = base() + '/index.php?controller=auth&action=showLogin'; }, 800);
-            });
-        });
-      });
-    }
-  })();
-</script>
-
-<script src="<?= e(js_url('location')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

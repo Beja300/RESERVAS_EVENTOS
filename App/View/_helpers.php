@@ -9,13 +9,16 @@
 
 if (!function_exists('css_url')) {
     /**
-     * Devuelve la URL absoluta hacia el CSS de la aplicación,
-     * calculada a partir de la ubicación del front controller (Public/).
+     * Devuelve la URL absoluta hacia un CSS de la aplicación.
+     *
+     * Sin argumentos devuelve el núcleo común (app.css). Con un nombre,
+     * devuelve la hoja específica de una vista (Public/css/{name}.css).
      */
-    function css_url(): string
+    function css_url(?string $name = null): string
     {
-        $base = dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php');
-        return rtrim($base, '/') . '/css/app.css';
+        $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'), '/');
+        $file = ($name === null || $name === '') ? 'app' : $name;
+        return $base . '/css/' . $file . '.css';
     }
 }
 
@@ -155,6 +158,54 @@ if (!function_exists('respond_json')) {
     }
 }
 
+if (!function_exists('format_venue_location')) {
+    /**
+     * Devuelve la ubicación completa como "Provincia · Cantón · Distrito",
+     * omitiendo las partes que falten (nunca deja separadores colgantes).
+     *
+     * Si el cantón o el distrito vienen vacíos en BD pero existen en el
+     * dataset oficial de Costa Rica, se completan en pantalla con el primer
+     * valor real de esa provincia/cantón para que nunca se vea incompleto.
+     */
+    function format_venue_location(?Location $location): string
+    {
+        if ($location === null) {
+            return '';
+        }
+
+        $province = trim((string) $location->getProvinceLocation());
+        $canton = trim((string) $location->getCantonLocation());
+        $district = trim((string) $location->getDistrictLocation());
+
+        if ($province === '') {
+            return '';
+        }
+
+        $locations = require __DIR__ . '/../Data/locations.php';
+
+        if ($canton === '') {
+            $firstCanton = array_key_first($locations[$province] ?? []);
+            if ($firstCanton !== null) {
+                $canton = (string) $firstCanton;
+            }
+        }
+
+        if ($district === '') {
+            $districts = $locations[$province][$canton] ?? [];
+            if (!empty($districts)) {
+                $district = (string) $districts[0];
+            }
+        }
+
+        $parts = array_values(array_filter(
+            [$province, $canton, $district],
+            static fn(string $part): bool => $part !== ''
+        ));
+
+        return $parts === [] ? '' : e(implode(' · ', $parts));
+    }
+}
+
 if (!function_exists('render_partial')) {
     /**
      * Renderiza una vista parcial y devuelve su HTML (sin imprimir).
@@ -169,5 +220,229 @@ if (!function_exists('render_partial')) {
         ob_start();
         include $path;
         return (string) ob_get_clean();
+    }
+}
+
+if (!function_exists('input')) {
+    /**
+     * Lee y recorta un campo de formulario (POST).
+     */
+    function input(string $key, string $default = ''): string
+    {
+        return trim((string) ($_POST[$key] ?? $default));
+    }
+}
+
+if (!function_exists('require_login')) {
+    /**
+     * Exige sesión iniciada (cualquier rol). Sin sesión:
+     *  - AJAX -> responde 401 JSON.
+     *  - Normal -> redirige al login.
+     */
+    function require_login(): void
+    {
+        if (empty($_SESSION['type'])) {
+            if (is_ajax()) {
+                respond_json(['ok' => false, 'error' => 'Debes iniciar sesión para continuar.'], 401);
+            }
+            header('Location: ' . base_url('auth', 'showLogin'));
+            exit;
+        }
+    }
+}
+
+if (!function_exists('require_role')) {
+    /**
+     * Exige que el usuario autenticado sea del rol dado. Sin sesión o con
+     * rol distinto:
+     *  - AJAX -> responde 401 (sin sesión) o 403 (rol incorrecto) JSON.
+     *  - Normal -> redirige al login.
+     */
+    function require_role(string $expectedType): void
+    {
+        if (empty($_SESSION['type'])) {
+            require_login();
+            return;
+        }
+        if (($_SESSION['type'] ?? '') !== $expectedType) {
+            if (is_ajax()) {
+                respond_json(['ok' => false, 'error' => 'No tienes permisos para realizar esta acción.'], 403);
+            }
+            header('Location: ' . base_url('auth', 'showLogin'));
+            exit;
+        }
+    }
+}
+
+if (!function_exists('require_post')) {
+    /**
+     * Exige método POST para operaciones que mutan estado. Evita que una
+     * acción sensible se dispare por GET (enlace/imagen) saltándose el CSRF.
+     */
+    function require_post(): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            if (is_ajax()) {
+                respond_json(['ok' => false, 'error' => 'Método no permitido.'], 405);
+            }
+            http_response_code(405);
+            exit('Método no permitido.');
+        }
+    }
+}
+
+if (!function_exists('redirect_to')) {
+    /**
+     * Redirige al front controller (controller/acción) y termina el script.
+     */
+    function redirect_to(string $controller, string $action, array $params = []): void
+    {
+        header('Location: ' . base_url($controller, $action, $params));
+        exit;
+    }
+}
+
+if (!function_exists('respond_or_redirect')) {
+    /**
+     * Respuesta común AJAX + redirección fallback.
+     * Si la petición es AJAX responde JSON (con $status); si no, redirige.
+     */
+    function respond_or_redirect(array $payload, string $controller, string $action, array $params = [], int $status = 200): void
+    {
+        if (is_ajax()) {
+            respond_json($payload, $status);
+        }
+        redirect_to($controller, $action, $params);
+    }
+}
+
+if (!function_exists('parse_year_month')) {
+    /**
+     * Valida/normaliza un año-mes "YYYY-MM". Devuelve el valor vigente,
+     * el anterior y el siguiente, y una etiqueta legible (Ej: "Agosto 2026").
+     */
+    function parse_year_month(string $raw): array
+    {
+        $current = (preg_match('~^\d{4}-\d{2}$~', $raw)) ? $raw : date('Y-m');
+
+        $months = [
+            1 => 'Enero', 2 => 'Febrero', 3 => 'Marzo', 4 => 'Abril',
+            5 => 'Mayo', 6 => 'Junio', 7 => 'Julio', 8 => 'Agosto',
+            9 => 'Septiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre',
+        ];
+
+        $label = $months[(int) substr($current, 5, 2)] . ' ' . substr($current, 0, 4);
+
+        return [
+            'value' => $current,
+            'prev'  => date('Y-m', strtotime($current . ' first day of this month -1 month')),
+            'next'  => date('Y-m', strtotime($current . ' first day of this month +1 month')),
+            'label' => $label,
+        ];
+    }
+}
+
+if (!function_exists('venue_comments_html')) {
+    /**
+     * HTML de los comentarios de un local (para refresco AJAX sin recargar).
+     */
+    function venue_comments_html(int $idVenue): string
+    {
+        require_once __DIR__ . '/../Service/VenueRatingService.php';
+        require_once __DIR__ . '/../../Configuration/DataBase.php';
+
+        $service = new VenueRatingService(DataBase::getConnection());
+
+        return render_partial(
+            __DIR__ . '/Venue/_venueComments.php',
+            ['venueComments' => $service->getPublicComments($idVenue)]
+        );
+    }
+}
+
+if (!function_exists('detect_gender')) {
+    /**
+     * Intenta inferir el género ('f' o 'm') a partir del primer nombre.
+     *
+     * No existe un campo de género en la base de datos, por lo que se usa
+     * una heurística: se revisan listas de excepciones conocidas y, si el
+     * nombre no está en ellas, se asume femenino cuando termina en "a" y
+     * masculino en cualquier otro caso. Devuelve null si no hay nombre.
+     */
+    function detect_gender(?string $name): ?string
+    {
+        $name = trim((string) $name);
+
+        if ($name === '') {
+            return null;
+        }
+
+        $firstName = strtolower(preg_replace('/\s+/', ' ', $name));
+        $firstName = explode(' ', $firstName)[0];
+        $firstName = str_replace(
+            ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ'],
+            ['a', 'e', 'i', 'o', 'u', 'u', 'n'],
+            $firstName
+        );
+
+        $feminineNames = [
+            'raquel', 'beatriz', 'pilar', 'carmen', 'isabel', 'ines', 'mercedes',
+            'soledad', 'ruth', 'esther', 'elizabeth', 'consuelo', 'rosario',
+            'dolores', 'luz', 'sol', 'yolanda', 'miriam', 'noemi', 'abigail',
+        ];
+
+        $masculineNames = [
+            'jose', 'joshua', 'noa', 'elias', 'isaias', 'tomas', 'matias',
+            'lucas', 'andres', 'nicolas', 'diego', 'borja',
+        ];
+
+        if (in_array($firstName, $feminineNames, true)) {
+            return 'f';
+        }
+
+        if (in_array($firstName, $masculineNames, true)) {
+            return 'm';
+        }
+
+        return substr($firstName, -1) === 'a' ? 'f' : 'm';
+    }
+}
+
+if (!function_exists('welcome_greeting')) {
+    /**
+     * Devuelve el saludo de bienvenida usando solo el primer nombre del
+     * usuario: "Bienvenida <nombre>", "Bienvenido <nombre>" o el saludo
+     * genérico cuando no hay nombre disponible.
+     */
+    function welcome_greeting(?string $name): string
+    {
+        $name = trim((string) $name);
+
+        if ($name === '') {
+            return 'Bienvenid@ a Event Hall';
+        }
+
+        $firstName = explode(' ', preg_replace('/\s+/', ' ', $name))[0];
+        $treatment = detect_gender($firstName) === 'f' ? 'Bienvenida' : 'Bienvenido';
+
+        return $treatment . ' ' . $firstName;
+    }
+}
+
+if (!function_exists('service_comments_html')) {
+    /**
+     * HTML de los comentarios de un servicio (para refresco AJAX sin recargar).
+     */
+    function service_comments_html(int $idService): string
+    {
+        require_once __DIR__ . '/../Service/ServiceRatingService.php';
+        require_once __DIR__ . '/../../Configuration/DataBase.php';
+
+        $service = new ServiceRatingService(DataBase::getConnection());
+
+        return render_partial(
+            __DIR__ . '/Venue/_serviceComments.php',
+            ['comments' => $service->getPublicComments($idService)]
+        );
     }
 }

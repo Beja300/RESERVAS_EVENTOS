@@ -28,7 +28,10 @@ foreach ($availableServices as $s) {
   <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(320px,1fr));">
     <?php foreach ($promotions as $promo): ?>
       <div class="card">
-        <h3 style="margin-bottom:8px;"><?= e($promo->getLabel()) ?></h3>
+        <h3 style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+          <span><?= e($promo->getLabel()) ?></span>
+          <a href="<?= e(base_url('promotion', 'edit', ['id' => $promo->getIdPromotion()])) ?>" class="btn btn-outline btn-sm">Editar</a>
+        </h3>
         <p class="muted"><?= e($promo->getDescription() !== '' ? $promo->getDescription() : 'Sin descripción') ?></p>
         <div class="detail-grid" style="margin:12px 0;">
           <div class="detail-item"><div class="k">Desde</div><div class="v"><?= $promo->getStartDate() ? e(date('d/m/Y', strtotime($promo->getStartDate()))) : '—' ?></div></div>
@@ -53,6 +56,7 @@ foreach ($availableServices as $s) {
           <?= csrf_field() ?>
           <input type="hidden" name="promotionId" value="<?= (int) $promo->getIdPromotion() ?>">
           <input type="hidden" name="venueId" value="<?= (int) $idVenue ?>">
+          <label>Servicio <span class="required-mark">*</span></label>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <select class="form-control" name="serviceId" required style="flex:1;min-width:180px;">
               <option value="">— Agregar servicio —</option>

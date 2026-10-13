@@ -1,3 +1,4 @@
+<?php $pageJs = ['venue/list']; ?>
 <?php require_once __DIR__ . '/../_header.php'; ?>
 
 <div class="page-head">
@@ -8,6 +9,20 @@
   <a class="btn btn-primary" href="<?= e(base_url('venue', 'showForm')) ?>">+ Nuevo local</a>
 </div>
 
+<div class="card" style="margin-bottom:18px;padding:16px;">
+  <div class="actions" style="flex-wrap:wrap">
+    <input class="form-control" type="search" id="venue-search"
+           placeholder="Buscar por nombre del local..."
+           style="max-width:320px;flex:1 1 220px;">
+    <select class="form-control" id="venue-state" style="max-width:160px;">
+      <option value="">Todos los estados</option>
+      <option value="activo">Activo</option>
+      <option value="inactivo">Inactivo</option>
+    </select>
+    <button class="btn btn-ghost" type="button" id="venue-clear">Limpiar filtros</button>
+  </div>
+</div>
+
 <?php if (empty($venues)): ?>
   <div class="card empty">
     <span class="emoji">&#127968;</span>
@@ -15,7 +30,7 @@
   </div>
 <?php else: ?>
   <div class="table-wrap">
-    <table class="table">
+    <table class="table venue-table">
       <thead>
         <tr>
           <th>Local</th>

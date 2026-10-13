@@ -1,8 +1,24 @@
+<?php
+$pageCss = 'venue/form';
+$pageJs = ['venue/form', 'venue/location', 'venue/location-map'];
+?>
 <?php require_once __DIR__ . '/../_header.php';
 
 $isEdit = $venue !== null;
 $action = $isEdit ? base_url('venue', 'update') : base_url('venue', 'create');
+
+$curProvince = $isEdit && $location !== null ? $location->getProvinceLocation() : ($_POST['province'] ?? '');
+$curCanton   = $isEdit && $location !== null ? $location->getCantonLocation()   : ($_POST['canton'] ?? '');
+$curDistrict = $isEdit && $location !== null ? $location->getDistrictLocation() : ($_POST['district'] ?? '');
+$curTown     = $isEdit && $location !== null ? $location->getTownLocation()     : ($_POST['town'] ?? '');
+$curDesc     = $isEdit && $location !== null ? $location->getDescriptionLocation() : ($_POST['description'] ?? '');
+$curLat      = $isEdit && $location !== null ? ($location->getLatitudeLocation() !== null ? (string) $location->getLatitudeLocation() : '') : ($_POST['latitude'] ?? '');
+$curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation() !== null ? (string) $location->getLongitudeLocation() : '') : ($_POST['longitude'] ?? '');
 ?>
+
+<?php $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'), '/'); ?>
+<link rel="stylesheet" href="<?= e($basePath . '/vendor/leaflet/leaflet.css') ?>">
+<script src="<?= e($basePath . '/vendor/leaflet/leaflet.js') ?>"></script>
 
 <div class="page-head">
   <div>
@@ -25,108 +41,128 @@ $action = $isEdit ? base_url('venue', 'update') : base_url('venue', 'create');
     <div class="form-group">
       <label for="name">Nombre del local *</label>
       <input class="form-control" type="text" id="name" name="name" required
+        data-validate="required"
         value="<?= e($isEdit ? $venue->getNameVenue() : ($_POST['name'] ?? '')) ?>">
     </div>
 
     <div class="form-group">
-      <label for="type">Tipo de local</label>
-      <input class="form-control" type="text" id="type" name="type"
+      <label for="type">Tipo de local *</label>
+      <input class="form-control" type="text" id="type" name="type" required
+        data-validate="required"
         placeholder="Ej: Salón de eventos, Restaurante, Jardín..."
         value="<?= e($isEdit && $venue->getTypeVenue() !== '' ? $venue->getTypeVenue() : ($_POST['type'] ?? '')) ?>">
     </div>
 
     <div class="form-group">
-      <label for="capacity">Capacidad</label>
-      <input class="form-control" type="number" id="capacity" name="capacity" min="1"
+      <label for="capacity">Capacidad *</label>
+      <input class="form-control" type="number" id="capacity" name="capacity" min="1" required
+        data-validate="required positive"
         value="<?= e($isEdit ? (string) $venue->getCapacityVenue() : ($_POST['capacity'] ?? '')) ?>">
     </div>
 
     <div class="form-group">
       <label for="price">Precio de renta por evento *</label>
       <input class="form-control" type="number" id="price" name="price" min="0.01" step="0.01" required
+        data-validate="required positive"
         value="<?= e($isEdit ? number_format($venue->getPriceVenue(), 2, '.', '') : ($_POST['price'] ?? '')) ?>">
       <p class="form-hint">Este precio se incluye siempre en la factura de cada reserva de este local.</p>
     </div>
 
     <div class="form-group">
-      <label for="image">Imagen (URL)</label>
-      <input class="form-control" type="text" id="image" name="image"
-        placeholder="https://..."
-        value="<?= e($isEdit && $venue->getImageVenue() !== '' ? $venue->getImageVenue() : ($_POST['image'] ?? '')) ?>">
+      <label for="image">Fotos del local <?= $isEdit ? '' : '*' ?> <span class="muted">(hasta 6)</span></label>
+      <input class="form-control" type="file" id="image" name="image[]" accept="image/*" multiple
+        <?= $isEdit ? '' : 'required' ?>>
+      <div id="venueImages" class="venue-gallery" data-max="6">
+        <?php if ($isEdit): ?>
+          <?php $coverImg = $venue->getImageVenue(); ?>
+          <?php if ($coverImg !== ''): ?>
+            <div class="venue-thumb is-cover">
+              <img src="<?= e(image_url($coverImg)) ?>" alt="Portada actual">
+              <button type="button" class="thumb-remove" aria-label="Quitar foto">&times;</button>
+              <input type="hidden" name="existingImages[]" value="<?= e($coverImg) ?>">
+              <span class="thumb-label">Portada</span>
+            </div>
+          <?php endif; ?>
+          <?php foreach ($venueImages ?? [] as $vi): ?>
+            <div class="venue-thumb">
+              <img src="<?= e(image_url($vi->getImagePath())) ?>" alt="Foto del local">
+              <button type="button" class="thumb-remove" aria-label="Quitar foto">&times;</button>
+              <input type="hidden" name="existingImages[]" value="<?= e($vi->getImagePath()) ?>">
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
+      </div>
+      <p class="form-hint">Puedes subir hasta 6 fotos (jpg, png, webp o gif; máx. 2 MB cada una). La primera de la lista será la portada.</p>
+      <p id="venueImageCount" class="venue-count muted"></p>
     </div>
 
-    <?php if (!$isEdit): ?>
-      <hr style="border:none;border-top:1px solid var(--neutral-200);margin:18px 0;">
-      <p style="font-weight:700;color:var(--neutral-800);margin-bottom:14px;">Ubicación</p>
-
-      <div class="grid grid-3">
-        <div class="form-group">
-          <label for="province">Provincia *</label>
-          <select class="form-control" id="province" name="province" data-level="province" required
-                  data-value="<?= e($_POST['province'] ?? '') ?>">
-            <option value="">— Selecciona —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="canton">Cantón *</label>
-          <select class="form-control" id="canton" name="canton" data-level="canton" disabled required
-                  data-value="<?= e($_POST['canton'] ?? '') ?>">
-            <option value="">— Selecciona —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="district">Distrito *</label>
-          <select class="form-control" id="district" name="district" data-level="district" disabled required
-                  data-value="<?= e($_POST['district'] ?? '') ?>">
-            <option value="">— Selecciona —</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="town">Pueblo</label>
-        <input class="form-control" type="text" id="town" name="town"
-          value="<?= e($_POST['town'] ?? '') ?>">
-      </div>
-      <div class="form-group">
-        <label for="description">Descripción</label>
-        <input class="form-control" type="text" id="description" name="description"
-          value="<?= e($_POST['description'] ?? '') ?>">
-      </div>
-    <?php else: ?>
-      <div class="checkbox-row">
+    <?php if ($isEdit): ?>
+      <div class="checkbox-row" style="margin:18px 0;">
         <input type="checkbox" id="active" name="active" <?= $venue->getIsActive() ? 'checked' : '' ?>>
         <label for="active">Local activo (visible en el catálogo)</label>
       </div>
     <?php endif; ?>
 
+    <hr style="border:none;border-top:1px solid var(--neutral-200);margin:18px 0;">
+    <p style="font-weight:700;color:var(--neutral-800);margin-bottom:14px;">Ubicación</p>
+
+    <div class="grid grid-3">
+      <div class="form-group">
+        <label for="province">Provincia *</label>
+        <select class="form-control" id="province" name="province" data-level="province" required
+                data-validate="required" data-value="<?= e($curProvince) ?>">
+          <option value="">— Selecciona —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="canton">Cantón *</label>
+        <select class="form-control" id="canton" name="canton" data-level="canton" disabled required
+                data-validate="required" data-value="<?= e($curCanton) ?>">
+          <option value="">— Selecciona —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="district">Distrito *</label>
+        <select class="form-control" id="district" name="district" data-level="district" disabled required
+                data-validate="required" data-value="<?= e($curDistrict) ?>">
+          <option value="">— Selecciona —</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="town">Pueblo</label>
+      <input class="form-control" type="text" id="town" name="town"
+        value="<?= e($curTown ?? '') ?>">
+    </div>
+    <div class="form-group">
+      <label for="description">Descripción</label>
+      <input class="form-control" type="text" id="description" name="description"
+        value="<?= e($curDesc ?? '') ?>">
+    </div>
+
+    <div class="form-group">
+      <label for="venue-map">Ubicación exacta en el mapa *</label>
+      <div class="geo-search-box">
+        <input class="form-control" type="search" id="venue-map-search"
+          placeholder="Buscar dirección o cantón (ej. San José)...">
+        <ul class="geo-search-results" id="venue-map-results"></ul>
+      </div>
+      <div id="venue-map"></div>
+      <span id="geo-display" class="geo-coords <?= $curLat !== '' && $curLng !== '' ? '' : 'muted' ?>">
+        <?php if ($curLat !== '' && $curLng !== ''): ?>
+          Lat <?= e($curLat) ?> · Lon <?= e($curLng) ?>
+        <?php else: ?>
+          Marca el punto en el mapa
+        <?php endif; ?>
+      </span>
+      <input type="hidden" name="latitude" id="latitude" value="<?= e($curLat ?? '') ?>">
+      <input type="hidden" name="longitude" id="longitude" value="<?= e($curLng ?? '') ?>">
+      <p class="form-hint">Haz clic en el mapa o arrastra el marcador para marcar la ubicación del local (obligatorio).</p>
+    </div>
+
     <button class="btn btn-primary" type="submit"><?= $isEdit ? 'Guardar cambios' : 'Crear local' ?></button>
   </form>
 </div>
-
-<?php if (!$isEdit): ?>
-  <script src="<?= e(js_url('location')) ?>"></script>
-<?php endif; ?>
-
-<script>
-  (function () {
-    function base() { var p=(window.location.pathname||'').split('/'); p.pop(); return p.join('/'); }
-    var form = document.querySelector('form[data-ajax-venue-form]');
-    if (form) {
-      form.addEventListener('submit', function (e) {
-        e.preventDefault();
-        fetch(form.getAttribute('action'), {
-          method: 'POST',
-          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
-          body: new FormData(form)
-        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, data: j }; }); })
-          .then(function (r) {
-            window.App && App.toast(r.data.message, r.ok ? 'success' : 'error');
-            if (r.ok) setTimeout(function () { window.location.href = base() + '/index.php?controller=venue&action=list'; }, 700);
-          });
-      });
-    }
-  })();
-</script>
 
 <?php require_once __DIR__ . '/../_footer.php'; ?>

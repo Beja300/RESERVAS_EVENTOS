@@ -23,7 +23,6 @@ class NotificationController
   // =========================================================
   public function list(): void
   {
-    session_start();
     $this->requireLogin();
 
     $role = $_SESSION['user'];
@@ -39,7 +38,7 @@ class NotificationController
   // =========================================================
   public function markAsRead(): void
   {
-    session_start();
+    require_post();
     $this->requireLogin();
 
     $role = $_SESSION['user'];
@@ -49,13 +48,13 @@ class NotificationController
 
       $this->notificationService->markAsRead($idNotification, $role->getIdRol());
 
-      header('Location: ../../Public/index.php?controller=notification&action=list');
+      header('Location: ' . base_url('notification', 'list'));
       exit;
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
 
-      header('Location: ../../Public/index.php?controller=notification&action=list');
+      header('Location: ' . base_url('notification', 'list'));
       exit;
     }
   }
@@ -65,15 +64,15 @@ class NotificationController
   // =========================================================
   public function open(): void
   {
-    session_start();
     $this->requireLogin();
 
     $role = $_SESSION['user'];
     $idNotification = (int) ($_GET['id'] ?? 0);
-    $listUrl = '../../Public/index.php?controller=notification&action=list';
+    $listUrl = base_url('notification', 'list');
 
     try {
       $link = $this->notificationService->open($idNotification, $role->getIdRol());
+      $link = $this->normalizeLink($link);
 
       header('Location: ' . ($link !== null && $link !== '' ? $link : $listUrl));
       exit;
@@ -83,19 +82,44 @@ class NotificationController
     }
   }
 
+  // Normaliza enlaces legacy (rutas directas previas al router) al formato
+  // actual index.php?controller=..&action=..; si no es reconocible devuelve
+  // null para que el flujo caiga a la lista de notificaciones.
+  private function normalizeLink(?string $link): ?string
+  {
+    if ($link === null || $link === '') {
+      return null;
+    }
+
+    if (preg_match('#^booking/detail\.php\?id=(\d+)$#', $link, $matches)) {
+      return 'index.php?controller=booking&action=detail&id=' . $matches[1];
+    }
+
+    if (trim($link) === 'client/profile.php') {
+      return 'index.php?controller=client&action=profile';
+    }
+
+    // Formatos ya compatibles con el router (index.php?controller=... o URL absoluta).
+    if (str_starts_with($link, 'index.php?') || str_starts_with($link, 'http://') || str_starts_with($link, 'https://')) {
+      return $link;
+    }
+
+    return null;
+  }
+
   // =========================================================
   // MARCAR TODAS COMO LEÍDAS
   // =========================================================
   public function markAllAsRead(): void
   {
-    session_start();
+    require_post();
     $this->requireLogin();
 
     $role = $_SESSION['user'];
 
     $this->notificationService->markAllAsRead($role->getIdRol());
 
-    header('Location: ../../Public/index.php?controller=notification&action=list');
+    header('Location: ' . base_url('notification', 'list'));
     exit;
   }
 
@@ -105,7 +129,7 @@ class NotificationController
   private function requireLogin(): void
   {
     if (($_SESSION['type'] ?? null) === null) {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+      header('Location: ' . base_url('auth', 'showLogin'));
       exit;
     }
   }

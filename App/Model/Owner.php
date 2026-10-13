@@ -11,6 +11,7 @@ require_once __DIR__ . '/Role.php';
 class Owner extends Role
 {
   private int $idOwner;
+  private string $firstNameOwner;
   private string $lastNameOwner;
   private string $aliasOwner;
   private string $identificationNumberOwner;
@@ -25,16 +26,18 @@ class Owner extends Role
     string $password,
     bool $isActive,
     int $idOwner,
-    string $lastName,
-    string $alias,
-    string $identificationNumber,
-    bool $isOwnerActive,
-    int $idRol,
-    string $imageOwner,
+    string $firstName = '',
+    string $lastName = '',
+    string $alias = '',
+    string $identificationNumber = '',
+    bool $isOwnerActive = true,
+    int $idRol = 1,
+    string $imageOwner = '',
     ?string $phoneNumber = null
   ) {
     parent::__construct($id, $name, $email, $password, $phoneNumber, $isActive);
     $this->idOwner = $idOwner;
+    $this->firstNameOwner = $firstName;
     $this->lastNameOwner = $lastName;
     $this->aliasOwner = $alias;
     $this->identificationNumberOwner = $identificationNumber;
@@ -51,7 +54,7 @@ class Owner extends Role
 
   public function getFirstNameOwner(): string
   {
-    return $this->getName();
+    return $this->firstNameOwner;
   }
 
   public function getLastNameOwner(): string
@@ -88,6 +91,11 @@ class Owner extends Role
   public function setIdOwner(int $idOwner): void
   {
     $this->idOwner = $idOwner;
+  }
+
+  public function setFirstNameOwner(string $firstNameOwner): void
+  {
+    $this->firstNameOwner = $firstNameOwner;
   }
 
   public function setLastNameOwner(string $lastNameOwner): void

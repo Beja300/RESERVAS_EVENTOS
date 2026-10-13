@@ -3,17 +3,20 @@
 require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/LocationService.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
+require_once __DIR__ . '/../Repository/VenueImageRepository.php';
 require_once __DIR__ . '/../Model/Venue.php';
 
 class VenueService
 {
     private VenueRepository $venueRepo;
+    private VenueImageRepository $venueImageRepo;
     private LocationService $locationService;
 
 
     public function __construct(PDO $connection)
     {
         $this->venueRepo = new VenueRepository($connection);
+        $this->venueImageRepo = new VenueImageRepository($connection);
         $this->locationService = new LocationService(new LocationRepository($connection));
     }
 
@@ -28,9 +31,11 @@ class VenueService
         ?string $type,
         ?int $capacity,
         float $price,
-        ?string $image
+        ?string $image,
+        ?float $latitude = null,
+        ?float $longitude = null
     ): int {
-        if ($capacity !== null && $capacity <= 0) {
+        if ($capacity === null || $capacity <= 0) {
             throw new BusinessRuleException("La capacidad del local debe ser mayor a 0.");
         }
 
@@ -42,12 +47,18 @@ class VenueService
             throw new BusinessRuleException("El nombre del local es obligatorio.");
         }
 
+        if (trim((string) $type) === '') {
+            throw new BusinessRuleException("El tipo de local es obligatorio.");
+        }
+
         $locationPk = $this->locationService->validateAndCreate(
             $province,
             $canton,
             $district,
             $town,
-            $description
+            $description,
+            $latitude,
+            $longitude
         );
 
         $venue = new Venue(
@@ -72,9 +83,10 @@ class VenueService
         ?int $capacity,
         float $price,
         ?string $image,
-        bool $active
+        bool $active,
+        int $idLocation
     ): void {
-        if ($capacity !== null && $capacity <= 0) {
+        if ($capacity === null || $capacity <= 0) {
             throw new BusinessRuleException("La capacidad del local debe ser mayor a 0.");
         }
 
@@ -82,14 +94,41 @@ class VenueService
             throw new BusinessRuleException("El precio de renta del local debe ser mayor a 0.");
         }
 
+        if (trim($name) === '') {
+            throw new BusinessRuleException("El nombre del local es obligatorio.");
+        }
+
+        if (trim((string) $type) === '') {
+            throw new BusinessRuleException("El tipo de local es obligatorio.");
+        }
+
         $venue->setNameVenue($name);
         $venue->setTypeVenue($type ?? $venue->getTypeVenue());
         $venue->setCapacityVenue($capacity ?? $venue->getCapacityVenue());
         $venue->setPriceVenue($price);
         $venue->setImageVenue($image ?? $venue->getImageVenue());
+        $venue->setIdLocation($idLocation);
         $venue->setIsActive($active);
 
         $this->venueRepo->update($venue);
+    }
+
+    // =========================================================
+    // GALERÍA: imágenes adicionales del local (la portada va en
+    // tbvenue.tbvenueimage y es la primera de $paths).
+    // =========================================================
+    public function galleryByVenue(int $idVenue): array
+    {
+        return $this->venueImageRepo->findByVenue($idVenue);
+    }
+
+    public function replaceGallery(int $idVenue, array $paths): void
+    {
+        $this->venueImageRepo->deleteByVenue($idVenue);
+
+        if (!empty($paths)) {
+            $this->venueImageRepo->saveBatch($idVenue, $paths);
+        }
     }
 
     // =========================================================

@@ -1,12 +1,17 @@
 <?php require_once __DIR__ . '/../_header.php';
 
+$pageJs = ['venue/location', 'venue/catalog'];
+
 $filters = $filters ?? [
-  'province' => '',
-  'canton'   => '',
-  'district' => '',
-  'type'     => '',
-  'q'        => '',
+  'province'    => '',
+  'canton'      => '',
+  'district'    => '',
+  'type'        => '',
+  'serviceType' => '',
+  'q'           => '',
 ];
+
+$serviceTypes = $serviceTypes ?? [];
 ?>
 
 <div class="page-head">
@@ -51,6 +56,15 @@ $filters = $filters ?? [
              placeholder="Ej: Salón"
              value="<?= e($filters['type']) ?>">
     </div>
+    <div class="form-group" style="min-width:160px;margin:0;">
+      <label for="serviceType">Categoría de servicio</label>
+      <select class="form-control" id="serviceType" name="serviceType">
+        <option value="">— Todas —</option>
+        <?php foreach ($serviceTypes as $st): ?>
+          <option value="<?= e($st) ?>" <?= $filters['serviceType'] === $st ? 'selected' : '' ?>><?= e($st) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </div>
     <button class="btn btn-primary" type="submit">Filtrar</button>
     <a class="btn btn-ghost" href="<?= e(base_url('venue', 'catalog')) ?>">Limpiar</a>
   </form>
@@ -66,14 +80,31 @@ $filters = $filters ?? [
     <?php foreach ($venues as $v): ?>
       <div class="card venue-card" style="display:flex;flex-direction:column;justify-content:space-between;">
         <div>
-          <div style="height:150px;border-radius:8px;background:linear-gradient(135deg,var(--primary-light),var(--neutral-100));display:flex;align-items:center;justify-content:center;font-size:3rem;margin-bottom:14px;">
-            <?= $v->getImageVenue() !== '' ? htmlspecialchars($v->getImageVenue()) : '&#127968;' ?>
+          <div style="height:150px;border-radius:8px;background:linear-gradient(135deg,var(--primary-light),var(--neutral-100));display:flex;align-items:center;justify-content:center;font-size:3rem;margin-bottom:14px;overflow:hidden;">
+            <?php if ($v->getImageVenue() !== ''): ?>
+              <img src="<?= e(image_url($v->getImageVenue())) ?>" alt="Foto de <?= e($v->getNameVenue()) ?>"
+                style="width:100%;height:150px;object-fit:cover;">
+            <?php else: ?>
+              <span>&#127968;</span>
+            <?php endif; ?>
           </div>
           <h3 style="margin-bottom:6px;color:var(--neutral-900);"><?= e($v->getNameVenue()) ?></h3>
           <p style="color:var(--neutral-500);font-size:0.92rem;">
             <?= $v->getTypeVenue() !== '' ? e($v->getTypeVenue()) : 'General' ?>
             &nbsp;·&nbsp; Capacidad: <?= (int) $v->getCapacityVenue() ?>
           </p>
+          <?php if (isset($locationByVenue[$v->getIdVenue()]) && $locationByVenue[$v->getIdVenue()] !== null): ?>
+            <p style="color:var(--neutral-500);font-size:0.85rem;margin-top:4px;">
+              &#128205; <?= format_venue_location($locationByVenue[$v->getIdVenue()]) ?>
+              <?php if (isset($distanceLabelByVenue[$v->getIdVenue()])): ?>
+                <span class="badge info" style="margin-left:4px;"><?= e($distanceLabelByVenue[$v->getIdVenue()]) ?></span>
+              <?php endif; ?>
+            </p>
+          <?php elseif (isset($distanceLabelByVenue[$v->getIdVenue()])): ?>
+            <p style="color:var(--neutral-500);font-size:0.85rem;margin-top:4px;">
+              <?= e($distanceLabelByVenue[$v->getIdVenue()]) ?>
+            </p>
+          <?php endif; ?>
           <p style="color:var(--neutral-900);font-weight:700;margin-top:6px;">
             &#8353; <?= number_format($v->getPriceVenue(), 2) ?>
             <span class="muted" style="font-weight:400;">por evento</span>
@@ -97,6 +128,4 @@ $filters = $filters ?? [
   </div>
 <?php endif; ?>
 
-<script src="<?= e(js_url('location')) ?>"></script>
-<script src="<?= e(js_url('catalog')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

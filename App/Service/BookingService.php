@@ -10,6 +10,8 @@ require_once __DIR__ . '/../Repository/BookingRefundRepository.php';
 require_once __DIR__ . '/../Model/Booking.php';
 require_once __DIR__ . '/../Model/BookingHistory.php';
 require_once __DIR__ . '/../Model/BookingRefund.php';
+require_once __DIR__ . '/CommissionConfigService.php';
+require_once __DIR__ . '/../Repository/CommissionConfigRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class BookingService
@@ -21,6 +23,7 @@ class BookingService
     private InvoiceRepository $invoiceRepo;
     private BookingHistoryRepository $historyRepo;
     private BookingRefundRepository $refundRepo;
+    private CommissionConfigService $configService;
 
     public function __construct()
     {
@@ -32,17 +35,68 @@ class BookingService
         $this->invoiceRepo = new InvoiceRepository($this->connection);
         $this->historyRepo = new BookingHistoryRepository($this->connection);
         $this->refundRepo = new BookingRefundRepository($this->connection);
+        $this->configService = new CommissionConfigService(
+            new CommissionConfigRepository($this->connection)
+        );
     }
 
     public function createBooking(
         int $clientPk,
         int $venuePk,
         string $date,
-        ?string $eventType = null
+        ?string $endDate = null,
+        ?string $eventType = null,
+        ?string $eventDetail = null
     ): int {
         if ($date < date('Y-m-d')) {
             throw new BusinessRuleException(
-                'La fecha de la reserva no puede ser anterior a hoy.'
+                'La fecha de inicio de la reserva no puede ser anterior a hoy.'
+            );
+        }
+
+        if (!$this->isRealDate($date)) {
+            throw new BusinessRuleException(
+                'La fecha de inicio no tiene un formato válido (AAAA-MM-DD).'
+            );
+        }
+
+        if ($endDate === null || $endDate === '') {
+            throw new BusinessRuleException(
+                'Debes indicar la fecha final de la reserva.'
+            );
+        }
+
+        if (!$this->isRealDate($endDate)) {
+            throw new BusinessRuleException(
+                'La fecha final no tiene un formato válido (AAAA-MM-DD).'
+            );
+        }
+
+        if ($endDate < $date) {
+            throw new BusinessRuleException(
+                'La fecha final no puede ser anterior a la fecha de inicio.'
+            );
+        }
+
+        $maxDate = date('Y-m-d', strtotime('+1 year'));
+
+        if ($date > $maxDate) {
+            throw new BusinessRuleException(
+                'La fecha de inicio no puede superar un año desde hoy.'
+            );
+        }
+
+        if ($endDate > $maxDate) {
+            throw new BusinessRuleException(
+                'La fecha final no puede superar un año desde hoy.'
+            );
+        }
+
+        $days = (int) ((strtotime($endDate) - strtotime($date)) / 86400) + 1;
+
+        if ($days < 1) {
+            throw new BusinessRuleException(
+                'La reserva debe cubrir al menos un día.'
             );
         }
 
@@ -61,13 +115,14 @@ class BookingService
         }
 
         if (
-            $this->bookingRepo->hasActiveBookingOnDate(
+            $this->bookingRepo->hasActiveRangeConflict(
                 $venuePk,
-                $date
+                $date,
+                $endDate
             )
         ) {
             throw new BusinessRuleException(
-                'Este local ya tiene una reserva para esa fecha. Elige otra fecha.'
+                'Este local ya tiene una reserva que se cruza con ese rango de fechas. Elige otro rango.'
             );
         }
 
@@ -77,7 +132,10 @@ class BookingService
             $venuePk,
             $date,
             'pendiente',
-            false
+            false,
+            $endDate,
+            $eventType,
+            $eventDetail
         );
 
         $this->connection->beginTransaction();
@@ -86,8 +144,9 @@ class BookingService
 
             $idBooking = $this->bookingRepo->save($booking);
 
-            // Línea base: renta del local (garantiza factura nunca en 0)
-            $this->detailRepo->addVenueLine($idBooking, $venue);
+            // Línea base: renta del local por el número de días
+            // (garantiza factura nunca en 0 y acumula precio por día)
+            $this->detailRepo->addVenueLine($idBooking, $venue, $days);
 
             $this->connection->commit();
 
@@ -100,21 +159,14 @@ class BookingService
         }
     }
 
-    // Porcentajes de cobro aplicados al total de la reserva
-    private const COMMISSION_PCT = 0.05; // Comisión de la plataforma: 5%
-    private const TAX_PCT        = 0.13; // Impuesto al valor agregado: 13%
-
-    public function calculateTotal(int $bookingPk): float
-    {
-        return $this->calculateTotals($bookingPk)['total'];
-    }
-
     /**
-     * Calcula el desglose de una reserva:
+     * Desglose de una reserva (fórmula única de la plataforma):
      *   - subtotal   = suma de las líneas (cantidad x precio - descuento)
-     *   - commission = 5% sobre el subtotal
-     *   - tax        = 13% de IVA sobre (subtotal + comisión)
-     *   - total      = subtotal + comisión + IVA
+     *   - commission = comisión de la plataforma sobre el subtotal
+     *   - tax        = IVA que paga el cliente sobre el subtotal
+     *   - total      = lo que paga el cliente (subtotal + IVA)
+     *   - ownerAmount = total - comisión - IVA = subtotal - comisión
+     * Las tasas se leen de la configuración vigente (tbcommissionconfig).
      */
     public function calculateTotals(int $bookingPk): array
     {
@@ -127,15 +179,19 @@ class BookingService
             $subtotal += $line->getSubtotal();
         }
 
-        $commission = round($subtotal * self::COMMISSION_PCT, 2);
-        $tax        = round(($subtotal + $commission) * self::TAX_PCT, 2);
-        $total      = round($subtotal + $commission + $tax, 2);
+        $config = $this->configService->getActive();
+
+        $commission = round($subtotal * ($config->getPercentage() / 100), 2);
+        $tax        = round($subtotal * ($config->getTax() / 100), 2);
+        $total      = round($subtotal + $tax, 2);
 
         return [
-            'subtotal'   => $subtotal,
-            'commission' => $commission,
-            'tax'        => $tax,
-            'total'      => $total,
+            'subtotal'     => $subtotal,
+            'commission'   => $commission,
+            'tax'          => $tax,
+            'total'        => $total,
+            'commissionPct' => $config->getPercentage(),
+            'taxPct'       => $config->getTax(),
         ];
     }
 
@@ -223,5 +279,18 @@ public function cancel(int $bookingPk): void
         detail: $motivo
       )
     );
+  }
+
+  /**
+   * Comprueba que una cadena sea una fecha real en formato AAAA-MM-DD
+   * (rechaza "2026-02-31", "2050-13-01", etc.).
+   */
+  private function isRealDate(string $value): bool
+  {
+    if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m)) {
+      return false;
+    }
+
+    return checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
   }
 }

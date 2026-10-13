@@ -1,3 +1,4 @@
+<?php $pageJs = ['admin/list']; ?>
 <?php require_once __DIR__ . '/../_header.php'; ?>
 
 <?php if (!empty($error)): ?>
@@ -9,18 +10,21 @@
   <div class="page-head">
     <div>
       <h1>Panel de reservas</h1>
+      <p class="muted">Reservas del mes de <?= date('F Y', strtotime($yearMonth . '-01')) ?></p>
     </div>
   </div>
 
-  <div class="card" style="max-width:320px;margin-bottom:18px;">
-    <form method="post" action="<?= e(base_url('admin', 'bookings')) ?>">
-      <?= csrf_field() ?>
-      <div class="form-group">
-        <label for="month">Mes</label>
-        <input class="form-control" type="month" id="month" name="month" value="<?= e(date('Y-m')) ?>">
-      </div>
-      <button class="btn btn-primary btn-sm" type="submit">Filtrar</button>
-    </form>
+  <div class="card" style="margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <a class="btn btn-sm" href="<?= e(base_url('admin', 'bookings', ['month' => $prevMonth])) ?>">&larr; Mes anterior</a>
+      <form method="get" action="<?= e(base_url('admin', 'bookings')) ?>" style="display:flex;align-items:center;gap:8px;">
+        <input type="hidden" name="controller" value="admin">
+        <input type="hidden" name="action" value="bookings">
+        <input class="form-control" style="width:auto;" type="month" name="month" value="<?= e($yearMonth) ?>">
+        <button class="btn btn-primary btn-sm" type="submit">Ver mes</button>
+      </form>
+      <a class="btn btn-sm" href="<?= e(base_url('admin', 'bookings', ['month' => $nextMonth])) ?>">Mes siguiente &rarr;</a>
+    </div>
   </div>
 
   <?php if (!empty($refundsPending)): ?>
@@ -43,14 +47,14 @@
           <tbody>
             <?php foreach ($refundsPending as $rf): ?>
               <tr>
-                <td>#<?= (int) $rf['tbbookingrefundbookingid'] ?></td>
+                <td>#<?= (int) $rf['tbbookingid'] ?></td>
                 <td><?= e($rf['clientName'] ?? '—') ?></td>
                 <td><?= e($rf['venueName'] ?? '—') ?></td>
                 <td><?= e(date('d/m/Y', strtotime($rf['tbbookingdate']))) ?></td>
                 <td><?= e($rf['tbbookingrefunddetail']) ?></td>
                 <td>
                   <a class="btn btn-sm btn-primary"
-                     href="<?= e(base_url('admin', 'bookingDetail', ['id' => $rf['tbbookingrefundbookingid']])) ?>">Revisar</a>
+                     href="<?= e(base_url('admin', 'bookingDetail', ['id' => $rf['tbbookingid']])) ?>">Revisar</a>
                 </td>
               </tr>
             <?php endforeach; ?>
@@ -67,7 +71,7 @@
       <table class="table">
         <thead>
           <tr>
-            <th>ID</th>
+            <!-- <th>ID</th> -->
             <th>Cliente</th>
             <th>Local</th>
             <th>Fecha</th>
@@ -78,7 +82,7 @@
         <tbody>
           <?php foreach ($bookings as $b): ?>
             <tr>
-              <td>#<?= (int) $b['tbbookingid'] ?></td>
+              <!-- <td>#<?= (int) $b['tbbookingid'] ?></td> -->
               <td><?= e($b['clientName'] ?? '—') ?></td>
               <td><?= e($b['venueName'] ?? '—') ?></td>
               <td><?= e(date('d/m/Y', strtotime($b['tbbookingdate']))) ?></td>
@@ -125,7 +129,7 @@
         <tbody>
           <?php foreach ($history as $h): ?>
             <tr>
-              <td>#<?= (int) $h['tbbookinghistorybookingid'] ?></td>
+              <td>#<?= (int) $h['tbbookingid'] ?></td>
               <td><?= e($h['clientName'] ?? '—') ?></td>
               <td><?= e($h['tbbookingdate'] ? date('d/m/Y', strtotime($h['tbbookingdate'])) : '—') ?></td>
               <td><?= e($h['responsibleName'] ?? '—') ?></td>
@@ -249,5 +253,4 @@
   <?php endforeach; ?>
 <?php endif; ?>
 
-<script src="<?= e(js_url('admin-list')) ?>"></script>
 <?php require_once __DIR__ . '/../_footer.php'; ?>

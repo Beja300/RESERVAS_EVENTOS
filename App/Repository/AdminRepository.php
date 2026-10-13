@@ -47,8 +47,8 @@ class AdminRepository
             // Tabla intermedia rol <-> admin
             $sqlLink = "
                 INSERT INTO tbroleadmin (
-                    tbroleadminrolid,
-                    tbroleadminadminid,
+                    tbroleid,
+                    tbadminid,
                     tbroleadminactive
                 )
                 VALUES (
@@ -92,9 +92,9 @@ class AdminRepository
                 p.tbadminimage,
                 p.tbadminactive
             FROM tbrole r
-            INNER JOIN tbroleadmin a ON a.tbroleadminrolid = r.tbroleid
-            INNER JOIN tbadmin p ON p.tbadminid = a.tbroleadminadminid
-            WHERE r.tbroleemail = :email
+            INNER JOIN tbroleadmin a ON a.tbroleid = r.tbroleid
+            INNER JOIN tbadmin p ON p.tbadminid = a.tbadminid
+            WHERE LOWER(r.tbroleemail) = LOWER(:email)
             LIMIT 1
         ";
 
@@ -122,8 +122,8 @@ class AdminRepository
                 p.tbadminimage,
                 p.tbadminactive
             FROM tbrole r
-            INNER JOIN tbroleadmin a ON a.tbroleadminrolid = r.tbroleid
-            INNER JOIN tbadmin p ON p.tbadminid = a.tbroleadminadminid
+            INNER JOIN tbroleadmin a ON a.tbroleid = r.tbroleid
+            INNER JOIN tbadmin p ON p.tbadminid = a.tbadminid
             WHERE p.tbadminid = :idAdmin
             LIMIT 1
         ";
@@ -152,8 +152,8 @@ class AdminRepository
                 p.tbadminimage,
                 p.tbadminactive
             FROM tbrole r
-            INNER JOIN tbroleadmin a ON a.tbroleadminrolid = r.tbroleid
-            INNER JOIN tbadmin p ON p.tbadminid = a.tbroleadminadminid
+            INNER JOIN tbroleadmin a ON a.tbroleid = r.tbroleid
+            INNER JOIN tbadmin p ON p.tbadminid = a.tbadminid
             WHERE r.tbroleid = :idRole
             LIMIT 1
         ";
@@ -163,6 +163,21 @@ class AdminRepository
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ? $this->mapRow($row) : null;
+    }
+
+    // =========================================================
+    // CONTAR TODOS LOS ADMINS (inactivos incluidos)
+    // =========================================================
+    public function countAll(): int
+    {
+        $sql = "
+            SELECT COUNT(*)
+            FROM tbrole r
+            INNER JOIN tbroleadmin a ON a.tbroleid = r.tbroleid
+        ";
+
+        $stmt = $this->connection->query($sql);
+        return (int) $stmt->fetchColumn();
     }
 
     // =========================================================
@@ -182,9 +197,9 @@ class AdminRepository
                 p.tbadminimage,
                 p.tbadminactive
             FROM tbrole r
-            INNER JOIN tbroleadmin a ON a.tbroleadminrolid = r.tbroleid
-            INNER JOIN tbadmin p ON p.tbadminid = a.tbroleadminadminid
-            ORDER BY p.tbadminid ASC
+            INNER JOIN tbroleadmin a ON a.tbroleid = r.tbroleid
+            INNER JOIN tbadmin p ON p.tbadminid = a.tbadminid
+            ORDER BY r.tbrolename ASC
         ";
 
         $stmt = $this->connection->prepare($sql);
@@ -195,6 +210,32 @@ class AdminRepository
             $admins[] = $this->mapRow($row);
         }
         return $admins;
+    }
+
+    // =========================================================
+    // ACTUALIZAR PERFIL DEL ADMINISTRADOR (tbadmin)
+    // Recibe un Admin ya actualizado; sincroniza tbadminname
+    // con el nombre base (tbrole) y actualiza su imagen propia.
+    // =========================================================
+    public function updateProfile(Admin $admin): bool
+    {
+        $sql = "
+            UPDATE tbadmin
+            SET
+                tbadminname = :name,
+                tbadminimage = :image
+            WHERE tbadminid = :idAdmin
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+
+        $adminImage = $admin->getImageAdmin();
+
+        return $stmt->execute([
+            ':name'     => $admin->getName(),
+            ':image'    => $adminImage !== '' ? $adminImage : null,
+            ':idAdmin'  => $admin->getIdAdmin(),
+        ]);
     }
 
     // =========================================================

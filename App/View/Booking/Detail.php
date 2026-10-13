@@ -1,3 +1,4 @@
+<?php $pageJs = ['booking/detail']; ?>
 <?php require_once __DIR__ . '/../_header.php';
 if ($booking === null) {
   echo '<div class="alert alert-error">Reserva no encontrada.</div>';
@@ -18,10 +19,46 @@ $hasTicket = $ticket !== null;
   </div>
 </div>
 
+<?php if (!empty($_GET['creditError'])): ?>
+  <div class="alert alert-error"><?= e($_GET['creditError']) ?></div>
+<?php endif; ?>
+
 <div class="card">
   <div class="detail-grid">
-    <div class="detail-item"><div class="k">Local</div><div class="v">#<?= (int) $booking->getIdLocal() ?> <?= $venue !== null ? '— ' . e($venue->getNameVenue()) : '' ?></div></div>
-    <div class="detail-item"><div class="k">Fecha</div><div class="v"><?= e(date('d/m/Y', strtotime($booking->getBookingDate()))) ?></div></div>
+<div class="detail-item"><div class="k">Local</div><div class="v">#<?= (int) $booking->getIdLocal() ?> <?= $venue !== null ? '— ' . e($venue->getNameVenue()) : '' ?></div></div>
+    <div class="detail-item"><div class="k">Fechas</div>
+      <div class="v">
+        <?php
+          $startLabel = date('d/m/Y', strtotime($booking->getBookingDate()));
+          $endLabel = $booking->getBookingEndDate() !== null
+            ? ' — ' . date('d/m/Y', strtotime($booking->getBookingEndDate()))
+            : '';
+        ?>
+        <?= e($startLabel . $endLabel) ?>
+      </div>
+    </div>
+    <?php if ($booking->getEventType() !== null): ?>
+      <div class="detail-item">
+        <div class="k">Tipo de evento</div>
+        <div class="v">
+          <?php
+            $eventTypeLabel = [
+              'boda' => 'Boda',
+              'cumpleanos' => 'Cumpleaños',
+              'empresarial' => 'Empresarial',
+              'otro' => 'Otro',
+            ][$booking->getEventType()] ?? $booking->getEventType();
+          ?>
+          <?= e($eventTypeLabel) ?>
+        </div>
+      </div>
+    <?php endif; ?>
+    <?php if ($booking->getEventDescription() !== null && $booking->getEventDescription() !== ''): ?>
+      <div class="detail-item">
+        <div class="k">Detalle del evento</div>
+        <div class="v"><?= e($booking->getEventDescription()) ?></div>
+      </div>
+    <?php endif; ?>
     <div class="detail-item"><div class="k">Estado</div>
       <div class="v" style="margin-top:6px;">
         <?php
@@ -35,7 +72,34 @@ $hasTicket = $ticket !== null;
         <span class="badge <?= $badge ?>"><?= e($booking->getBookingState()) ?></span>
       </div>
     </div>
+
   </div>
+
+  <div class="detail-item"><div class="k">Propietario</div>
+      <?php if ($owner === null): ?>
+        <div class="v muted">Propietario no encontrado.</div>
+      <?php else: ?>
+        <div class="v" style="display:flex;flex-direction:column;gap:4px;">
+          <span style="display:inline-flex;align-items:center;gap:8px;">
+            <?php if ($owner->getImageOwner() !== ''): ?>
+              <img src="<?= e(image_url($owner->getImageOwner())) ?>" alt="Foto del propietario"
+                   style="width:32px;height:32px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px #fff,0 0 0 3px var(--neutral-200);">
+            <?php else: ?>
+              <span class="avatar" aria-hidden="true"
+                    style="width:32px;height:32px;font-size:1.1rem;">&#128100;</span>
+            <?php endif; ?>
+            <a href="<?= e(base_url('venue', 'showOwner', ['ownerId' => $owner->getIdOwner(), 'venueId' => $booking->getIdLocal()])) ?>"
+               style="font-weight:700;color:var(--neutral-900);text-decoration:none;">
+              <?= e($owner->getFirstNameOwner()) ?><?= $owner->getLastNameOwner() !== '' ? ' ' . e($owner->getLastNameOwner()) : '' ?>
+            </a>
+          </span>
+          <span class="muted"><?= e($owner->getEmail()) ?></span>
+          <?php if ($owner->getPhoneNumber() !== null && $owner->getPhoneNumber() !== ''): ?>
+            <span class="muted"><?= e($owner->getPhoneNumber()) ?></span>
+          <?php endif; ?>
+        </div>
+      <?php endif; ?>
+    </div>
 
   <h3 style="margin:18px 0 12px;">Detalle de la reserva</h3>
   <?php if (empty($details)): ?>
@@ -57,8 +121,9 @@ $hasTicket = $ticket !== null;
               <td>
                 <?php if ($d->getIdVenue() > 0): ?>
                   Renta del local — <?= e($venue !== null ? $venue->getNameVenue() : ('Local #' . $d->getIdVenue())) ?>
+                  <?php if ($d->getQuantityDetail() > 1): ?> <span class="muted">(<?= (int) $d->getQuantityDetail() ?> día<?= $d->getQuantityDetail() > 1 ? 's' : '' ?>)</span><?php endif; ?>
                 <?php else: ?>
-                  Servicio #<?= (int) $d->getIdLocalService() ?>
+                  Servicio — <?= isset($serviceMap[$d->getIdLocalService()]) ? e($serviceMap[$d->getIdLocalService()]->getNameService()) : ('Servicio #' . $d->getIdLocalService()) ?>
                 <?php endif; ?>
               </td>
               <td><?= (int) $d->getQuantityDetail() ?></td>
@@ -72,12 +137,14 @@ $hasTicket = $ticket !== null;
             <th colspan="3" style="text-align:right;">Subtotal</th>
             <th>&#8353; <?= number_format($totals['subtotal'], 2) ?></th>
           </tr>
+          <?php if ($isOwner): ?>
+            <tr>
+              <th colspan="3" style="text-align:right;">Comisión (<?= e(number_format($totals['commissionPct'] ?? 0, 2)) ?>%)</th>
+              <th>&#8353; <?= number_format($totals['commission'], 2) ?></th>
+            </tr>
+          <?php endif; ?>
           <tr>
-            <th colspan="3" style="text-align:right;">Comisión (5%)</th>
-            <th>&#8353; <?= number_format($totals['commission'], 2) ?></th>
-          </tr>
-          <tr>
-            <th colspan="3" style="text-align:right;">IVA (13%)</th>
+            <th colspan="3" style="text-align:right;">IVA (<?= e(number_format($totals['taxPct'] ?? 0, 2)) ?>%)</th>
             <th>&#8353; <?= number_format($totals['tax'], 2) ?></th>
           </tr>
           <tr>
@@ -100,7 +167,7 @@ $hasTicket = $ticket !== null;
             style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
         <?= csrf_field() ?>
         <div class="form-group" style="min-width:220px;">
-          <label for="serviceId">Servicio</label>
+          <label for="serviceId">Servicio <span class="required-mark">*</span></label>
           <select class="form-control" id="serviceId" name="serviceId" required>
             <?php foreach ($availableServices as $s): ?>
               <option value="<?= (int) $s->getIdService() ?>">
@@ -156,6 +223,35 @@ $hasTicket = $ticket !== null;
     </div>
   <?php endif; ?>
 
+  <?php if ($isClient && isset($creditInfo) && $creditInfo !== null): ?>
+    <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
+    <h3 style="margin:0 0 10px;">Financiar con crédito</h3>
+    <?php if (isset($bookingCredit) && $bookingCredit !== null): ?>
+      <div class="alert alert-info" style="text-align:left;">
+        <p style="margin:0 0 8px;">
+          Esta reserva tiene un crédito por &#8353; <?= number_format($bookingCredit->getTotal(), 2) ?>
+          (saldo &#8353; <?= number_format($bookingCredit->getBalance(), 2) ?>,
+          vence <?= e($bookingCredit->getDueDate()) ?>).
+        </p>
+        <a class="btn btn-sm btn-outline" href="<?= e(base_url('credit', 'detail', ['id' => $bookingCredit->getIdCredit()])) ?>">
+          Ver crédito y abonar
+        </a>
+      </div>
+    <?php elseif ($isPending && $creditInfo['allowed']): ?>
+      <form method="post" action="<?= e(base_url('credit', 'request')) ?>" style="max-width:460px;">
+        <?= csrf_field() ?>
+        <input type="hidden" name="bookingId" value="<?= (int) $booking->getIdBooking() ?>">
+        <p class="form-hint">
+          El propietario acepta crédito. Tu reserva quedará confirmada y podrás pagar en abonos
+          dentro del plazo acordado.
+        </p>
+        <button class="btn btn-outline" type="submit">Solicitar crédito</button>
+      </form>
+    <?php elseif ($isPending): ?>
+      <p class="muted" style="margin:0;"><?= e($creditInfo['reason']) ?></p>
+    <?php endif; ?>
+  <?php endif; ?>
+
   <?php if ($isClient && $isPending && !$hasTicket): ?>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;">
       <form method="post" action="<?= e(base_url('booking', 'cancel')) ?>"
@@ -188,7 +284,7 @@ $hasTicket = $ticket !== null;
         <?= csrf_field() ?>
         <input type="hidden" name="id" value="<?= (int) $booking->getIdBooking() ?>">
         <div class="form-group">
-          <label for="motivoRefund">Motivo (mínimo 10 caracteres)</label>
+          <label for="motivoRefund">Motivo (mínimo 10 caracteres) <span class="required-mark">*</span></label>
           <textarea class="form-control" id="motivoRefund" name="motivo" rows="3" minlength="10" required></textarea>
         </div>
         <button class="btn btn-outline" type="submit">Enviar solicitud de reembolso</button>
@@ -232,7 +328,7 @@ $hasTicket = $ticket !== null;
     <p class="form-hint">Factura generada el día del pago.</p>
   <?php endif; ?>
 
-  <?php if ($isOwner && $ticket !== null && $ticket->getState() === 'pendiente'): ?>
+  <?php if ($isOwner && $ticket !== null && $ticket->getState() === 'pendiente' && $booking->getBookingState() === 'pendiente'): ?>
     <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
 
     <form method="post" action="<?= e(base_url('booking', 'approveTicket')) ?>"
@@ -252,5 +348,29 @@ $hasTicket = $ticket !== null;
   <?php endif; ?>
 </div>
 
-<script src="<?= e(js_url('booking-detail')) ?>"></script>
+<div class="grid grid-2" style="margin-top:20px;">
+  <div class="card">
+    <h3 class="card-title">Cliente</h3>
+    <?php if ($client === null): ?>
+      <p class="muted">Datos del cliente no encontrados.</p>
+    <?php else: ?>
+      <div class="detail-item"><div class="k">Nombre</div><div class="v"><strong><?= e($client->getName()) ?></strong></div></div>
+      <div class="detail-item"><div class="k">Correo</div><div class="v"><?= e($client->getEmail()) ?></div></div>
+      <div class="detail-item"><div class="k">Teléfono</div><div class="v"><?= $client->getPhoneNumber() !== null && $client->getPhoneNumber() !== '' ? e($client->getPhoneNumber()) : '—' ?></div></div>
+    <?php endif; ?>
+  </div>
+
+  <div class="card">
+    <h3 class="card-title">Local</h3>
+    <?php if ($venue === null): ?>
+      <p class="muted">Datos del local no encontrados.</p>
+    <?php else: ?>
+      <div class="detail-item"><div class="k">Nombre</div><div class="v"><strong><?= e($venue->getNameVenue()) ?></strong></div></div>
+      <div class="detail-item"><div class="k">Tipo</div><div class="v"><?= $venue->getTypeVenue() !== '' ? e($venue->getTypeVenue()) : '—' ?></div></div>
+      <div class="detail-item"><div class="k">Capacidad</div><div class="v"><?= (int) $venue->getCapacityVenue() ?> personas</div></div>
+      <div class="detail-item"><div class="k">Precio de renta</div><div class="v">&#8353; <?= number_format($venue->getPriceVenue(), 2) ?></div></div>
+    <?php endif; ?>
+  </div>
+</div>
+
 <?php require_once __DIR__ . '/../_footer.php'; ?>

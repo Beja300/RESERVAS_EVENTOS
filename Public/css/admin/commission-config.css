@@ -1,0 +1,4 @@
+/* Ajuste específico de la vista Comisión e IVA del admin. */
+.commission-config-card {
+  max-width: 560px;
+}

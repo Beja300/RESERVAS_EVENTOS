@@ -73,10 +73,11 @@ class DataBase
                     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 ]);
             } catch (PDOException $e) {
-                // Detenemos la ejecución con un mensaje claro. En producción,
-                // esto normalmente se reemplaza por un log + página de error
-                // genérica, para no exponer detalles de la BD al usuario final.
-                die('Error de conexión a la base de datos: ' . $e->getMessage());
+                // No exponemos detalles de la BD/SQL al usuario: se registra
+                // el error real en el log y se responde con un mensaje genérico.
+                error_log('[EventHall] Error de conexión a la base de datos: ' . $e->getMessage());
+                http_response_code(500);
+                exit('Ocurrió un error al conectar con la base de datos. Intenta más tarde.');
             }
         }
 

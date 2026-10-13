@@ -1,3 +1,4 @@
+<?php $pageJs = ['admin/booking-detail']; ?>
 <?php require_once __DIR__ . '/../_header.php'; ?>
 
 <?php if (isset($_GET['msg'])): ?>
@@ -38,8 +39,16 @@
       <div class="v">#<?= (int) $booking->getIdLocal() ?>
         <?= $venue !== null ? '— ' . e($venue->getNameVenue()) : '' ?></div>
     </div>
-    <div class="detail-item"><div class="k">Fecha</div>
-      <div class="v"><?= e(date('d/m/Y', strtotime($booking->getBookingDate()))) ?></div>
+    <div class="detail-item"><div class="k">Fechas</div>
+      <div class="v">
+        <?php
+          $startLabel = date('d/m/Y', strtotime($booking->getBookingDate()));
+          $endLabel = $booking->getBookingEndDate() !== null
+            ? ' — ' . date('d/m/Y', strtotime($booking->getBookingEndDate()))
+            : '';
+          echo e($startLabel . $endLabel);
+        ?>
+      </div>
     </div>
     <div class="detail-item"><div class="k">Estado</div>
       <div class="v">
@@ -121,9 +130,9 @@
       <tfoot>
         <tr><th colspan="3" style="text-align:right;">Subtotal</th>
           <th>&#8353; <?= number_format($totals['subtotal'] ?? 0, 2) ?></th></tr>
-        <tr><th colspan="3" style="text-align:right;">Comisión</th>
+        <tr><th colspan="3" style="text-align:right;">Comisión (<?= e(number_format($totals['commissionPct'] ?? 0, 2)) ?>%)</th>
           <th>&#8353; <?= number_format($totals['commission'] ?? 0, 2) ?></th></tr>
-        <tr><th colspan="3" style="text-align:right;">Impuesto</th>
+        <tr><th colspan="3" style="text-align:right;">IVA (<?= e(number_format($totals['taxPct'] ?? 0, 2)) ?>%)</th>
           <th>&#8353; <?= number_format($totals['tax'] ?? 0, 2) ?></th></tr>
         <tr><th colspan="3" style="text-align:right;">Total</th>
           <th>&#8353; <?= number_format($totals['total'] ?? 0, 2) ?></th></tr>
@@ -147,7 +156,7 @@
           <input type="hidden" name="id" value="<?= (int) $booking->getIdBooking() ?>">
           <input type="hidden" name="refundId" value="<?= (int) $refundRequest->getId() ?>">
           <input class="form-control" style="max-width:300px;margin-bottom:8px;"
-                 type="text" name="note" placeholder="Nota (opcional)">
+                 type="text" name="note" placeholder="Nota (opcional)" maxlength="500">
           <button class="btn btn-sm btn-success" type="submit">Aprobar reembolso</button>
         </form>
         <form method="post" action="<?= e(base_url('admin', 'rejectRefundBooking')) ?>"
@@ -167,20 +176,28 @@
     <h2 style="font-size:1.05rem;margin-bottom:10px;">Acciones del administrador</h2>
 
     <details style="margin-bottom:14px;">
-      <summary class="muted" style="cursor:pointer;">Reprogramar fecha</summary>
+      <summary class="muted" style="cursor:pointer;">Reprogramar fechas</summary>
       <form method="post" action="<?= e(base_url('admin', 'rescheduleBooking')) ?>" style="margin-top:8px;">
         <?= csrf_field() ?>
         <input type="hidden" name="id" value="<?= (int) $booking->getIdBooking() ?>">
+        <?php
+          $durationDays = 1;
+          if ($booking->getBookingEndDate() !== null) {
+            $durationDays = (int) ((strtotime($booking->getBookingEndDate()) - strtotime($booking->getBookingDate())) / 86400) + 1;
+          }
+        ?>
         <div class="form-group" style="max-width:260px;">
+          <label>Nueva fecha de inicio <span class="required-mark">*</span></label>
           <input class="form-control" type="date" name="date"
                  value="<?= e($booking->getBookingDate()) ?>"
                  min="<?= e(date('Y-m-d')) ?>"
                  required
-                 data-booked-dates='<?= e(json_encode($bookedDates)) ?>'>
-          <p class="form-hint">No se puede elegir una fecha ya ocupada por otra reserva.</p>
+                 data-booked-dates='<?= e(json_encode($bookedDates)) ?>'
+                 data-current-date="<?= e($booking->getBookingDate()) ?>">
+          <p class="form-hint">Al reprogramar se mantiene la duración (<?= (int) $durationDays ?> día<?= $durationDays > 1 ? 's' : '' ?>).</p>
         </div>
         <div class="form-group" style="max-width:300px;">
-          <input class="form-control" type="text" name="note" placeholder="Nota (opcional)">
+          <input class="form-control" type="text" name="note" placeholder="Nota (opcional)" maxlength="500">
         </div>
         <button class="btn btn-sm btn-primary" type="submit">Reprogramar</button>
       </form>
@@ -192,7 +209,8 @@
         <?= csrf_field() ?>
         <input type="hidden" name="id" value="<?= (int) $booking->getIdBooking() ?>">
         <div class="form-group" style="max-width:300px;">
-          <select class="form-control" name="venueId" required>
+          <label for="newVenueSelect">Nuevo local <span class="required-mark">*</span></label>
+          <select class="form-control" id="newVenueSelect" name="venueId" required>
             <option value="">Seleccionar local...</option>
             <?php foreach ($venues as $v): ?>
               <option value="<?= (int) $v->getIdVenue() ?>" <?= $v->getIdVenue() === $booking->getIdLocal() ? 'disabled' : '' ?>>
@@ -202,7 +220,7 @@
           </select>
         </div>
         <div class="form-group" style="max-width:300px;">
-          <input class="form-control" type="text" name="note" placeholder="Nota (opcional)">
+          <input class="form-control" type="text" name="note" placeholder="Nota (opcional)" maxlength="500">
         </div>
         <button class="btn btn-sm btn-primary" type="submit">Cambiar local</button>
       </form>
@@ -249,24 +267,4 @@
 <?php endif; ?>
 
 <?php require_once __DIR__ . '/../_footer.php'; ?>
-
-<script>
-(function () {
-  var input = document.querySelector('input[type="date"][data-booked-dates]');
-  if (!input) { return; }
-  var current = <?= json_encode($booking->getBookingDate()) ?>;
-  var booked = (input.getAttribute('data-booked-dates') || '').trim();
-  var dates = booked ? JSON.parse(booked) : [];
-  var blocked = dates.filter(function (d) { return d !== current; });
-
-  input.addEventListener('input', function () {
-    var val = input.value;
-    if (blocked.indexOf(val) !== -1) {
-      input.setCustomValidity('Esa fecha ya está ocupada por otra reserva. Elige otra fecha.');
-    } else {
-      input.setCustomValidity('');
-    }
-  });
-})();
-</script>
 

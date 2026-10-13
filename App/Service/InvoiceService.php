@@ -26,6 +26,15 @@ class InvoiceService
         int $paymentMethodPk,
         string $date
     ): int {
+        $date = trim($date);
+
+        if (!$this->isRealDate($date)) {
+            throw new BusinessRuleException('La fecha de la factura no es válida.');
+        }
+
+        if ($date > date('Y-m-d')) {
+            throw new BusinessRuleException('La fecha de la factura no puede ser futura.');
+        }
         $booking =
             $this->bookingRepo->findById($bookingPk);
 
@@ -63,7 +72,7 @@ class InvoiceService
                 0,
                 $booking->getIdBooking(),
                 $paymentMethodPk,
-                date('Y-m-d'),
+                $date,
                 'pendiente',
                 true
             )
@@ -239,5 +248,14 @@ class InvoiceService
     public function findByBooking(int $bookingPk): ?Invoice
     {
         return $this->invoiceRepo->findByBooking($bookingPk);
+    }
+
+    private function isRealDate(string $value): bool
+    {
+        if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m)) {
+            return false;
+        }
+
+        return checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
     }
 }

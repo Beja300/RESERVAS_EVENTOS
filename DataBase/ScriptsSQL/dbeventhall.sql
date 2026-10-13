@@ -1,11 +1,3 @@
--- =========================================================
--- EventHall Database Schema
--- Relaciones manejadas desde PHP (sin FOREIGN KEY)
--- Todas las tablas usan el sufijo ...active como BOOLEAN.
--- Solo se definen las TABLAS; los datos de prueba se cargan
--- desde seed_test_data.sql (ejecutarlo después de este script).
--- =========================================================
-
 CREATE DATABASE IF NOT EXISTS dbeventhall;
 
 USE dbeventhall;
@@ -16,7 +8,7 @@ USE dbeventhall;
 CREATE TABLE tbrole (
     tbroleid INT AUTO_INCREMENT PRIMARY KEY,
     tbrolename VARCHAR(300) NOT NULL,
-    tbroleemail VARCHAR(300) NOT NULL UNIQUE,
+    tbroleemail VARCHAR(300) NOT NULL,
     tbrolepassword VARCHAR(300) NOT NULL,
     tbrolephone VARCHAR(25),
     tbroleactive BOOLEAN NOT NULL DEFAULT TRUE
@@ -28,8 +20,8 @@ CREATE TABLE tbrole (
 -- =========================================================
 CREATE TABLE tbroleadmin (
     tbroleadminid INT AUTO_INCREMENT PRIMARY KEY,
-    tbroleadminrolid INT NOT NULL UNIQUE,
-    tbroleadminadminid INT NOT NULL,
+    tbroleid INT NOT NULL,
+    tbadminid INT NOT NULL,
     tbroleadminactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
@@ -39,8 +31,8 @@ CREATE TABLE tbroleadmin (
 -- =========================================================
 CREATE TABLE tbroleclient (
     tbroleclientid INT AUTO_INCREMENT PRIMARY KEY,
-    tbroleclientrolid INT NOT NULL UNIQUE,
-    tbroleclientclientid INT NOT NULL,
+    tbroleid INT NOT NULL,
+    tbclientid INT NOT NULL,
     tbroleclientactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
@@ -50,8 +42,8 @@ CREATE TABLE tbroleclient (
 -- =========================================================
 CREATE TABLE tbroleowner (
     tbroleownerid INT AUTO_INCREMENT PRIMARY KEY,
-    tbroleownerrolid INT NOT NULL UNIQUE,
-    tbroleownerownerid INT NOT NULL,
+    tbroleid INT NOT NULL,
+    tbownerid INT NOT NULL,
     tbroleowneractive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
@@ -72,7 +64,7 @@ CREATE TABLE tbclient (
     tbclientid INT AUTO_INCREMENT PRIMARY KEY,
     tbclientname VARCHAR(300) NOT NULL,
     tbclientimage VARCHAR(255),
-    tbclientlocationid INT,
+    tblocationid INT,
     tbclientactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
@@ -84,13 +76,14 @@ CREATE TABLE tbowner (
     tbownerfirstname VARCHAR(300) NOT NULL,
     tbownerlastname VARCHAR(250),
     tbowneralias VARCHAR(100),
-    tbowneridentificationnumber VARCHAR(30) UNIQUE,
+    tbowneridentificationnumber VARCHAR(30),
     tbownerimage VARCHAR(255),
     tbowneractive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 8) tblocation: ubicaciones (provincia/canton/distrito/pueblo/desc) 
+-- 8) tblocation: ubicaciones (provincia/canton/distrito/pueblo/desc) + coords
+--    lat/long (DECIMAL(10,7)) para calcular distancia con Haversine.
 -- =========================================================
 CREATE TABLE tblocation (
     tblocationid INT AUTO_INCREMENT PRIMARY KEY,
@@ -98,7 +91,9 @@ CREATE TABLE tblocation (
     tblocationcanton VARCHAR(60) NOT NULL,
     tblocationdistrict VARCHAR(60) NOT NULL,
     tblocationtown VARCHAR(100),
-    tblocationdescription VARCHAR(300)
+    tblocationdescription VARCHAR(300),
+    tblocationlatitude DECIMAL(10,7) NULL,
+    tblocationlongitude DECIMAL(10,7) NULL
 ) ENGINE=InnoDB;
 
 -- =========================================================
@@ -106,8 +101,8 @@ CREATE TABLE tblocation (
 -- =========================================================
 CREATE TABLE tbvenue (
     tbvenueid INT AUTO_INCREMENT PRIMARY KEY,
-    tbvenueownerid INT NOT NULL,
-    tbvenuelocationid INT,
+    tbownerid INT NOT NULL,
+    tblocationid INT,
     tbvenuename VARCHAR(150) NOT NULL,
     tbvenuetype VARCHAR(50),
     tbvenuecapacity INT,
@@ -121,12 +116,12 @@ CREATE TABLE tbvenue (
 -- =========================================================
 CREATE TABLE tbservice (
     tbserviceid INT AUTO_INCREMENT PRIMARY KEY,
-    tbservicelocalid INT NOT NULL,
+    tbvenueid INT NOT NULL,
     tbservicename VARCHAR(200) NOT NULL,
     tbservicetype VARCHAR(100),
     tbserviceprice DECIMAL(10,2) NOT NULL,
     tbservicestate VARCHAR(30) DEFAULT 'solicitado',
-    tbserviceapprovedby INT NULL,
+    tbroleid INT NULL,
     tbserviceapprovedon DATETIME NULL,
     tbserviceactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
@@ -136,7 +131,7 @@ CREATE TABLE tbservice (
 -- =========================================================
 CREATE TABLE tbservicehistory (
     tbservicehistoryid INT AUTO_INCREMENT PRIMARY KEY,
-    tbservicehistoryserviceid INT NOT NULL,
+    tbserviceid INT NOT NULL,
     tbservicehistoryprice DECIMAL(10,2) NOT NULL,
     tbservicehistoryvalidfrom DATE NOT NULL,
     tbservicehistoryactive BOOLEAN NOT NULL DEFAULT TRUE
@@ -147,7 +142,7 @@ CREATE TABLE tbservicehistory (
 -- =========================================================
 CREATE TABLE tbpromotion (
     tbpromotionid INT AUTO_INCREMENT PRIMARY KEY,
-    tbpromotionvenueid INT NOT NULL,
+    tbvenueid INT NOT NULL,
     tbpromotiondescription VARCHAR(500),
     tbpromotionlabel VARCHAR(100),
     tbpromotionstart DATE,
@@ -161,8 +156,8 @@ CREATE TABLE tbpromotion (
 -- =========================================================
 CREATE TABLE tbpromotionservice (
     tbpromotionserviceid INT AUTO_INCREMENT PRIMARY KEY,
-    tbpromotionservicepromotionid INT NOT NULL,
-    tbpromotionserviceserviceid INT NOT NULL,
+    tbpromotionid INT NOT NULL,
+    tbserviceid INT NOT NULL,
     tbpromotionserviceactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
@@ -171,23 +166,25 @@ CREATE TABLE tbpromotionservice (
 -- =========================================================
 CREATE TABLE tbbooking (
     tbbookingid INT AUTO_INCREMENT PRIMARY KEY,
-    tbbookingclientid INT NOT NULL,
-    tbbookinglocalid INT NOT NULL,
+    tbclientid INT NOT NULL,
+    tbvenueid INT NOT NULL,
     tbbookingdate DATE NOT NULL,
+    tbbookingenddate DATE,
     tbbookingeventtype VARCHAR(50),
+    tbbookingeventdetail VARCHAR(255),
     tbbookingstate VARCHAR(30) DEFAULT 'pendiente',
     tbbookingactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
 -- =========================================================
 -- 15) tbdetail: linea del detalle (local/servicio, cants, precios)
---     tbdetailserviceid -> servicio (nullable si es renta del local)
---     tbdetailvenueid    -> local (nullable si es un servicio)
+--     tbserviceid -> servicio (nullable si es renta del local)
+--     tbvenueid   -> local (nullable si es un servicio)
 -- =========================================================
 CREATE TABLE tbdetail (
     tbdetailid INT AUTO_INCREMENT PRIMARY KEY,
-    tbdetailserviceid INT,
-    tbdetailvenueid INT,
+    tbserviceid INT,
+    tbvenueid INT,
     tbdetailquantity INT NOT NULL DEFAULT 1,
     tbdetailunitprice DECIMAL(10,2) NOT NULL,
     tbdetaildiscount DECIMAL(10,2) NOT NULL DEFAULT 0,
@@ -199,8 +196,8 @@ CREATE TABLE tbdetail (
 -- =========================================================
 CREATE TABLE tbbookingdetail (
     tbbookingdetailid INT AUTO_INCREMENT PRIMARY KEY,
-    tbbookingdetailbookingid INT NOT NULL,
-    tbbookingdetaildetailid INT NOT NULL,
+    tbbookingid INT NOT NULL,
+    tbdetailid INT NOT NULL,
     tbbookingdetailactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
@@ -209,10 +206,10 @@ CREATE TABLE tbbookingdetail (
 -- =========================================================
 CREATE TABLE tbbookingticket (
     tbbookingticketid INT AUTO_INCREMENT PRIMARY KEY,
-    tbbookingticketbookingid INT NOT NULL,
+    tbbookingid INT NOT NULL,
     tbbookingticketfile VARCHAR(255) NOT NULL,
     tbbookingtickettype VARCHAR(10) NOT NULL,
-    tbbookingticketpaymentmethodid INT,
+    tbpaymentmethodid INT,
     tbbookingticketstate VARCHAR(30) DEFAULT 'pendiente',
     tbbookingticketactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
@@ -231,8 +228,8 @@ CREATE TABLE tbpaymentmethod (
 -- =========================================================
 CREATE TABLE tbownerpayment (
     tbownerpaymentid INT AUTO_INCREMENT PRIMARY KEY,
-    tbownerpaymentownerid INT NOT NULL,
-    tbownerpaymentpaymentmethodid INT NOT NULL,
+    tbownerid INT NOT NULL,
+    tbpaymentmethodid INT NOT NULL,
     tbownerpaymentholder VARCHAR(150),
     tbownerpaymentaccount VARCHAR(100),
     tbownerpaymentinstructions VARCHAR(500),
@@ -244,8 +241,8 @@ CREATE TABLE tbownerpayment (
 -- =========================================================
 CREATE TABLE tbinvoice (
     tbinvoiceid INT AUTO_INCREMENT PRIMARY KEY,
-    tbinvoicebookingid INT NOT NULL UNIQUE,
-    tbinvoicepaymentmethodid INT NOT NULL,
+    tbbookingid INT NOT NULL,
+    tbpaymentmethodid INT NOT NULL,
     tbinvoicedate DATETIME DEFAULT CURRENT_TIMESTAMP,
     tbinvoicestatus VARCHAR(30) DEFAULT 'pendiente',
     tbinvoiceactive BOOLEAN NOT NULL DEFAULT TRUE
@@ -266,24 +263,24 @@ CREATE TABLE tbcommissionconfig (
 -- =========================================================
 CREATE TABLE tbeearning (
     tbeearningid INT AUTO_INCREMENT PRIMARY KEY,
-    tbeearningbookingid INT NOT NULL,
+    tbbookingid INT NOT NULL,
     tbeearningtotal DECIMAL(12,2) NOT NULL,
     tbeearningcommission DECIMAL(12,2) NOT NULL,
     tbeearningtax DECIMAL(12,2) NOT NULL,
     tbeearningowneramount DECIMAL(12,2) NOT NULL,
-    tbeearningreviewedbyrole INT,
+    tbroleid INT,
     tbeearningdate DATETIME DEFAULT CURRENT_TIMESTAMP,
     tbeearningactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
 -- =========================================================
 -- 22b) tbbookinghistory: auditoria de modificaciones de reservas
---      (quién lo modificó = tbbookinghistoryroleid -> tbrole.tbroleid)
+--      (quién lo modificó = tbroleid -> tbrole.tbroleid)
 -- =========================================================
 CREATE TABLE tbbookinghistory (
     tbbookinghistoryid INT AUTO_INCREMENT PRIMARY KEY,
-    tbbookinghistorybookingid INT NOT NULL,
-    tbbookinghistoryroleid INT,
+    tbbookingid INT NOT NULL,
+    tbroleid INT,
     tbbookinghistoryaction VARCHAR(50) NOT NULL,
     tbbookinghistorydetail VARCHAR(500),
     tbbookinghistorydate DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -295,8 +292,8 @@ CREATE TABLE tbbookinghistory (
 -- =========================================================
 CREATE TABLE tbbookingrefund (
     tbbookingrefundid INT AUTO_INCREMENT PRIMARY KEY,
-    tbbookingrefundbookingid INT NOT NULL,
-    tbbookingrefundclientroleid INT NOT NULL,
+    tbbookingid INT NOT NULL,
+    tbroleid INT NOT NULL,
     tbbookingrefunddetail VARCHAR(500) NOT NULL,
     tbbookingrefundstate VARCHAR(30) DEFAULT 'pendiente',
     tbbookingrefunddate DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -308,8 +305,8 @@ CREATE TABLE tbbookingrefund (
 -- =========================================================
 CREATE TABLE tbvenuerating (
     tbvenueratingid INT AUTO_INCREMENT PRIMARY KEY,
-    tbvenueratingvenueid INT NOT NULL,
-    tbvenueratingroleid INT NOT NULL,
+    tbvenueid INT NOT NULL,
+    tbroleid INT NOT NULL,
     tbvenueratingstars TINYINT NOT NULL,
     tbvenueratingcomment VARCHAR(500),
     tbvenueratingactive BOOLEAN NOT NULL DEFAULT TRUE
@@ -320,8 +317,8 @@ CREATE TABLE tbvenuerating (
 -- =========================================================
 CREATE TABLE tbservicerating (
     tbserviceratingid INT AUTO_INCREMENT PRIMARY KEY,
-    tbserviceratingserviceid INT NOT NULL,
-    tbserviceratingroleid INT NOT NULL,
+    tbserviceid INT NOT NULL,
+    tbroleid INT NOT NULL,
     tbserviceratingstars TINYINT NOT NULL,
     tbserviceratingcomment VARCHAR(500),
     tbserviceratingactive BOOLEAN NOT NULL DEFAULT TRUE
@@ -332,7 +329,7 @@ CREATE TABLE tbservicerating (
 -- =========================================================
 CREATE TABLE tbnotification (
     tbnotificationid INT AUTO_INCREMENT PRIMARY KEY,
-    tbnotificationroleid INT NOT NULL,
+    tbroleid INT NOT NULL,
     tbnotificationmessage VARCHAR(255) NOT NULL,
     tbnotificationlink VARCHAR(255) NULL DEFAULT NULL,
     tbnotificationdate DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -345,7 +342,7 @@ CREATE TABLE tbnotification (
 -- =========================================================
 CREATE TABLE tbuserhistory (
     tbuserhistoryid INT AUTO_INCREMENT PRIMARY KEY,
-    tbuserhistoryroleid INT NOT NULL,
+    tbroleid INT NOT NULL,
     tbuserhistoryaction VARCHAR(50) NOT NULL,
     tbuserhistoryentity VARCHAR(50),
     tbuserhistoryentityid INT,
@@ -357,9 +354,90 @@ CREATE TABLE tbuserhistory (
 -- =========================================================
 CREATE TABLE tbownerhistory (
     tbownerhistoryid INT AUTO_INCREMENT PRIMARY KEY,
-    tbownerhistoryownerid INT NOT NULL,
+    tbownerid INT NOT NULL,
     tbownerhistoryaction VARCHAR(50) NOT NULL,
     tbownerhistorydetail VARCHAR(500),
     tbownerhistorydate DATETIME DEFAULT CURRENT_TIMESTAMP,
     tbownerhistoryactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 28) Mini-tablas históricas de credenciales de la identidad
+--     Rol (tbrole). No llevan columna "active": son de solo
+--     registro (append-only) para perpetuar el movimiento y
+--     validar ataques informáticos sin sobrecargar tbrole.
+--     La contraseña siempre se guarda HASEADA (bcrypt).
+-- =========================================================
+
+-- 28a) histórico de contraseñas: permite impedir la reutilización
+--      de las últimas N contraseñas y detectar cambios frecuentes.
+CREATE TABLE tbrolpasswordhistorical (
+    tbrolpasswordhistoricalid INT AUTO_INCREMENT PRIMARY KEY,
+    tbroleid INT NOT NULL,
+    tbrolpasswordhistoricalactualpassword VARCHAR(300) NOT NULL,
+    tbrolpasswordhistoricalnewpassword VARCHAR(300) NOT NULL,
+    tbrolpasswordhistoricaldate DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- 28b) histórico de teléfonos: "advertencia si cambia demasiado"
+--      de teléfono (frecuencia anómala = posible ataque).
+CREATE TABLE tbrolphonehistorical (
+    tbrolphonehistoricalid INT AUTO_INCREMENT PRIMARY KEY,
+    tbroleid INT NOT NULL,
+    tbrolphonehistoricalactualphone VARCHAR(25),
+    tbrolphonehistoricalnewphone VARCHAR(25) NOT NULL,
+    tbrolphonehistoricaldate DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- 28c) histórico de correos: cambios del email de acceso.
+CREATE TABLE tbrolemailhistorical (
+    tbrolemailhistoricalid INT AUTO_INCREMENT PRIMARY KEY,
+    tbroleid INT NOT NULL,
+    tbrolemailhistoricalactualemail VARCHAR(300),
+    tbrolemailhistoricalnewemail VARCHAR(300) NOT NULL,
+    tbrolemailhistoricaldate DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 29) tbcreditconfig: política de crédito definida por el
+--     propietario (plazo en días y umbral de cliente frecuente).
+-- =========================================================
+CREATE TABLE tbcreditconfig (
+    tbcreditconfigid INT AUTO_INCREMENT PRIMARY KEY,
+    tbownerid INT NOT NULL,
+    tbcreditconfigenabled BOOLEAN NOT NULL DEFAULT FALSE,
+    tbcreditconfigdays INT NOT NULL DEFAULT 30,
+    tbcreditconfigfrequentmin INT NOT NULL DEFAULT 3,
+    tbcreditconfigactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 30) tbcredit: cuenta por cobrar generada al otorgar crédito
+--     sobre una reserva (relación 1:1 con la reserva).
+--     estados: pendiente | parcial | pagado | vencido
+-- =========================================================
+CREATE TABLE tbcredit (
+    tbcreditid INT AUTO_INCREMENT PRIMARY KEY,
+    tbbookingid INT NOT NULL,
+    tbclientid INT NOT NULL,
+    tbownerid INT NOT NULL,
+    tbcredittotal DECIMAL(12,2) NOT NULL,
+    tbcreditbalance DECIMAL(12,2) NOT NULL,
+    tbcreditduedate DATE NOT NULL,
+    tbcreditstate VARCHAR(30) DEFAULT 'pendiente',
+    tbcreditdate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    tbcreditactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 31) tbcreditpayment: abonos (pagos parciales) de un crédito.
+-- =========================================================
+CREATE TABLE tbcreditpayment (
+    tbcreditpaymentid INT AUTO_INCREMENT PRIMARY KEY,
+    tbcreditid INT NOT NULL,
+    tbcreditpaymentamount DECIMAL(12,2) NOT NULL,
+    tbcreditpaymentnote VARCHAR(255),
+    tbroleid INT,
+    tbcreditpaymentdate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    tbcreditpaymentactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;

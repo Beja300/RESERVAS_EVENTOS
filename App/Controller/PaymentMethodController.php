@@ -35,7 +35,6 @@ class PaymentMethodController
   // =========================================================
   public function showForm(): void
   {
-    session_start();
     $this->requireAdmin();
 
     require_once __DIR__ . '/../View/PaymentMethod/Form.php';
@@ -46,7 +45,6 @@ class PaymentMethodController
   // =========================================================
   public function create(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -60,7 +58,7 @@ class PaymentMethodController
 
       $this->paymentMethodService->validateAndCreate($type);
 
-      header('Location: ../../Public/index.php?controller=paymentmethod&action=list');
+      header('Location: ' . base_url('paymentmethod', 'list'));
       exit;
     } catch (BusinessRuleException $e) {
 
@@ -75,14 +73,13 @@ class PaymentMethodController
   // =========================================================
   public function edit(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $idPaymentMethod = (int) ($_GET['id'] ?? 0);
     $paymentMethod = $this->paymentMethodRepo->findById($idPaymentMethod);
 
     if ($paymentMethod === null) {
-      header('Location: ../../Public/index.php?controller=paymentmethod&action=list');
+      header('Location: ' . base_url('paymentmethod', 'list'));
       exit;
     }
 
@@ -94,11 +91,10 @@ class PaymentMethodController
   // =========================================================
   public function update(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-      header('Location: ../../Public/index.php?controller=paymentmethod&action=list');
+      header('Location: ' . base_url('paymentmethod', 'list'));
       exit;
     }
 
@@ -110,7 +106,7 @@ class PaymentMethodController
 
       $this->paymentMethodService->updateMethod($idPaymentMethod, $type, $isActive);
 
-      header('Location: ../../Public/index.php?controller=paymentmethod&action=list&updated=1');
+      header('Location: ' . base_url('paymentmethod', 'list', ['updated' => '1']));
       exit;
     } catch (BusinessRuleException $e) {
 
@@ -118,7 +114,7 @@ class PaymentMethodController
       $paymentMethod = $this->paymentMethodRepo->findById($idPaymentMethod);
 
       if ($paymentMethod === null) {
-        header('Location: ../../Public/index.php?controller=paymentmethod&action=list');
+        header('Location: ' . base_url('paymentmethod', 'list'));
         exit;
       }
 
@@ -131,11 +127,10 @@ class PaymentMethodController
   // =========================================================
   public function delete(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-      header('Location: ../../Public/index.php?controller=paymentmethod&action=list');
+      header('Location: ' . base_url('paymentmethod', 'list'));
       exit;
     }
 
@@ -148,7 +143,7 @@ class PaymentMethodController
       // Sin cambios; se redirige igual a la lista.
     }
 
-    header('Location: ../../Public/index.php?controller=paymentmethod&action=list');
+    header('Location: ' . base_url('paymentmethod', 'list'));
     exit;
   }
 
@@ -158,7 +153,7 @@ class PaymentMethodController
   private function requireAdmin(): void
   {
     if (($_SESSION['type'] ?? null) !== 'admin') {
-      header('Location: ../../Public/index.php?controller=auth&action=showLogin');
+      header('Location: ' . base_url('auth', 'showLogin'));
       exit;
     }
   }

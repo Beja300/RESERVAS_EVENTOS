@@ -13,4 +13,6 @@ class HistoryAction
   public const FAVORITE = 'FAVORITE';
   public const BOOKING = 'BOOKING';
   public const PURCHASE = 'PURCHASE';
+  public const CANCEL = 'CANCEL';
+  public const RATING = 'RATING';
 }

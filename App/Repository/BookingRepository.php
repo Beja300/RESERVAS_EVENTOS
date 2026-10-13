@@ -19,9 +19,12 @@ class BookingRepository
   {
     $sql = "
             INSERT INTO tbbooking (
-                tbbookingclientid,
-                tbbookinglocalid,
+                tbclientid,
+                tbvenueid,
                 tbbookingdate,
+                tbbookingenddate,
+                tbbookingeventtype,
+                tbbookingeventdetail,
                 tbbookingstate,
                 tbbookingactive
             )
@@ -29,6 +32,9 @@ class BookingRepository
                 :idClient,
                 :idLocal,
                 :bookingDate,
+                :bookingEndDate,
+                :eventType,
+                :eventDetail,
                 :bookingState,
                 :isBookingActive
             )
@@ -40,6 +46,9 @@ class BookingRepository
       ':idClient'         => $booking->getIdClient(),
       ':idLocal'          => $booking->getIdLocal(),
       ':bookingDate'      => $booking->getBookingDate(),
+      ':bookingEndDate'   => $booking->getBookingEndDate() ?: null,
+      ':eventType'        => $booking->getEventType(),
+      ':eventDetail'      => $booking->getEventDescription(),
       ':bookingState'     => $booking->getBookingState(),
       ':isBookingActive'  => $this->toDb($booking->getIsBookingActive())
     ]);
@@ -56,9 +65,12 @@ class BookingRepository
     $sql = "
             SELECT
                 tbbookingid,
-                tbbookingclientid,
-                tbbookinglocalid,
+                tbclientid,
+                tbvenueid,
                 tbbookingdate,
+                tbbookingenddate,
+                tbbookingeventtype,
+                tbbookingeventdetail,
                 tbbookingstate,
                 tbbookingactive
 
@@ -87,15 +99,18 @@ class BookingRepository
     $sql = "
             SELECT
                 tbbookingid,
-                tbbookingclientid,
-                tbbookinglocalid,
+                tbclientid,
+                tbvenueid,
                 tbbookingdate,
+                tbbookingenddate,
+                tbbookingeventtype,
+                tbbookingeventdetail,
                 tbbookingstate,
                 tbbookingactive
 
             FROM tbbooking
 
-            WHERE tbbookingclientid = :idClient
+            WHERE tbclientid = :idClient
 
             ORDER BY tbbookingdate DESC
         ";
@@ -118,15 +133,18 @@ class BookingRepository
     $sql = "
             SELECT
                 tbbookingid,
-                tbbookingclientid,
-                tbbookinglocalid,
+                tbclientid,
+                tbvenueid,
                 tbbookingdate,
+                tbbookingenddate,
+                tbbookingeventtype,
+                tbbookingeventdetail,
                 tbbookingstate,
                 tbbookingactive
 
             FROM tbbooking
 
-            WHERE tbbookinglocalid = :idLocal
+            WHERE tbvenueid = :idLocal
 
             ORDER BY tbbookingdate DESC
         ";
@@ -149,9 +167,12 @@ class BookingRepository
     $sql = "
             SELECT
                 tbbookingid,
-                tbbookingclientid,
-                tbbookinglocalid,
+                tbclientid,
+                tbvenueid,
                 tbbookingdate,
+                tbbookingenddate,
+                tbbookingeventtype,
+                tbbookingeventdetail,
                 tbbookingstate,
                 tbbookingactive
 
@@ -180,9 +201,9 @@ class BookingRepository
             FROM tbbooking b
 
             INNER JOIN tbvenue v
-                ON v.tbvenueid = b.tbbookinglocalid
+                ON v.tbvenueid = b.tbvenueid
 
-            WHERE v.tbvenueownerid = :idOwner
+            WHERE v.tbownerid = :idOwner
               AND b.tbbookingdate LIKE :yearMonth
         ";
 
@@ -197,7 +218,44 @@ class BookingRepository
   }
 
   // =========================================================
-  // PRÓXIMA RESERVA DE UN OWNER (fecha más cercana >= hoy)
+  // RESERVAS PENDIENTES DE UN OWNER (todos sus locales)
+  // =========================================================
+  public function findPendingByOwner(int $idOwner): array
+  {
+    $sql = "
+            SELECT
+                b.tbbookingid,
+                b.tbclientid,
+                b.tbvenueid,
+                b.tbbookingdate,
+                b.tbbookingenddate,
+                b.tbbookingeventtype,
+                b.tbbookingeventdetail,
+                b.tbbookingstate,
+                b.tbbookingactive
+
+            FROM tbbooking b
+
+            INNER JOIN tbvenue v
+                ON v.tbvenueid = b.tbvenueid
+
+            WHERE v.tbownerid = :idOwner
+              AND b.tbbookingstate = 'pendiente'
+
+            ORDER BY b.tbbookingdate ASC
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':idOwner' => $idOwner
+    ]);
+
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+  }
+
+  // =========================================================
+  // PRÓXIMA RESERVA CONFIRMADA DE UN OWNER (fecha más cercana >= hoy)
   // =========================================================
   public function nextBookingByOwner(int $idOwner, string $today): ?array
   {
@@ -209,12 +267,11 @@ class BookingRepository
             FROM tbbooking b
 
             INNER JOIN tbvenue v
-                ON v.tbvenueid = b.tbbookinglocalid
+                ON v.tbvenueid = b.tbvenueid
 
-            WHERE v.tbvenueownerid = :idOwner
+            WHERE v.tbownerid = :idOwner
               AND b.tbbookingdate >= :today
-              AND b.tbbookingstate IN ('pendiente', 'confirmado')
-              AND b.tbbookingactive = true
+              AND b.tbbookingstate = 'confirmado'
 
             ORDER BY b.tbbookingdate ASC
 
@@ -247,9 +304,9 @@ class BookingRepository
             FROM tbbooking b
 
             INNER JOIN tbvenue v
-                ON v.tbvenueid = b.tbbookinglocalid
+                ON v.tbvenueid = b.tbvenueid
 
-            GROUP BY b.tbbookinglocalid, v.tbvenuename
+            GROUP BY b.tbvenueid, v.tbvenuename
 
             ORDER BY bookingCount DESC
 
@@ -258,6 +315,43 @@ class BookingRepository
 
     $stmt = $this->connection->prepare($sql);
     $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+  }
+
+  // =========================================================
+  // LOCALES MÁS SOLICITADOS DE UN OWNER (en un mes dado)
+  // -- para el dashboard del propietario
+  // =========================================================
+  public function topVenuesByOwner(int $idOwner, string $yearMonth, int $limit = 1): array
+  {
+    $sql = "
+            SELECT
+                v.tbvenuename AS name,
+                COUNT(*) AS bookingCount
+
+            FROM tbbooking b
+
+            INNER JOIN tbvenue v
+                ON v.tbvenueid = b.tbvenueid
+
+            WHERE v.tbownerid = :idOwner
+              AND b.tbbookingdate LIKE :yearMonth
+
+            GROUP BY b.tbvenueid, v.tbvenuename
+
+            ORDER BY bookingCount DESC
+
+            LIMIT :limit
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->bindValue(':idOwner',   $idOwner,   PDO::PARAM_INT);
+    $stmt->bindValue(':yearMonth', $yearMonth . '%');
+    $stmt->bindValue(':limit',     $limit,     PDO::PARAM_INT);
+
     $stmt->execute();
 
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -284,21 +378,23 @@ class BookingRepository
   }
 
   // =========================================================
-  // REPROGRAMAR (cambiar la fecha de la reserva)
+  // REPROGRAMAR (cambiar el rango de fechas de la reserva)
   // =========================================================
-  public function reschedule(int $idBooking, string $newDate): bool
+  public function reschedule(int $idBooking, string $newDate, ?string $newEndDate = null): bool
   {
     $sql = "
             UPDATE tbbooking
-            SET tbbookingdate = :newDate
+            SET tbbookingdate = :newDate,
+                tbbookingenddate = :newEndDate
             WHERE tbbookingid = :idBooking
         ";
 
     $stmt = $this->connection->prepare($sql);
 
     return $stmt->execute([
-      ':newDate'   => $newDate,
-      ':idBooking' => $idBooking
+      ':newDate'    => $newDate,
+      ':newEndDate' => $newEndDate ?: null,
+      ':idBooking'  => $idBooking
     ]);
   }
 
@@ -309,7 +405,7 @@ class BookingRepository
   {
     $sql = "
             UPDATE tbbooking
-            SET tbbookinglocalid = :newVenueId
+            SET tbvenueid = :newVenueId
             WHERE tbbookingid = :idBooking
         ";
 
@@ -322,14 +418,16 @@ class BookingRepository
   }
 
   // =========================================================
-  // FECHAS OCUPADAS DE UN LOCAL (reservas activas)
+  // FECHAS OCUPADAS DE UN LOCAL (todas las reservas activas)
+  // Expande cada rango [inicio, fin] en fechas individuales para
+  // deshabilitarlas en el calendario del formulario de reserva.
   // =========================================================
   public function bookedDatesByVenue(int $idLocal): array
   {
     $sql = "
-            SELECT tbbookingdate
+            SELECT tbbookingdate, tbbookingenddate
             FROM tbbooking
-            WHERE tbbookinglocalid = :idLocal
+            WHERE tbvenueid = :idLocal
               AND tbbookingstate IN ('pendiente', 'confirmado')
               AND tbbookingactive = true
             ORDER BY tbbookingdate
@@ -338,7 +436,26 @@ class BookingRepository
     $stmt = $this->connection->prepare($sql);
     $stmt->execute([':idLocal' => $idLocal]);
 
-    return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $dates = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+      $start = $row['tbbookingdate'];
+      $end = ($row['tbbookingenddate'] !== null && $row['tbbookingenddate'] !== '')
+        ? $row['tbbookingenddate']
+        : $start;
+
+      if ($end < $start) {
+        $end = $start;
+      }
+
+      $cursor = new DateTime($start);
+      $limit = new DateTime($end);
+      while ($cursor <= $limit) {
+        $dates[] = $cursor->format('Y-m-d');
+        $cursor->modify('+1 day');
+      }
+    }
+
+    return array_values(array_unique($dates));
   }
 
   // =========================================================
@@ -350,17 +467,17 @@ class BookingRepository
     $sql = "
             SELECT
                 b.tbbookingid,
-                b.tbbookingclientid,
+                b.tbclientid,
                 c.tbclientname AS clientName,
-                b.tbbookinglocalid,
+                b.tbvenueid,
                 v.tbvenuename AS venueName,
                 b.tbbookingdate,
                 b.tbbookingeventtype,
                 b.tbbookingstate,
                 b.tbbookingactive
             FROM tbbooking b
-            LEFT JOIN tbclient c ON c.tbclientid = b.tbbookingclientid
-            LEFT JOIN tbvenue v ON v.tbvenueid = b.tbbookinglocalid
+            LEFT JOIN tbclient c ON c.tbclientid = b.tbclientid
+            LEFT JOIN tbvenue v ON v.tbvenueid = b.tbvenueid
             WHERE b.tbbookingdate LIKE :yearMonth
             ORDER BY b.tbbookingdate DESC, b.tbbookingid DESC
         ";
@@ -392,20 +509,33 @@ class BookingRepository
 
   // =========================================================
   // VERIFICAR SI YA HAY UNA RESERVA ACTIVA EN ESA FECHA
+  // (compatibilidad: delega a la comprobación de rango)
   // =========================================================
   public function hasActiveBookingOnDate(int $idLocal, string $bookingDate, int $excludeBookingId = 0): bool
+  {
+    return $this->hasActiveRangeConflict($idLocal, $bookingDate, $bookingDate, $excludeBookingId);
+  }
+
+  // =========================================================
+  // VERIFICAR SOLAPAMIENTO DE RANGO [inicio, fin]
+  // Dos reservas chocan si: inicio <= finExistente AND fin >= inicioExistente
+  // =========================================================
+  public function hasActiveRangeConflict(int $idLocal, string $startDate, string $endDate, int $excludeBookingId = 0): bool
   {
     $sql = "
             SELECT COUNT(*)
             FROM tbbooking
-            WHERE tbbookinglocalid = :idLocal
-              AND tbbookingdate = :bookingDate
+WHERE tbvenueid = :idLocal
               AND tbbookingstate IN ('pendiente', 'confirmado')
+              AND tbbookingactive = true
+              AND tbbookingdate <= :endDate
+              AND COALESCE(tbbookingenddate, tbbookingdate) >= :startDate
         ";
 
     $params = [
-      ':idLocal'     => $idLocal,
-      ':bookingDate' => $bookingDate
+      ':idLocal'   => $idLocal,
+      ':startDate' => $startDate,
+      ':endDate'   => $endDate
     ];
 
     if ($excludeBookingId > 0) {
@@ -431,8 +561,8 @@ class BookingRepository
             SELECT COUNT(*)
             FROM tbbooking b
             INNER JOIN tbvenue v
-                ON v.tbvenueid = b.tbbookinglocalid
-            WHERE v.tbvenueownerid = :idOwner
+                ON v.tbvenueid = b.tbvenueid
+            WHERE v.tbownerid = :idOwner
               AND b.tbbookingdate >= :today
               AND b.tbbookingstate IN ('pendiente', 'confirmado')
         ";
@@ -486,15 +616,15 @@ class BookingRepository
   {
     $sql = "
             SELECT
-                b.tbbookinglocalid AS idLocal,
+                b.tbvenueid AS idLocal,
                 v.tbvenuename AS name,
                 COUNT(*) AS total,
                 SUM(CASE WHEN b.tbbookingstate = 'confirmado' THEN 1 ELSE 0 END) AS confirmed
             FROM tbbooking b
             INNER JOIN tbvenue v
-                ON v.tbvenueid = b.tbbookinglocalid
+                ON v.tbvenueid = b.tbvenueid
             WHERE b.tbbookingdate LIKE :yearMonth
-            GROUP BY b.tbbookinglocalid, v.tbvenuename
+            GROUP BY b.tbvenueid, v.tbvenuename
             ORDER BY name ASC
         ";
 
@@ -511,11 +641,20 @@ class BookingRepository
   {
     return new Booking(
       idBooking: (int) $row['tbbookingid'],
-      idClient: (int) $row['tbbookingclientid'],
-      idLocal: (int) $row['tbbookinglocalid'],
+      idClient: (int) $row['tbclientid'],
+      idLocal: (int) $row['tbvenueid'],
       bookingDate: $row['tbbookingdate'],
       bookingState: $row['tbbookingstate'],
-      isBookingActive: $this->toBool($row['tbbookingactive'])
+      isBookingActive: $this->toBool($row['tbbookingactive']),
+      bookingEndDate: ($row['tbbookingenddate'] ?? null) !== null && $row['tbbookingenddate'] !== ''
+        ? $row['tbbookingenddate']
+        : null,
+      eventType: ($row['tbbookingeventtype'] ?? null) !== null && $row['tbbookingeventtype'] !== ''
+        ? $row['tbbookingeventtype']
+        : null,
+      eventDescription: ($row['tbbookingeventdetail'] ?? null) !== null && $row['tbbookingeventdetail'] !== ''
+        ? $row['tbbookingeventdetail']
+        : null
     );
   }
 
