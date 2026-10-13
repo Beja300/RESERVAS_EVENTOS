@@ -52,8 +52,8 @@
           <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
         </div>
         <div class="form-group">
-          <label for="phoneNumber">Teléfono</label>
-          <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone"
+          <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
+          <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" required
                  value="<?= e($_POST['phoneNumber'] ?? '') ?>" maxlength="8" placeholder="8 dígitos">
           <div class="form-hint">Ej: 8888-7777</div>
         </div>
@@ -107,8 +107,8 @@
           <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
         </div>
         <div class="form-group">
-          <label for="ownerPhone">Teléfono</label>
-          <input class="form-control" type="tel" id="ownerPhone" name="phoneNumber" data-mask="phone" data-validate="phone"
+          <label for="ownerPhone">Teléfono <span class="required-mark">*</span></label>
+          <input class="form-control" type="tel" id="ownerPhone" name="phoneNumber" required data-mask="phone" data-validate="phone" required
                  value="<?= e($_POST['phoneNumber'] ?? '') ?>" maxlength="8" placeholder="8 dígitos">
           <div class="form-hint">Ej: 8888-7777</div>
         </div>

@@ -1,3 +1,9 @@
+
+
+-- ========================================
+-- dbeventhall.sql
+-- ========================================
+
 CREATE DATABASE IF NOT EXISTS dbeventhall;
 
 USE dbeventhall;
@@ -433,6 +439,89 @@ CREATE TABLE tbcredit (
 -- 31) tbcreditpayment: abonos (pagos parciales) de un crédito.
 -- =========================================================
 CREATE TABLE tbcreditpayment (
+    tbcreditpaymentid INT AUTO_INCREMENT PRIMARY KEY,
+    tbcreditid INT NOT NULL,
+    tbcreditpaymentamount DECIMAL(12,2) NOT NULL,
+    tbcreditpaymentnote VARCHAR(255),
+    tbroleid INT,
+    tbcreditpaymentdate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    tbcreditpaymentactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+
+-- ========================================
+-- migrate_remove_business_unique.sql
+-- ========================================
+
+-- =========================================================
+-- MIGRACIÓN: quitar restricciones UNIQUE de negocio de MySQL
+-- ---------------------------------------------------------
+-- La rúbrica exige que las reglas de unicidad/duplicados se
+-- controlen desde PHP (Service/Controller), NO mediante
+-- restricciones de negocio de MySQL. Este script elimina los
+-- índices UNIQUE que imponían esas reglas a nivel de motor.
+--
+-- La unicidad sigue garantizada en la capa de código:
+--   - correo    -> AuthService::validateEmailIsUnique
+--   - cédula    -> AuthService::validateIdentificationIsUnique
+--   - 1:1 rol   -> validaciones de los Services al asignar subtipo
+--   - factura   -> InvoiceService (una factura por reserva)
+--
+-- Ejecutar una sola vez sobre bases existentes.
+-- Importar DESPUÉS de dbeventhall.sql en instalaciones nuevas ya
+-- no es necesario (el esquema ya no declara los UNIQUE).
+-- =========================================================
+
+USE dbeventhall;
+
+-- Índices inline: MySQL los nombra igual que la columna.
+ALTER TABLE tbrole            DROP INDEX tbroleemail;
+ALTER TABLE tbroleadmin       DROP INDEX tbroleid;
+ALTER TABLE tbroleclient      DROP INDEX tbroleid;
+ALTER TABLE tbroleowner       DROP INDEX tbroleid;
+ALTER TABLE tbowner           DROP INDEX tbowneridentificationnumber;
+ALTER TABLE tbinvoice         DROP INDEX tbbookingid;
+
+
+-- ========================================
+-- migrate_credit_module.sql
+-- ========================================
+
+-- =========================================================
+-- MIGRACIÓN: módulo de crédito y cuentas por cobrar/pagar
+-- ---------------------------------------------------------
+-- Crea las tablas nuevas del módulo P5 sobre una base ya
+-- instalada, sin tocar los datos existentes.
+--
+-- Ejecutar una sola vez sobre bases existentes. En instalaciones
+-- nuevas NO es necesario (dbeventhall.sql ya las incluye).
+-- =========================================================
+
+USE dbeventhall;
+
+CREATE TABLE IF NOT EXISTS tbcreditconfig (
+    tbcreditconfigid INT AUTO_INCREMENT PRIMARY KEY,
+    tbownerid INT NOT NULL,
+    tbcreditconfigenabled BOOLEAN NOT NULL DEFAULT FALSE,
+    tbcreditconfigdays INT NOT NULL DEFAULT 30,
+    tbcreditconfigfrequentmin INT NOT NULL DEFAULT 3,
+    tbcreditconfigactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS tbcredit (
+    tbcreditid INT AUTO_INCREMENT PRIMARY KEY,
+    tbbookingid INT NOT NULL,
+    tbclientid INT NOT NULL,
+    tbownerid INT NOT NULL,
+    tbcredittotal DECIMAL(12,2) NOT NULL,
+    tbcreditbalance DECIMAL(12,2) NOT NULL,
+    tbcreditduedate DATE NOT NULL,
+    tbcreditstate VARCHAR(30) DEFAULT 'pendiente',
+    tbcreditdate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    tbcreditactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS tbcreditpayment (
     tbcreditpaymentid INT AUTO_INCREMENT PRIMARY KEY,
     tbcreditid INT NOT NULL,
     tbcreditpaymentamount DECIMAL(12,2) NOT NULL,
