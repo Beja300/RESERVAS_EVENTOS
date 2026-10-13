@@ -4,6 +4,7 @@ require_once __DIR__ . '/../Service/AdminService.php';
 require_once __DIR__ . '/../Service/AuthService.php';
 require_once __DIR__ . '/../Service/RoleSecurityService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
+require_once __DIR__ . '/../Model/UserSessionDTO.php';
 require_once __DIR__ . '/../Repository/RoleRepository.php';
 require_once __DIR__ . '/../Repository/AdminRepository.php';
 require_once __DIR__ . '/../Repository/ClientRepository.php';
@@ -315,9 +316,9 @@ class AdminUserController
       }
 
       if (($_SESSION['type'] ?? null) === $type
-          && ($_SESSION['user'] ?? null) instanceof Role
-          && $_SESSION['user']->getIdRole() === $idRole) {
-        $_SESSION['user'] = $user;
+          && ($_SESSION['user'] ?? null) instanceof UserSessionDTO
+          && $_SESSION['user']->getRoleId() === $idRole) {
+        $_SESSION['user'] = UserSessionDTO::fromObject($user);
       }
 
       redirect_to('admin', 'users', ['updated' => $type]);

@@ -54,23 +54,23 @@ if ($invoice === null) {
               <?php endif; ?>
             </td>
             <td><?= (int) $d->getQuantityDetail() ?></td>
-            <td>&#8353; <?= number_format($d->getUnitPrice(), 2) ?></td>
-            <td>&#8353; <?= number_format($d->getQuantityDetail() * $d->getUnitPrice() - $d->getDiscount(), 2) ?></td>
+            <td><?= format_colones($d->getUnitPrice()) ?></td>
+            <td><?= format_colones($d->getQuantityDetail() * $d->getUnitPrice() - $d->getDiscount()) ?></td>
           </tr>
         <?php endforeach; ?>
       </tbody>
       <tfoot>
         <tr>
           <th colspan="3" style="text-align:right;">Subtotal</th>
-          <th>&#8353; <?= number_format($totals['subtotal'], 2) ?></th>
+          <th><?= format_colones($totals['subtotal']) ?></th>
         </tr>
         <tr>
           <th colspan="3" style="text-align:right;">IVA (<?= e(number_format($totals['taxPct'] ?? 0, 2)) ?>%)</th>
-          <th>&#8353; <?= number_format($totals['tax'], 2) ?></th>
+          <th><?= format_colones($totals['tax']) ?></th>
         </tr>
         <tr>
           <th colspan="3" style="text-align:right;">Total a pagar</th>
-          <th>&#8353; <?= number_format($total, 2) ?></th>
+          <th><?= format_colones($total) ?></th>
         </tr>
       </tfoot>
     </table>
@@ -85,7 +85,7 @@ if ($invoice === null) {
     <?php else: ?>
       <div class="detail-item"><div class="k">Nombre</div><div class="v"><strong><?= e($client->getName()) ?></strong></div></div>
       <div class="detail-item"><div class="k">Correo</div><div class="v"><?= e($client->getEmail()) ?></div></div>
-      <div class="detail-item"><div class="k">Teléfono</div><div class="v"><?= $client->getPhoneNumber() !== null && $client->getPhoneNumber() !== '' ? e($client->getPhoneNumber()) : '—' ?></div></div>
+      <div class="detail-item"><div class="k">Teléfono</div><div class="v"><?= $client->getPhoneNumber() !== null && $client->getPhoneNumber() !== '' ? e(format_phone($client->getPhoneNumber())) : '—' ?></div></div>
     <?php endif; ?>
   </div>
 
@@ -97,7 +97,7 @@ if ($invoice === null) {
       <div class="detail-item"><div class="k">Nombre</div><div class="v"><strong><?= e($venue->getNameVenue()) ?></strong></div></div>
       <div class="detail-item"><div class="k">Tipo</div><div class="v"><?= $venue->getTypeVenue() !== '' ? e($venue->getTypeVenue()) : '—' ?></div></div>
       <div class="detail-item"><div class="k">Capacidad</div><div class="v"><?= (int) $venue->getCapacityVenue() ?> personas</div></div>
-      <div class="detail-item"><div class="k">Precio de renta</div><div class="v">&#8353; <?= number_format($venue->getPriceVenue(), 2) ?></div></div>
+      <div class="detail-item"><div class="k">Precio de renta</div><div class="v"><?= format_colones($venue->getPriceVenue()) ?></div></div>
     <?php endif; ?>
   </div>
 </div>

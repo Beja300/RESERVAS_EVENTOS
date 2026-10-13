@@ -10,6 +10,9 @@ require_once __DIR__ . '/NotificationService.php';
 require_once __DIR__ . '/HistoryService.php';
 require_once __DIR__ . '/ImageStorageService.php';
 require_once __DIR__ . '/BusinessRuleException.php';
+require_once __DIR__ . '/ServiceException.php';
+require_once __DIR__ . '/ErrorLogger.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
@@ -23,6 +26,7 @@ require_once __DIR__ . '/../Repository/NotificationRepository.php';
  */
 class BookingActionService
 {
+  private PDO $connection;
   private BookingService $bookingService;
   private DetailService $detailService;
   private InvoiceService $invoiceService;
@@ -37,6 +41,7 @@ class BookingActionService
 
   public function __construct(PDO $connection)
   {
+    $this->connection = $connection;
     $this->bookingService = new BookingService();
     $this->detailService = new DetailService($connection);
     $this->invoiceService = new InvoiceService();
@@ -77,29 +82,48 @@ class BookingActionService
 
     $this->clientService->assertCanBook($clientId);
 
-    $idBooking = $this->bookingService->createBooking(
-      $clientId,
-      $idVenue,
-      $date,
-      $endDate,
-      $eventType,
-      $eventDetail
-    );
+    DataBase::beginTransaction($this->connection);
 
-    $this->historyService->logVenueBooking($roleId, $idVenue);
+    try {
+      $idBooking = $this->bookingService->createBooking(
+        $clientId,
+        $idVenue,
+        $date,
+        $endDate,
+        $eventType,
+        $eventDetail
+      );
 
-    $venue = $this->venueRepo->findById($idVenue);
-    if ($venue !== null) {
-      $this->notificationService->notifyOwnerOfNewBooking(
-        (int) $venue->getIdOwner(),
-        $venue->getNameVenue(),
-        (int) $idBooking
+      $this->historyService->logVenueBooking($roleId, $idVenue);
+
+      $venue = $this->venueRepo->findById($idVenue);
+      if ($venue !== null) {
+        $this->notificationService->notifyOwnerOfNewBooking(
+          (int) $venue->getIdOwner(),
+          $venue->getNameVenue(),
+          (int) $idBooking
+        );
+      }
+
+      $this->notificationService->notifyNewBookingToAdmins((int) $idBooking);
+
+      DataBase::commit();
+
+      return $idBooking;
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+
+      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+        throw $e;
+      }
+
+      ErrorLogger::log($e, __METHOD__);
+      throw new ServiceException(
+        'No se pudo completar la operación. Intenta de nuevo.',
+        0,
+        $e
       );
     }
-
-    $this->notificationService->notifyNewBookingToAdmins((int) $idBooking);
-
-    return $idBooking;
   }
 
   // =========================================================
@@ -117,18 +141,38 @@ class BookingActionService
   public function cancel(int $clientId, int $roleId, int $idBooking): void
   {
     $this->clientService->assertOwnsBooking($clientId, $idBooking);
-    $this->bookingService->cancel($idBooking);
 
-    $cancelledBooking = $this->bookingRepo->findById($idBooking);
-    if ($cancelledBooking !== null) {
-      $cancelledVenue = $this->venueRepo->findById($cancelledBooking->getIdLocal());
-      if ($cancelledVenue !== null) {
-        $this->historyService->logVenueCancel($roleId, (int) $cancelledBooking->getIdLocal());
-        $this->notificationService->notifyOwnerBookingCancelled(
-          (int) $cancelledVenue->getIdOwner(),
-          (int) $idBooking
-        );
+    DataBase::beginTransaction($this->connection);
+
+    try {
+      $this->bookingService->cancel($idBooking);
+
+      $cancelledBooking = $this->bookingRepo->findById($idBooking);
+      if ($cancelledBooking !== null) {
+        $cancelledVenue = $this->venueRepo->findById($cancelledBooking->getIdLocal());
+        if ($cancelledVenue !== null) {
+          $this->historyService->logVenueCancel($roleId, (int) $cancelledBooking->getIdLocal());
+          $this->notificationService->notifyOwnerBookingCancelled(
+            (int) $cancelledVenue->getIdOwner(),
+            (int) $idBooking
+          );
+        }
       }
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+
+      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+        throw $e;
+      }
+
+      ErrorLogger::log($e, __METHOD__);
+      throw new ServiceException(
+        'No se pudo completar la operación. Intenta de nuevo.',
+        0,
+        $e
+      );
     }
   }
 
@@ -138,8 +182,28 @@ class BookingActionService
   public function requestRefund(int $clientId, int $roleId, int $idBooking, string $motivo): void
   {
     $this->clientService->assertOwnsBooking($clientId, $idBooking);
-    $this->bookingService->requestRefund($idBooking, $roleId, $motivo);
-    $this->notificationService->notifyAdminsRefundRequested($idBooking);
+
+    DataBase::beginTransaction($this->connection);
+
+    try {
+      $this->bookingService->requestRefund($idBooking, $roleId, $motivo);
+      $this->notificationService->notifyAdminsRefundRequested($idBooking);
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+
+      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+        throw $e;
+      }
+
+      ErrorLogger::log($e, __METHOD__);
+      throw new ServiceException(
+        'No se pudo completar la operación. Intenta de nuevo.',
+        0,
+        $e
+      );
+    }
   }
 
   // =========================================================
@@ -148,11 +212,31 @@ class BookingActionService
   public function pay(int $clientId, int $roleId, int $idBooking, int $idPaymentMethod): void
   {
     $this->clientService->assertOwnsBooking($clientId, $idBooking);
-    $this->invoiceService->generate($idBooking, $idPaymentMethod, date('Y-m-d'));
 
-    $paidBooking = $this->bookingRepo->findById($idBooking);
-    if ($paidBooking !== null) {
-      $this->historyService->logVenuePurchase($roleId, (int) $paidBooking->getIdLocal());
+    DataBase::beginTransaction($this->connection);
+
+    try {
+      $this->invoiceService->generate($idBooking, $idPaymentMethod, date('Y-m-d'));
+
+      $paidBooking = $this->bookingRepo->findById($idBooking);
+      if ($paidBooking !== null) {
+        $this->historyService->logVenuePurchase($roleId, (int) $paidBooking->getIdLocal());
+      }
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+
+      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+        throw $e;
+      }
+
+      ErrorLogger::log($e, __METHOD__);
+      throw new ServiceException(
+        'No se pudo completar la operación. Intenta de nuevo.',
+        0,
+        $e
+      );
     }
   }
 
@@ -181,19 +265,38 @@ class BookingActionService
 
     $extension = strtolower(pathinfo($file['name'] ?? '', PATHINFO_EXTENSION));
 
-    $this->bookingTicketService->upload($idBooking, $storedPath, $extension, $idPaymentMethod);
+    DataBase::beginTransaction($this->connection);
 
-    $ticketBooking = $this->bookingRepo->findById($idBooking);
-    if ($ticketBooking !== null) {
-      $this->historyService->logVenuePurchase($roleId, (int) $ticketBooking->getIdLocal());
+    try {
+      $this->bookingTicketService->upload($idBooking, $storedPath, $extension, $idPaymentMethod);
 
-      $ticketVenue = $this->venueRepo->findById($ticketBooking->getIdLocal());
-      if ($ticketVenue !== null) {
-        $this->notificationService->notifyOwnerPaymentVerification(
-          (int) $ticketVenue->getIdOwner(),
-          (int) $idBooking
-        );
+      $ticketBooking = $this->bookingRepo->findById($idBooking);
+      if ($ticketBooking !== null) {
+        $this->historyService->logVenuePurchase($roleId, (int) $ticketBooking->getIdLocal());
+
+        $ticketVenue = $this->venueRepo->findById($ticketBooking->getIdLocal());
+        if ($ticketVenue !== null) {
+          $this->notificationService->notifyOwnerPaymentVerification(
+            (int) $ticketVenue->getIdOwner(),
+            (int) $idBooking
+          );
+        }
       }
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+
+      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+        throw $e;
+      }
+
+      ErrorLogger::log($e, __METHOD__);
+      throw new ServiceException(
+        'No se pudo completar la operación. Intenta de nuevo.',
+        0,
+        $e
+      );
     }
   }
 
@@ -216,9 +319,28 @@ class BookingActionService
       throw new BusinessRuleException('Esta reserva no tiene comprobante.');
     }
 
-    $this->bookingTicketService->approve($ticket->getIdTicket(), $ownerRoleId);
+    DataBase::beginTransaction($this->connection);
 
-    $this->notificationService->notifyClientPaymentApproved((int) $booking->getIdClient(), (int) $idBooking);
+    try {
+      $this->bookingTicketService->approve($ticket->getIdTicket(), $ownerRoleId);
+
+      $this->notificationService->notifyClientPaymentApproved((int) $booking->getIdClient(), (int) $idBooking);
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+
+      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+        throw $e;
+      }
+
+      ErrorLogger::log($e, __METHOD__);
+      throw new ServiceException(
+        'No se pudo completar la operación. Intenta de nuevo.',
+        0,
+        $e
+      );
+    }
   }
 
   // =========================================================
@@ -240,8 +362,27 @@ class BookingActionService
       throw new BusinessRuleException('Esta reserva no tiene comprobante.');
     }
 
-    $this->bookingTicketService->reject($ticket->getIdTicket());
+    DataBase::beginTransaction($this->connection);
 
-    $this->notificationService->notifyClientPaymentRejected((int) $booking->getIdClient(), (int) $idBooking);
+    try {
+      $this->bookingTicketService->reject($ticket->getIdTicket());
+
+      $this->notificationService->notifyClientPaymentRejected((int) $booking->getIdClient(), (int) $idBooking);
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+
+      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+        throw $e;
+      }
+
+      ErrorLogger::log($e, __METHOD__);
+      throw new ServiceException(
+        'No se pudo completar la operación. Intenta de nuevo.',
+        0,
+        $e
+      );
+    }
   }
 }

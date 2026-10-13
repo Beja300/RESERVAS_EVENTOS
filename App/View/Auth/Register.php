@@ -53,9 +53,9 @@
         </div>
         <div class="form-group">
           <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
-          <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" required
-                 value="<?= e($_POST['phoneNumber'] ?? '') ?>" maxlength="8" placeholder="8 dígitos">
-          <div class="form-hint">Ej: 8888-7777</div>
+          <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" pattern="[0-9]{4}-?[0-9]{4}" required
+                 value="<?= e($_POST['phoneNumber'] ?? '') ?>" maxlength="9" placeholder="8888-8888">
+          <div class="form-hint">Ej: 8888-8888</div>
         </div>
       </div>
 
@@ -87,7 +87,7 @@
         </div>
         <div class="form-group">
           <label for="ownerIdentification">Cédula / identificación</label>
-          <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification" data-mask="identification" data-validate="identification"
+          <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification" data-mask="identification" data-validate="identification" maxlength="15"
                  value="<?= e($_POST['ownerIdentification'] ?? '') ?>">
           <div class="form-hint">Ej: 1-2345-0678</div>
         </div>
@@ -108,9 +108,9 @@
         </div>
         <div class="form-group">
           <label for="ownerPhone">Teléfono <span class="required-mark">*</span></label>
-          <input class="form-control" type="tel" id="ownerPhone" name="phoneNumber" required data-mask="phone" data-validate="phone" required
-                 value="<?= e($_POST['phoneNumber'] ?? '') ?>" maxlength="8" placeholder="8 dígitos">
-          <div class="form-hint">Ej: 8888-7777</div>
+          <input class="form-control" type="tel" id="ownerPhone" name="phoneNumber" required data-mask="phone" data-validate="phone" pattern="[0-9]{4}-?[0-9]{4}"
+                 value="<?= e($_POST['phoneNumber'] ?? '') ?>" maxlength="9" placeholder="8888-8888">
+          <div class="form-hint">Ej: 8888-8888</div>
         </div>
       </div>
 

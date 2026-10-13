@@ -1,6 +1,8 @@
 <?php
 
 require_once __DIR__ . '/BusinessRuleException.php';
+require_once __DIR__ . '/ServiceException.php';
+require_once __DIR__ . '/ErrorLogger.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
@@ -11,6 +13,7 @@ require_once __DIR__ . '/EarningService.php';
 
 class BookingTicketService
 {
+  private PDO $connection;
   private BookingTicketRepository $ticketRepo;
   private BookingRepository $bookingRepo;
   private InvoiceService $invoiceService;
@@ -21,6 +24,7 @@ class BookingTicketService
 
   public function __construct(PDO $connection)
   {
+    $this->connection = $connection;
     $this->ticketRepo = new BookingTicketRepository($connection);
     $this->bookingRepo = new BookingRepository($connection);
     $this->invoiceService = new InvoiceService();
@@ -70,16 +74,35 @@ class BookingTicketService
       state: 'pendiente'
     );
 
-    $idTicket = $this->ticketRepo->save($ticket);
+    DataBase::beginTransaction($this->connection);
 
-    // La factura se genera aquí (pendiente), con el método elegido por el cliente.
-    if ($this->invoiceService->findByBooking($bookingPk) === null) {
-      $this->invoiceService->generate($bookingPk, $paymentMethodPk, date('Y-m-d'));
+    try {
+      $idTicket = $this->ticketRepo->save($ticket);
+
+      // La factura se genera aquí (pendiente), con el método elegido por el cliente.
+      if ($this->invoiceService->findByBooking($bookingPk) === null) {
+        $this->invoiceService->generate($bookingPk, $paymentMethodPk, date('Y-m-d'));
+      }
+
+      $this->bookingRepo->updateStatus($bookingPk, 'pendiente');
+
+      DataBase::commit();
+
+      return $idTicket;
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+
+      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+        throw $e;
+      }
+
+      ErrorLogger::log($e, __METHOD__);
+      throw new ServiceException(
+        'No se pudo completar la operación. Intenta de nuevo.',
+        0,
+        $e
+      );
     }
-
-    $this->bookingRepo->updateStatus($bookingPk, 'pendiente');
-
-    return $idTicket;
   }
 
   // =========================================================
@@ -102,15 +125,34 @@ class BookingTicketService
 
     $bookingPk = $ticket->getIdBooking();
 
-    $this->ticketRepo->updateState($ticketPk, 'aprobado');
+    DataBase::beginTransaction($this->connection);
 
-    $this->invoiceService->approve($bookingPk);
+    try {
+      $this->ticketRepo->updateState($ticketPk, 'aprobado');
 
-    $totals = $this->bookingService->calculateTotals($bookingPk);
+      $this->invoiceService->approve($bookingPk);
 
-    $this->earningService->recordEarning($bookingPk, $totals, $reviewedByRole);
+      $totals = $this->bookingService->calculateTotals($bookingPk);
 
-    $this->bookingRepo->updateStatus($bookingPk, 'confirmado');
+      $this->earningService->recordEarning($bookingPk, $totals, $reviewedByRole);
+
+      $this->bookingRepo->updateStatus($bookingPk, 'confirmado');
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+
+      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+        throw $e;
+      }
+
+      ErrorLogger::log($e, __METHOD__);
+      throw new ServiceException(
+        'No se pudo completar la operación. Intenta de nuevo.',
+        0,
+        $e
+      );
+    }
   }
 
   // =========================================================
@@ -128,11 +170,30 @@ class BookingTicketService
       throw new BusinessRuleException('Este comprobante ya fue procesado.');
     }
 
-    $this->ticketRepo->updateState($ticketPk, 'rechazado');
+    DataBase::beginTransaction($this->connection);
 
-    $this->invoiceService->reject($ticket->getIdBooking());
+    try {
+      $this->ticketRepo->updateState($ticketPk, 'rechazado');
 
-    $this->bookingRepo->updateStatus($ticket->getIdBooking(), 'rechazado');
+      $this->invoiceService->reject($ticket->getIdBooking());
+
+      $this->bookingRepo->updateStatus($ticket->getIdBooking(), 'rechazado');
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+
+      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+        throw $e;
+      }
+
+      ErrorLogger::log($e, __METHOD__);
+      throw new ServiceException(
+        'No se pudo completar la operación. Intenta de nuevo.',
+        0,
+        $e
+      );
+    }
   }
 
 }

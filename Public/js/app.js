@@ -31,6 +31,21 @@
     });
   };
 
+  // ---------- Formato de cédula (solo dígitos) ----------
+  // Física 9 -> 1-2345-0678 | Jurídica 10 -> 3-101-123456
+  // DIMEX 11 -> 1-2345-67890 | DIMEX 12 -> 1-2345-678901
+  App.formatCedula = function (value) {
+    var d = String(value == null ? '' : value).replace(/\D/g, '');
+    var cut = function (start, len) { return d.substr(start, len); };
+    switch (d.length) {
+      case 9:  return cut(0, 1) + '-' + cut(1, 4) + '-' + cut(5, 4);
+      case 10: return cut(0, 1) + '-' + cut(1, 3) + '-' + cut(4, 6);
+      case 11: return cut(0, 1) + '-' + cut(1, 4) + '-' + cut(5, 6);
+      case 12: return cut(0, 1) + '-' + cut(1, 4) + '-' + cut(5, 7);
+    }
+    return String(value == null ? '' : value);
+  };
+
   // ---------- Toast (notificación no intrusiva) ----------
   App.toast = function (message, type) {
     var types = ['success', 'error', 'info', 'warning'];
@@ -167,6 +182,39 @@
     }
   };
 
+  // ---------- Máscaras de entrada (data-mask) ----------
+  // phone: solo 8 dígitos, se muestra como 8888-8888.
+  // identification: solo dígitos (máx 12), se muestra con guiones al salir.
+  App.initMasks = function () {
+    var fields = document.querySelectorAll('[data-mask]');
+
+    var formatPhone = function (v) {
+      var digits = String(v || '').replace(/\D/g, '').slice(0, 8);
+      return digits.length > 4 ? digits.slice(0, 4) + '-' + digits.slice(4) : digits;
+    };
+
+    for (var i = 0; i < fields.length; i++) {
+      (function (field) {
+        var kind = field.getAttribute('data-mask');
+
+        if (kind === 'phone') {
+          field.addEventListener('input', function () {
+            field.value = formatPhone(field.value);
+          });
+          if (field.value) field.value = formatPhone(field.value);
+        } else if (kind === 'identification') {
+          field.addEventListener('input', function () {
+            field.value = field.value.replace(/\D/g, '').slice(0, 12);
+          });
+          field.addEventListener('blur', function () {
+            field.value = App.formatCedula(field.value);
+          });
+          if (field.value) field.value = App.formatCedula(field.value);
+        }
+      })(fields[i]);
+    }
+  };
+
   // ---------- Validación en vivo (genérica, data-validate) ----------
   App.validateField = function (field) {
     var value = (field.value || '').trim();
@@ -178,8 +226,8 @@
     if (rules.indexOf('required') !== -1 && value === '') {
       message = 'Este campo es obligatorio.';
     } else if (value !== '') {
-      if (rules.indexOf('phone') !== -1 && !/^\d{8}$/.test(value)) {
-        message = 'El teléfono debe tener 8 dígitos.';
+      if (rules.indexOf('phone') !== -1 && !/^\d{8}$/.test(value.replace(/\D/g, ''))) {
+        message = 'El teléfono debe tener 8 dígitos (ej. 8888-8888).';
       } else if (rules.indexOf('email') !== -1 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
         message = 'Correo electrónico no válido.';
       } else if (rules.indexOf('password') !== -1 && !/^(?=.*\d).{8,}$/.test(value)) {
@@ -248,6 +296,7 @@
     App.initConfirm();
     App.initTableFilter();
     App.initCardFilter();
+    App.initMasks();
     App.initValidation();
   };
 

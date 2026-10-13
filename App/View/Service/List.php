@@ -39,7 +39,7 @@ $venue = null;
           <tr>
             <td><strong><?= e($s->getNameService()) ?></strong></td>
             <td><?= $s->getTypeService() !== '' ? e($s->getTypeService()) : '—' ?></td>
-            <td>&#8353; <?= number_format($s->getPriceService(), 2) ?></td>
+            <td><?= format_colones($s->getPriceService()) ?></td>
             <td>
               <?php
                 $badge = [

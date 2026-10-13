@@ -26,9 +26,9 @@ if ($booking === null) {
       ?>
       <?= e($startLabel . $endLabel) ?>
     </div>
-    <div class="detail-item"><div class="k">Subtotal</div><div class="v">&#8353; <?= number_format($totals['subtotal'], 2) ?></div></div>
-    <div class="detail-item"><div class="k">IVA (<?= e(number_format($totals['taxPct'] ?? 0, 2)) ?>%)</div><div class="v">&#8353; <?= number_format($totals['tax'], 2) ?></div></div>
-    <div class="detail-item"><div class="k">Total a pagar</div><div class="v"><strong>&#8353; <?= number_format($total, 2) ?></strong></div></div>
+    <div class="detail-item"><div class="k">Subtotal</div><div class="v"><?= format_colones($totals['subtotal']) ?></div></div>
+    <div class="detail-item"><div class="k">IVA (<?= e(number_format($totals['taxPct'] ?? 0, 2)) ?>%)</div><div class="v"><?= format_colones($totals['tax']) ?></div></div>
+    <div class="detail-item"><div class="k">Total a pagar</div><div class="v"><strong><?= format_colones($total) ?></strong></div></div>
   </div>
 
   <?php if (!empty($error)): ?>

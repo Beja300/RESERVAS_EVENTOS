@@ -17,6 +17,7 @@ require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/ClientRepository.php';
 require_once __DIR__ . '/../Repository/NotificationRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
+require_once __DIR__ . '/../Model/UserSessionDTO.php';
 require_once __DIR__ . '/../View/_helpers.php';
 
 class AdminBookingController
@@ -309,6 +310,6 @@ class AdminBookingController
   private function currentAdminRoleId(): int
   {
     $user = $_SESSION['user'] ?? null;
-    return $user instanceof Admin && method_exists($user, 'getIdRol') ? (int) $user->getIdRol() : 0;
+    return $user instanceof UserSessionDTO ? (int) $user->getRoleId() : 0;
   }
 }

@@ -74,7 +74,7 @@ class CreditController
   }
 
   // =========================================================
-  // CLIENTE: MIS CRÉDITOS (cuentas por cobrar)
+  // CLIENTE: CUENTAS POR PAGAR (lo que el cliente debe al propietario)
   // =========================================================
   public function clientList(): void
   {

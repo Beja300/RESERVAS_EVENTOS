@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../Service/ProfileService.php';
 require_once __DIR__ . '/../Service/ImageStorageService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
+require_once __DIR__ . '/../Model/UserSessionDTO.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/RoleRepository.php';
 require_once __DIR__ . '/../Repository/OwnerRepository.php';
@@ -49,7 +50,12 @@ class OwnerProfileController
       return;
     }
 
-    $owner = $_SESSION['user'];
+    $dto = $_SESSION['user'];
+    $owner = $this->ownerRepo->findByRoleId($dto->getRoleId());
+
+    if ($owner === null) {
+      redirect_to('auth', 'showLogin');
+    }
 
     $currentEmail = $owner->getEmail();
     $currentPhone = $owner->getPhoneNumber();
@@ -94,7 +100,7 @@ class OwnerProfileController
       $this->roleRepo->update($owner);
       $this->ownerRepo->updateProfile($owner);
 
-      $_SESSION['user'] = $owner;
+      $_SESSION['user'] = UserSessionDTO::fromObject($owner);
 
       respond_or_redirect(
         ['ok' => true, 'message' => 'Perfil actualizado correctamente.'],
@@ -125,14 +131,19 @@ class OwnerProfileController
       return;
     }
 
-    $owner = $_SESSION['user'];
+    $dto = $_SESSION['user'];
+    $owner = $this->ownerRepo->findByRoleId($dto->getRoleId());
+
+    if ($owner === null) {
+      redirect_to('auth', 'showLogin');
+    }
 
     ImageStorageService::deleteLocal($owner->getImageOwner());
     $owner->setImageOwner('');
 
     $this->ownerRepo->updateProfile($owner);
 
-    $_SESSION['user'] = $owner;
+    $_SESSION['user'] = UserSessionDTO::fromObject($owner);
 
     respond_or_redirect(
       ['ok' => true, 'message' => 'Foto de perfil eliminada.'],

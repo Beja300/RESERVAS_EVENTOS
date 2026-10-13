@@ -4,6 +4,7 @@ require_once __DIR__ . '/../Service/ProfileService.php';
 require_once __DIR__ . '/../Service/AdminService.php';
 require_once __DIR__ . '/../Service/ImageStorageService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
+require_once __DIR__ . '/../Model/UserSessionDTO.php';
 require_once __DIR__ . '/../Repository/RoleRepository.php';
 require_once __DIR__ . '/../Repository/AdminRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
@@ -48,10 +49,7 @@ class AdminProfileController
       return;
     }
 
-    $admin = $_SESSION['user'];
-
-    $currentEmail = $admin->getEmail();
-    $currentPhone = $admin->getPhoneNumber();
+    $dto = $_SESSION['user'];
 
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
@@ -60,6 +58,15 @@ class AdminProfileController
     $newPassword = $_POST['newPassword'] ?? '';
 
     try {
+      $admin = $this->adminRepo->findByRoleId($dto->getRoleId());
+
+      if ($admin === null) {
+        throw new BusinessRuleException('No se pudo cargar tu perfil.');
+      }
+
+      $currentEmail = $admin->getEmail();
+      $currentPhone = $admin->getPhoneNumber();
+
       if ($name === '') {
         throw new BusinessRuleException('El nombre es obligatorio.');
       }
@@ -79,7 +86,7 @@ class AdminProfileController
       $this->roleRepo->update($admin);
       $this->adminRepo->updateProfile($admin);
 
-      $_SESSION['user'] = $admin;
+      $_SESSION['user'] = UserSessionDTO::fromObject($admin);
 
       respond_or_redirect(
         ['ok' => true, 'message' => 'Perfil actualizado correctamente.'],
@@ -110,14 +117,19 @@ class AdminProfileController
       return;
     }
 
-    $admin = $_SESSION['user'];
+    $dto = $_SESSION['user'];
+    $admin = $this->adminRepo->findByRoleId($dto->getRoleId());
+
+    if ($admin === null) {
+      redirect_to('auth', 'showLogin');
+    }
 
     ImageStorageService::deleteLocal($admin->getImageAdmin());
     $admin->setImageAdmin('');
 
     $this->adminRepo->updateProfile($admin);
 
-    $_SESSION['user'] = $admin;
+    $_SESSION['user'] = UserSessionDTO::fromObject($admin);
 
     respond_or_redirect(
       ['ok' => true, 'message' => 'Foto de perfil eliminada.'],

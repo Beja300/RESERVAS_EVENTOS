@@ -5,6 +5,7 @@ require_once __DIR__ . '/../Service/RoleSecurityService.php';
 require_once __DIR__ . '/../Service/LocationService.php';
 require_once __DIR__ . '/../Service/ImageStorageService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
+require_once __DIR__ . '/../Model/UserSessionDTO.php';
 require_once __DIR__ . '/../Repository/RoleRepository.php';
 require_once __DIR__ . '/../Repository/ClientRepository.php';
 require_once __DIR__ . '/../Repository/LocationRepository.php';
@@ -63,7 +64,12 @@ class ClientProfileController
       return;
     }
 
-    $client = $_SESSION['user'];
+    $dto = $_SESSION['user'];
+    $client = $this->clientRepo->findByRoleId($dto->getRoleId());
+
+    if ($client === null) {
+      redirect_to('auth', 'showLogin');
+    }
 
     $currentEmail = $client->getEmail();
     $currentPhone = $client->getPhoneNumber();
@@ -119,7 +125,7 @@ class ClientProfileController
       $client->setImageClient($image);
       $client->setLocationId($locationId);
 
-      $_SESSION['user'] = $client;
+      $_SESSION['user'] = UserSessionDTO::fromObject($client);
 
       respond_or_redirect(
         ['ok' => true, 'message' => 'Perfil actualizado correctamente.'],
@@ -155,7 +161,12 @@ class ClientProfileController
       return;
     }
 
-    $client = $_SESSION['user'];
+    $dto = $_SESSION['user'];
+    $client = $this->clientRepo->findByRoleId($dto->getRoleId());
+
+    if ($client === null) {
+      respond_json(['ok' => false, 'message' => 'No se pudo cargar tu perfil.'], 404);
+    }
 
     $province = trim($_POST['province'] ?? '');
     $canton = trim($_POST['canton'] ?? '');
@@ -185,7 +196,7 @@ class ClientProfileController
       $this->clientRepo->updateProfile($client->getIdClient(), $client->getImageClient(), $locationId);
       $client->setLocationId($locationId);
 
-      $_SESSION['user'] = $client;
+      $_SESSION['user'] = UserSessionDTO::fromObject($client);
 
       respond_json([
         'ok'       => true,
@@ -216,14 +227,19 @@ class ClientProfileController
       return;
     }
 
-    $client = $_SESSION['user'];
+    $dto = $_SESSION['user'];
+    $client = $this->clientRepo->findByRoleId($dto->getRoleId());
+
+    if ($client === null) {
+      redirect_to('auth', 'showLogin');
+    }
 
     ImageStorageService::deleteLocal($client->getImageClient());
     $client->setImageClient('');
 
     $this->clientRepo->updateProfile($client->getIdClient(), '', $client->getLocationId());
 
-    $_SESSION['user'] = $client;
+    $_SESSION['user'] = UserSessionDTO::fromObject($client);
 
     respond_or_redirect(
       ['ok' => true, 'message' => 'Foto de perfil eliminada.'],

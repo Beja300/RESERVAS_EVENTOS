@@ -106,7 +106,7 @@ $serviceTypes = $serviceTypes ?? [];
             </p>
           <?php endif; ?>
           <p style="color:var(--neutral-900);font-weight:700;margin-top:6px;">
-            &#8353; <?= number_format($v->getPriceVenue(), 2) ?>
+            <?= format_colones($v->getPriceVenue()) ?>
             <span class="muted" style="font-weight:400;">por evento</span>
           </p>
           <?php if (isset($ratingsByVenue[$v->getIdVenue()])): ?>

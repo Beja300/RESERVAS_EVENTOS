@@ -40,7 +40,7 @@ $u = $user;
       <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
       <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
              value="<?= e($_POST['phoneNumber'] ?? $u->getPhoneNumber() ?? '') ?>"
-             data-validate="phone" inputmode="numeric" pattern="\d{8}" maxlength="8" placeholder="8 dígitos">
+             data-mask="phone" data-validate="phone" inputmode="numeric" pattern="[0-9]{4}-?[0-9]{4}" maxlength="9" placeholder="8888-8888">
       <div class="form-hint">Ej: 8888-7777</div>
     </div>
     <div class="form-group">

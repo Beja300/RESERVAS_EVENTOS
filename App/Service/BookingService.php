@@ -1,6 +1,8 @@
 <?php
 
 require_once __DIR__ . '/BusinessRuleException.php';
+require_once __DIR__ . '/ServiceException.php';
+require_once __DIR__ . '/ErrorLogger.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/DetailRepository.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
@@ -48,12 +50,9 @@ class BookingService
         ?string $eventType = null,
         ?string $eventDetail = null
     ): int {
-        if ($date < date('Y-m-d')) {
-            throw new BusinessRuleException(
-                'La fecha de inicio de la reserva no puede ser anterior a hoy.'
-            );
-        }
-
+        // Primero se valida el formato de las fechas; recién después las
+        // comparaciones, para no confundir una fecha inválida con una fuera
+        // de rango.
         if (!$this->isRealDate($date)) {
             throw new BusinessRuleException(
                 'La fecha de inicio no tiene un formato válido (AAAA-MM-DD).'
@@ -72,23 +71,23 @@ class BookingService
             );
         }
 
+        if ($date < date('Y-m-d')) {
+            throw new BusinessRuleException(
+                'La fecha de inicio de la reserva no puede ser anterior a hoy.'
+            );
+        }
+
         if ($endDate < $date) {
             throw new BusinessRuleException(
-                'La fecha final no puede ser anterior a la fecha de inicio.'
+                'La fecha de finalización debe ser igual o posterior a la fecha de inicio.'
             );
         }
 
         $maxDate = date('Y-m-d', strtotime('+1 year'));
 
-        if ($date > $maxDate) {
+        if ($date > $maxDate || $endDate > $maxDate) {
             throw new BusinessRuleException(
-                'La fecha de inicio no puede superar un año desde hoy.'
-            );
-        }
-
-        if ($endDate > $maxDate) {
-            throw new BusinessRuleException(
-                'La fecha final no puede superar un año desde hoy.'
+                'No se pueden realizar reservas con más de 1 año de anticipación.'
             );
         }
 
@@ -138,7 +137,7 @@ class BookingService
             $eventDetail
         );
 
-        $this->connection->beginTransaction();
+        DataBase::beginTransaction($this->connection);
 
         try {
 
@@ -148,14 +147,23 @@ class BookingService
             // (garantiza factura nunca en 0 y acumula precio por día)
             $this->detailRepo->addVenueLine($idBooking, $venue, $days);
 
-            $this->connection->commit();
+            DataBase::commit();
 
             return $idBooking;
         } catch (\Throwable $e) {
 
-            $this->connection->rollBack();
+            DataBase::rollBack();
 
-            throw $e;
+            if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+                throw $e;
+            }
+
+            ErrorLogger::log($e, __METHOD__);
+            throw new ServiceException(
+                'No se pudo completar la operación. Intenta de nuevo.',
+                0,
+                $e
+            );
         }
     }
 
@@ -214,10 +222,29 @@ public function cancel(int $bookingPk): void
       );
     }
 
-    $this->bookingRepo->updateStatus(
-      $bookingPk,
-      'cancelado'
-    );
+    DataBase::beginTransaction($this->connection);
+
+    try {
+      $this->bookingRepo->updateStatus(
+        $bookingPk,
+        'cancelado'
+      );
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+
+      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+        throw $e;
+      }
+
+      ErrorLogger::log($e, __METHOD__);
+      throw new ServiceException(
+        'No se pudo completar la operación. Intenta de nuevo.',
+        0,
+        $e
+      );
+    }
   }
 
   // =========================================================
@@ -260,25 +287,44 @@ public function cancel(int $bookingPk): void
       );
     }
 
-    $this->refundRepo->save(
-      new BookingRefund(
-        id: 0,
-        idBooking: $bookingPk,
-        clientRoleId: $clientRoleId,
-        detail: $motivo,
-        state: 'pendiente'
-      )
-    );
+    DataBase::beginTransaction($this->connection);
 
-    $this->historyRepo->save(
-      new BookingHistory(
-        id: 0,
-        idBooking: $bookingPk,
-        roleId: $clientRoleId,
-        action: 'SOLICITUD_REEMBOLSO',
-        detail: $motivo
-      )
-    );
+    try {
+      $this->refundRepo->save(
+        new BookingRefund(
+          id: 0,
+          idBooking: $bookingPk,
+          clientRoleId: $clientRoleId,
+          detail: $motivo,
+          state: 'pendiente'
+        )
+      );
+
+      $this->historyRepo->save(
+        new BookingHistory(
+          id: 0,
+          idBooking: $bookingPk,
+          roleId: $clientRoleId,
+          action: 'SOLICITUD_REEMBOLSO',
+          detail: $motivo
+        )
+      );
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+
+      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+        throw $e;
+      }
+
+      ErrorLogger::log($e, __METHOD__);
+      throw new ServiceException(
+        'No se pudo completar la operación. Intenta de nuevo.',
+        0,
+        $e
+      );
+    }
   }
 
   /**

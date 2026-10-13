@@ -1,6 +1,8 @@
 <?php
 
 require_once __DIR__ . '/BusinessRuleException.php';
+require_once __DIR__ . '/ServiceException.php';
+require_once __DIR__ . '/ErrorLogger.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/BookingHistoryRepository.php';
@@ -22,6 +24,7 @@ require_once __DIR__ . '/../Model/Booking.php';
  */
 class BookingAdminService
 {
+  private PDO $connection;
   private BookingRepository $bookingRepo;
   private BookingHistoryRepository $historyRepo;
   private BookingRefundRepository $refundRepo;
@@ -32,6 +35,7 @@ class BookingAdminService
 
   public function __construct(PDO $connection)
   {
+    $this->connection = $connection;
     $this->bookingRepo = new BookingRepository($connection);
     $this->historyRepo = new BookingHistoryRepository($connection);
     $this->refundRepo = new BookingRefundRepository($connection);
@@ -54,8 +58,17 @@ class BookingAdminService
       );
     }
 
-    $this->bookingRepo->updateStatus($bookingPk, 'cancelado');
-    $this->log($bookingPk, $adminRoleId, 'CANCELAR', $this->text($note, 'Cancelada por el administrador.'));
+    DataBase::beginTransaction($this->connection);
+
+    try {
+      $this->bookingRepo->updateStatus($bookingPk, 'cancelado');
+      $this->log($bookingPk, $adminRoleId, 'CANCELAR', $this->text($note, 'Cancelada por el administrador.'));
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+      $this->rethrowOrWrap($e, __METHOD__);
+    }
   }
 
   // =========================================================
@@ -78,7 +91,7 @@ class BookingAdminService
     }
 
     if ($newDate > date('Y-m-d', strtotime('+1 year'))) {
-      throw new BusinessRuleException('La nueva fecha no puede superar un año desde hoy.');
+      throw new BusinessRuleException('No se pueden reprogramar reservas con más de 1 año de anticipación.');
     }
 
     if ($newDate === $booking->getBookingDate()) {
@@ -105,16 +118,26 @@ class BookingAdminService
 
     $oldDate = $booking->getBookingDate();
     $oldEndDate = $booking->getBookingEndDate();
-    $this->bookingRepo->reschedule($bookingPk, $newDate, $newEndDate);
 
-    $this->log(
-      $bookingPk,
-      $adminRoleId,
-      'REPROGRAMAR',
-      'Rango anterior: ' . $oldDate . ' - ' . ($oldEndDate ?? $oldDate)
-      . ' -> nuevo rango: ' . $newDate . ' - ' . $newEndDate
-      . ($this->text($note) ? ' | ' . $note : '')
-    );
+    DataBase::beginTransaction($this->connection);
+
+    try {
+      $this->bookingRepo->reschedule($bookingPk, $newDate, $newEndDate);
+
+      $this->log(
+        $bookingPk,
+        $adminRoleId,
+        'REPROGRAMAR',
+        'Rango anterior: ' . $oldDate . ' - ' . ($oldEndDate ?? $oldDate)
+        . ' -> nuevo rango: ' . $newDate . ' - ' . $newEndDate
+        . ($this->text($note) ? ' | ' . $note : '')
+      );
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+      $this->rethrowOrWrap($e, __METHOD__);
+    }
   }
 
   // =========================================================
@@ -155,16 +178,25 @@ class BookingAdminService
       throw new BusinessRuleException('El local seleccionado ya tiene una reserva que se cruza con ese rango de fechas.');
     }
 
-    $this->bookingRepo->changeVenue($bookingPk, $newVenueId);
-    $this->updateVenueLine($bookingPk, $newVenueId, $venue->getPriceVenue());
+    DataBase::beginTransaction($this->connection);
 
-    $this->log(
-      $bookingPk,
-      $adminRoleId,
-      'CAMBIAR_LOCAL',
-      'Local anterior: #' . $booking->getIdLocal() . ' -> nuevo local: #' . $newVenueId
-      . ($this->text($note) ? ' | ' . $note : '')
-    );
+    try {
+      $this->bookingRepo->changeVenue($bookingPk, $newVenueId);
+      $this->updateVenueLine($bookingPk, $newVenueId, $venue->getPriceVenue());
+
+      $this->log(
+        $bookingPk,
+        $adminRoleId,
+        'CAMBIAR_LOCAL',
+        'Local anterior: #' . $booking->getIdLocal() . ' -> nuevo local: #' . $newVenueId
+        . ($this->text($note) ? ' | ' . $note : '')
+      );
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+      $this->rethrowOrWrap($e, __METHOD__);
+    }
   }
 
   private function updateVenueLine(int $bookingPk, int $newVenueId, float $unitPrice): void
@@ -192,27 +224,36 @@ class BookingAdminService
       throw new BusinessRuleException('La reserva ya no puede reembolsarse.');
     }
 
-    $this->refundRepo->updateState($refundRequestId, 'aprobado');
+    DataBase::beginTransaction($this->connection);
 
-    $invoice = $this->invoiceRepo->findByBooking($bookingPk);
-    if ($invoice !== null && in_array($invoice->getStatusInvoice(), ['pendiente', 'pagado'], true)) {
-      $this->invoiceRepo->updateStatus($invoice->getIdInvoice(), 'reembolsado');
+    try {
+      $this->refundRepo->updateState($refundRequestId, 'aprobado');
+
+      $invoice = $this->invoiceRepo->findByBooking($bookingPk);
+      if ($invoice !== null && in_array($invoice->getStatusInvoice(), ['pendiente', 'pagado'], true)) {
+        $this->invoiceRepo->updateStatus($invoice->getIdInvoice(), 'reembolsado');
+      }
+
+      // Reversar la ganancia registrada, si existe.
+      if ($this->earningRepo->findByBooking($bookingPk) !== null) {
+        $this->earningRepo->deactivateByBooking($bookingPk);
+      }
+
+      $this->bookingRepo->updateStatus($bookingPk, 'cancelado');
+
+      $this->log(
+        $bookingPk,
+        $adminRoleId,
+        'REEMBOLSO_APROBADO',
+        'Motivo del cliente: ' . $refund->getDetail()
+        . ($this->text($note) ? ' | ' . $note : '')
+      );
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+      $this->rethrowOrWrap($e, __METHOD__);
     }
-
-    // Reversar la ganancia registrada, si existe.
-    if ($this->earningRepo->findByBooking($bookingPk) !== null) {
-      $this->earningRepo->deactivateByBooking($bookingPk);
-    }
-
-    $this->bookingRepo->updateStatus($bookingPk, 'cancelado');
-
-    $this->log(
-      $bookingPk,
-      $adminRoleId,
-      'REEMBOLSO_APROBADO',
-      'Motivo del cliente: ' . $refund->getDetail()
-      . ($this->text($note) ? ' | ' . $note : '')
-    );
   }
 
   // =========================================================
@@ -222,19 +263,42 @@ class BookingAdminService
   {
     $refund = $this->requirePendingRefund($refundRequestId);
 
-    $this->refundRepo->updateState($refundRequestId, 'rechazado');
+    DataBase::beginTransaction($this->connection);
 
-    $this->log(
-      $refund->getIdBooking(),
-      $adminRoleId,
-      'REEMBOLSO_RECHAZADO',
-      'Se rechazó la solicitud de reembolso.'
-    );
+    try {
+      $this->refundRepo->updateState($refundRequestId, 'rechazado');
+
+      $this->log(
+        $refund->getIdBooking(),
+        $adminRoleId,
+        'REEMBOLSO_RECHAZADO',
+        'Se rechazó la solicitud de reembolso.'
+      );
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+      $this->rethrowOrWrap($e, __METHOD__);
+    }
   }
 
   // =========================================================
   // HELPERS
   // =========================================================
+  private function rethrowOrWrap(\Throwable $e, string $context): void
+  {
+    if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+      throw $e;
+    }
+
+    ErrorLogger::log($e, $context);
+    throw new ServiceException(
+      'No se pudo completar la operación. Intenta de nuevo.',
+      0,
+      $e
+    );
+  }
+
   private function requireBooking(int $bookingPk): Booking
   {
     $booking = $this->bookingRepo->findById($bookingPk);

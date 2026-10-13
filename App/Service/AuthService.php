@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
+require_once __DIR__ . '/../Model/UserSessionDTO.php';
 require_once __DIR__ . '/../Repository/RoleRepository.php';
 require_once __DIR__ . '/../Repository/AdminRepository.php';
 require_once __DIR__ . '/../Repository/ClientRepository.php';
@@ -52,10 +53,34 @@ class AuthService
         }
     }
 
+    /**
+     * Normaliza un teléfono dejando solo sus dígitos.
+     *
+     * Permite aceptar entradas con formato (ej. "8888-8888", "8888 8888"
+     * o "+506 8888-8888") y almacenar siempre los 8 dígitos limpios.
+     * Devuelve null cuando el valor viene vacío.
+     */
+    public function normalizePhone(?string $phoneNumber): ?string
+    {
+        $digits = preg_replace('/\D/', '', (string) $phoneNumber);
+
+        return $digits === '' ? null : $digits;
+    }
+
+    /**
+     * Valida que el teléfono (si viene) tenga exactamente 8 dígitos.
+     *
+     * Se normaliza primero, por lo que acepta tanto "88888888" como
+     * "8888-8888" o "8888 8888".
+     */
     public function validatePhoneFormat(?string $phoneNumber): void
     {
-        if ($phoneNumber !== null && $phoneNumber !== '' && !preg_match('/^[0-9]{8}$/', $phoneNumber)) {
-            throw new BusinessRuleException("El teléfono debe tener 8 dígitos.");
+        if ($phoneNumber === null || trim($phoneNumber) === '') {
+            return;
+        }
+
+        if (!preg_match('/^\d{8}$/', preg_replace('/\D/', '', $phoneNumber))) {
+            throw new BusinessRuleException("El teléfono debe contener 8 dígitos (ej. 8888-8888).");
         }
     }
 
@@ -73,16 +98,37 @@ class AuthService
         }
     }
 
+    /**
+     * Normaliza una identificación dejando solo sus dígitos.
+     */
+    public function normalizeIdentification(?string $identificationNumber): string
+    {
+        return preg_replace('/\D/', '', (string) $identificationNumber);
+    }
+
+    /**
+     * Valida el formato de una identificación costarricense.
+     *
+     * Acepta:
+     *  - Cédula física   con guiones: 1-2345-0678
+     *  - Cédula jurídica con guiones: 3-101-123456
+     *  - DIMEX           con guiones: 1-2345-67890 / 1-2345-678901
+     *  - Cualquiera de las anteriores como 9 a 12 dígitos sin guiones.
+     */
     public function validateIdentificationFormat(string $identificationNumber): void
     {
-        $digits = preg_replace('/[\s-]/', '', $identificationNumber);
+        $digits = $this->normalizeIdentification($identificationNumber);
 
-        $valid = preg_match('/^\d{1}-\d{4}-\d{4}$/', $identificationNumber)
-            || preg_match('/^\d{1}-\d{3}-\d{6}$/', $identificationNumber)
-            || preg_match('/^\d{9,12}$/', $digits);
+        $valid = preg_match('/^\d{1}-\d{4}-\d{4}$/', $identificationNumber)      // física
+            || preg_match('/^\d{1}-\d{3}-\d{6}$/', $identificationNumber)        // jurídica
+            || preg_match('/^\d{1}-\d{4}-\d{5,6}$/', $identificationNumber)      // DIMEX
+            || preg_match('/^\d{9,12}$/', $digits);                              // sin guiones
 
         if (!$valid) {
-            throw new BusinessRuleException("El formato de la cédula no es válido (ej. 1-2345-0678).");
+            throw new BusinessRuleException(
+                "El formato de la cédula no es válido. Usa cédula física (1-2345-0678), "
+                . "jurídica (3-101-123456) o 9 a 12 dígitos (DIMEX/NITE)."
+            );
         }
     }
 
@@ -96,6 +142,8 @@ class AuthService
         $this->validateEmailIsUnique($email);
         $this->validatePasswordStrength($password);
         $this->validatePhoneFormat($phoneNumber);
+
+        $phoneNumber = $this->normalizePhone($phoneNumber);
 
         $client = new Client(
             id: 0,
@@ -135,7 +183,20 @@ class AuthService
         $this->validatePasswordStrength($password);
         $this->validatePhoneFormat($phoneNumber);
 
-        if ($ownerIdentification !== null && trim($ownerIdentification) !== '') {
+        $phoneNumber = $this->normalizePhone($phoneNumber);
+
+        // La identificación, si viene, debe tener un formato válido y ser
+        // única. Se valida el valor tal como llegó (acepta con o sin guiones)
+        // y luego se normaliza a solo dígitos para almacenar.
+        $rawIdentification = trim((string) $ownerIdentification);
+
+        if ($rawIdentification !== '') {
+            $this->validateIdentificationFormat($rawIdentification);
+        }
+
+        $ownerIdentification = $this->normalizeIdentification($rawIdentification);
+
+        if ($ownerIdentification !== '') {
             $this->validateIdentificationIsUnique($ownerIdentification);
         }
 
@@ -180,6 +241,8 @@ class AuthService
         $this->validatePasswordStrength($password);
         $this->validatePhoneFormat($phoneNumber);
 
+        $phoneNumber = $this->normalizePhone($phoneNumber);
+
         $admin = new Admin(
             id: 0,
             name: $name,
@@ -202,7 +265,7 @@ class AuthService
     // =========================================================
     // LOGIN
     // =========================================================
-    /** @return array{type: string, user: Admin|Client|Owner} */
+    /** @return array{type: string, user: UserSessionDTO} */
     public function login(string $email, string $password): array
     {
         $finders = [
@@ -226,7 +289,9 @@ class AuthService
                 throw new BusinessRuleException("Esta cuenta está desactivada.");
             }
 
-            return ['type' => $type, 'user' => $user];
+            // Se guarda en sesión un DTO liviano (sin contraseña), no la
+            // entidad de dominio completa.
+            return ['type' => $type, 'user' => UserSessionDTO::fromObject($user)];
         }
 
         throw new BusinessRuleException("Correo o contraseña incorrectos.");

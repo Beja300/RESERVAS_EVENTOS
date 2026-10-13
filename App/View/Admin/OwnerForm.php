@@ -42,7 +42,7 @@ require_once __DIR__ . '/../_header.php';
     </div>
     <div class="form-group">
       <label for="ownerIdentification">Cédula / identificación</label>
-      <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification" maxlength="30">
+      <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification" data-mask="identification" data-validate="identification" maxlength="15">
       <div class="form-hint">Ej: 1-2345-0678</div>
     </div>
     <div class="form-group">
@@ -63,7 +63,7 @@ require_once __DIR__ . '/../_header.php';
     <div class="form-group">
       <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
       <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
-             data-validate="phone" inputmode="numeric" pattern="\d{8}" maxlength="8" placeholder="8 dígitos">
+             data-mask="phone" data-validate="phone" inputmode="numeric" pattern="[0-9]{4}-?[0-9]{4}" maxlength="9" placeholder="8888-8888">
       <div class="form-hint">Ej: 8888-7777</div>
     </div>
     <div class="form-group" style="display:flex;gap:10px;margin-bottom:0;">

@@ -2,6 +2,9 @@
 $pageCss = 'booking/form';
 $pageJs = ['booking/form'];
 
+$minDate = date('Y-m-d');
+$maxDate = date('Y-m-d', strtotime('+1 year'));
+
 require_once __DIR__ . '/../_header.php';
 if ($venue === null) {
   echo '<div class="alert alert-error">Local no encontrado.</div>';
@@ -28,10 +31,10 @@ if ($venue === null) {
 
     <div class="form-group">
       <label for="date">Rango de fechas <span class="required-mark">*</span></label>
-      <input class="form-control" type="date" id="date" name="date" required min="<?= date('Y-m-d') ?>"
+      <input class="form-control" type="date" id="date" name="date" required min="<?= e($minDate) ?>" max="<?= e($maxDate) ?>"
              value="<?= e(trim($_POST['date'] ?? '')) ?>"
              data-booked-dates='<?= e(json_encode($bookedDates ?? [])) ?>'>
-      <input class="form-control" type="date" id="endDate" name="endDate" required
+      <input class="form-control" type="date" id="endDate" name="endDate" required min="<?= e($minDate) ?>" max="<?= e($maxDate) ?>"
              value="<?= e(trim($_POST['endDate'] ?? '')) ?>" data-end-date>
     </div>
     <p class="form-hint">Elige el día de inicio y luego el día final. El precio se acumula por día.</p>
@@ -61,7 +64,7 @@ if ($venue === null) {
 
     <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--neutral-200);">
       <p style="font-weight:700;color:var(--neutral-900);" data-venue-price="<?= e($venue->getPriceVenue()) ?>">
-        Precio por día: &#8353; <?= number_format($venue->getPriceVenue(), 2) ?>
+        Precio por día: <?= format_colones($venue->getPriceVenue()) ?>
       </p>
       <p class="form-hint" id="bookingPriceSummary">
         El precio se acumula por día (del 10 al 12 = 3 días). El total mostrará el precio × días más los servicios que agregues.

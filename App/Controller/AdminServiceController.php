@@ -11,6 +11,7 @@ require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/AdminRepository.php';
 require_once __DIR__ . '/../Repository/NotificationRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
+require_once __DIR__ . '/../Model/UserSessionDTO.php';
 require_once __DIR__ . '/../Model/Admin.php';
 require_once __DIR__ . '/../View/_helpers.php';
 
@@ -59,7 +60,7 @@ class AdminServiceController
 
     $idService = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
     $admin = $_SESSION['user'] ?? null;
-    $approvedByRoleId = $admin instanceof Admin && method_exists($admin, 'getIdRol') ? $admin->getIdRol() : 0;
+    $approvedByRoleId = $admin instanceof UserSessionDTO ? $admin->getRoleId() : 0;
 
     try {
       $this->serviceService->approve($idService, $approvedByRoleId > 0 ? $approvedByRoleId : null);
@@ -90,7 +91,7 @@ class AdminServiceController
 
     $idService = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
     $admin = $_SESSION['user'] ?? null;
-    $approvedByRoleId = $admin instanceof Admin && method_exists($admin, 'getIdRol') ? $admin->getIdRol() : 0;
+    $approvedByRoleId = $admin instanceof UserSessionDTO ? $admin->getRoleId() : 0;
 
     try {
       $this->serviceService->reject($idService, $approvedByRoleId > 0 ? $approvedByRoleId : null);

@@ -44,7 +44,7 @@ $lastName = $owner->getLastNameOwner();
     <?php endif; ?>
     <div class="detail-item"><div class="k">Correo</div><div class="v"><?= e($owner->getEmail()) ?></div></div>
     <?php if ($owner->getPhoneNumber() !== '' && $owner->getPhoneNumber() !== null): ?>
-      <div class="detail-item"><div class="k">Teléfono</div><div class="v"><?= e($owner->getPhoneNumber()) ?></div></div>
+      <div class="detail-item"><div class="k">Teléfono</div><div class="v"><?= e(format_phone($owner->getPhoneNumber())) ?></div></div>
     <?php endif; ?>
   </div>
 </div>

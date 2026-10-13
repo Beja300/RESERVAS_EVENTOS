@@ -32,8 +32,8 @@ $canPay = $isClientOwner && $effectiveState !== 'pagado';
 
 <div class="card" style="max-width:560px;">
   <div class="detail-grid">
-    <div class="detail-item"><div class="k">Monto total</div><div class="v">&#8353; <?= number_format($credit->getTotal(), 2) ?></div></div>
-    <div class="detail-item"><div class="k">Saldo pendiente</div><div class="v">&#8353; <?= number_format($credit->getBalance(), 2) ?></div></div>
+    <div class="detail-item"><div class="k">Monto total</div><div class="v"><?= format_colones($credit->getTotal()) ?></div></div>
+    <div class="detail-item"><div class="k">Saldo pendiente</div><div class="v"><?= format_colones($credit->getBalance()) ?></div></div>
     <div class="detail-item"><div class="k">Fecha límite</div><div class="v"><?= e($credit->getDueDate()) ?></div></div>
     <div class="detail-item"><div class="k">Estado</div><div class="v"><?= e($label) ?></div></div>
   </div>
@@ -50,7 +50,7 @@ $canPay = $isClientOwner && $effectiveState !== 'pagado';
       <input class="form-control" type="number" id="amount" name="amount" step="0.01" min="0.01"
              max="<?= number_format($credit->getBalance(), 2, '.', '') ?>" required data-validate="positive"
              value="">
-      <div class="form-hint">Máximo: &#8353; <?= number_format($credit->getBalance(), 2) ?></div>
+      <div class="form-hint">Máximo: <?= format_colones($credit->getBalance()) ?></div>
     </div>
     <div class="form-group">
       <label for="note">Nota (opcional)</label>
@@ -75,7 +75,7 @@ $canPay = $isClientOwner && $effectiveState !== 'pagado';
           <?php foreach ($payments as $p): ?>
             <tr>
               <td><?= e($p['tbcreditpaymentdate']) ?></td>
-              <td>&#8353; <?= number_format((float) $p['tbcreditpaymentamount'], 2) ?></td>
+              <td><?= format_colones((float) $p['tbcreditpaymentamount']) ?></td>
               <td><?= e($p['tbcreditpaymentnote'] ?? '') ?></td>
               <td><?= e($p['tbrolename'] ?? '—') ?></td>
             </tr>

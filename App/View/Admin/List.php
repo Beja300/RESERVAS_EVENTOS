@@ -220,7 +220,7 @@
                 <td>#<?= (int) $user->getIdRol() ?></td>
                 <td><?= e($user->getName()) ?></td>
                 <td><?= e($user->getEmail()) ?></td>
-                <td><?= e($user->getPhoneNumber() ?? '—') ?></td>
+                <td><?= $user->getPhoneNumber() ? e(format_phone($user->getPhoneNumber())) : '—' ?></td>
                 <td>
                   <?= $user->getIsActive() ? '<span class="badge success">Activo</span>' : '<span class="badge neutral">Inactivo</span>' ?>
                 </td>

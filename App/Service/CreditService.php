@@ -1,6 +1,8 @@
 <?php
 
 require_once __DIR__ . '/BusinessRuleException.php';
+require_once __DIR__ . '/ServiceException.php';
+require_once __DIR__ . '/ErrorLogger.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/BookingService.php';
 require_once __DIR__ . '/EarningService.php';
@@ -62,7 +64,7 @@ class CreditService
     }
 
     if ($frequentMin < 0 || $frequentMin > 1000) {
-      throw new BusinessRuleException('El mínimo de reservas para cliente frecuente no es válido.');
+      throw new BusinessRuleException('El mínimo de reservas para cliente frecuente debe estar entre 0 y 1000.');
     }
 
     $config = $this->configRepo->findByOwner($idOwner);
@@ -162,25 +164,44 @@ class CreditService
 
     $dueDate = date('Y-m-d', strtotime('+' . $config->getDays() . ' days'));
 
-    $idCredit = $this->creditRepo->save(new Credit(
-      idBooking: $idBooking,
-      idClient: $idClient,
-      idOwner: $venue->getIdOwner(),
-      total: $total,
-      balance: $total,
-      dueDate: $dueDate,
-      state: 'pendiente'
-    ));
+    DataBase::beginTransaction($this->connection);
 
-    // La reserva queda confirmada y su factura pasa a estado "credito".
-    $this->bookingRepo->updateStatus($idBooking, 'confirmado');
+    try {
+      $idCredit = $this->creditRepo->save(new Credit(
+        idBooking: $idBooking,
+        idClient: $idClient,
+        idOwner: $venue->getIdOwner(),
+        total: $total,
+        balance: $total,
+        dueDate: $dueDate,
+        state: 'pendiente'
+      ));
 
-    $invoice = $this->invoiceRepo->findByBooking($idBooking);
-    if ($invoice !== null) {
-      $this->invoiceRepo->updateStatus($invoice->getIdInvoice(), 'credito');
+      // La reserva queda confirmada y su factura pasa a estado "credito".
+      $this->bookingRepo->updateStatus($idBooking, 'confirmado');
+
+      $invoice = $this->invoiceRepo->findByBooking($idBooking);
+      if ($invoice !== null) {
+        $this->invoiceRepo->updateStatus($invoice->getIdInvoice(), 'credito');
+      }
+
+      DataBase::commit();
+
+      return $idCredit;
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+
+      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+        throw $e;
+      }
+
+      ErrorLogger::log($e, __METHOD__);
+      throw new ServiceException(
+        'No se pudo completar la operación. Intenta de nuevo.',
+        0,
+        $e
+      );
     }
-
-    return $idCredit;
   }
 
   // =========================================================
@@ -208,23 +229,42 @@ class CreditService
       throw new BusinessRuleException('El abono no puede superar el saldo pendiente de ₡ ' . number_format($credit->getBalance(), 2) . '.');
     }
 
-    $this->paymentRepo->save(new CreditPayment(
-      idCredit: $idCredit,
-      amount: $amount,
-      note: trim($note),
-      idRole: $rolePk
-    ));
+    DataBase::beginTransaction($this->connection);
 
-    $newBalance = round($credit->getBalance() - $amount, 2);
-    if ($newBalance < 0) {
-      $newBalance = 0.0;
-    }
+    try {
+      $this->paymentRepo->save(new CreditPayment(
+        idCredit: $idCredit,
+        amount: $amount,
+        note: trim($note),
+        idRole: $rolePk
+      ));
 
-    $newState = $newBalance <= 0 ? 'pagado' : 'parcial';
-    $this->creditRepo->updateBalanceAndState($idCredit, $newBalance, $newState);
+      $newBalance = round($credit->getBalance() - $amount, 2);
+      if ($newBalance < 0) {
+        $newBalance = 0.0;
+      }
 
-    if ($newState === 'pagado') {
-      $this->settleCredit($credit);
+      $newState = $newBalance <= 0 ? 'pagado' : 'parcial';
+      $this->creditRepo->updateBalanceAndState($idCredit, $newBalance, $newState);
+
+      if ($newState === 'pagado') {
+        $this->settleCredit($credit);
+      }
+
+      DataBase::commit();
+    } catch (\Throwable $e) {
+      DataBase::rollBack();
+
+      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+        throw $e;
+      }
+
+      ErrorLogger::log($e, __METHOD__);
+      throw new ServiceException(
+        'No se pudo completar la operación. Intenta de nuevo.',
+        0,
+        $e
+      );
     }
   }
 

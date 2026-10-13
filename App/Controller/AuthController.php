@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../Service/AuthService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
+require_once __DIR__ . '/../Model/UserSessionDTO.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 
 class AuthController
@@ -126,7 +127,7 @@ class AuthController
       session_regenerate_id(true);
 
       $_SESSION['type'] = 'admin';
-      $_SESSION['user'] = $admin;
+      $_SESSION['user'] = UserSessionDTO::fromObject($admin);
 
       header('Location: ' . base_url('admin', 'dashboard'));
       exit;
@@ -186,7 +187,7 @@ class AuthController
       session_regenerate_id(true);
 
       $_SESSION['type'] = 'client';
-      $_SESSION['user'] = $client;
+      $_SESSION['user'] = UserSessionDTO::fromObject($client);
 
       header('Location: ' . base_url('client', 'dashboard'));
       exit;
@@ -258,7 +259,7 @@ class AuthController
       session_regenerate_id(true);
 
       $_SESSION['type'] = 'owner';
-      $_SESSION['user'] = $owner;
+      $_SESSION['user'] = UserSessionDTO::fromObject($owner);
 
       header('Location: ' . base_url('owner', 'dashboard'));
       exit;

@@ -132,6 +132,38 @@ if (!function_exists('current_user_type')) {
     }
 }
 
+if (!function_exists('current_user')) {
+    /**
+     * Devuelve el DTO del usuario logueado (UserSessionDTO) o null.
+     *
+     * Normaliza el formato de la sesión: acepta tanto el DTO ya guardado
+     * como, por compatibilidad con sesiones antiguas, una entidad de
+     * dominio o un arreglo con los datos del usuario.
+     */
+    function current_user(): ?UserSessionDTO
+    {
+        $user = $_SESSION['user'] ?? null;
+
+        if ($user === null) {
+            return null;
+        }
+
+        if ($user instanceof UserSessionDTO) {
+            return $user;
+        }
+
+        if ($user instanceof Client || $user instanceof Owner || $user instanceof Admin) {
+            return UserSessionDTO::fromObject($user);
+        }
+
+        if (is_array($user)) {
+            return UserSessionDTO::fromArray($user);
+        }
+
+        return null;
+    }
+}
+
 if (!function_exists('is_ajax')) {
     /**
      * Detecta si la petición espera JSON (objetivo: interacciones AJAX).
@@ -426,6 +458,69 @@ if (!function_exists('welcome_greeting')) {
         $treatment = detect_gender($firstName) === 'f' ? 'Bienvenida' : 'Bienvenido';
 
         return $treatment . ' ' . $firstName;
+    }
+}
+
+if (!function_exists('format_colones')) {
+    /**
+     * Da formato monetario en colones costarricenses.
+     *
+     * Ej.: format_colones(1234.5) -> "₡1,234.50". Se usa coma como separador
+     * de miles y punto como separador decimal, con dos decimales fijos.
+     */
+    function format_colones($amount): string
+    {
+        return "\u{20A1}" . number_format((float) $amount, 2, '.', ',');
+    }
+}
+
+if (!function_exists('format_phone')) {
+    /**
+     * Da formato legible a un teléfono de 8 dígitos: "8888-8888".
+     *
+     * Si el valor no contiene exactamente 8 dígitos se devuelve tal cual
+     * (sin inventar separadores). Acepta entradas ya formateadas.
+     */
+    function format_phone(?string $phone): string
+    {
+        $digits = preg_replace('/\D/', '', (string) $phone);
+
+        if (strlen($digits) === 8) {
+            return substr($digits, 0, 4) . '-' . substr($digits, 4, 4);
+        }
+
+        return (string) $phone;
+    }
+}
+
+if (!function_exists('format_cedula')) {
+    /**
+     * Da formato legible a una cédula costarricense a partir de sus dígitos.
+     *
+     * - Cédula física  (9 dígitos):  1-2345-0678
+     * - Cédula jurídica (10 dígitos): 3-101-123456
+     * - DIMEX          (11 dígitos): 1-2345-67890
+     * - DIMEX          (12 dígitos): 1-2345-678901
+     *
+     * Si la cantidad de dígitos no coincide con un patrón conocido se
+     * devuelve el valor original sin alterar.
+     */
+    function format_cedula(?string $identification): string
+    {
+        $digits = preg_replace('/\D/', '', (string) $identification);
+
+        switch (strlen($digits)) {
+            case 9:  // cédula física
+                return substr($digits, 0, 1) . '-' . substr($digits, 1, 4) . '-' . substr($digits, 5, 4);
+            case 10: // cédula jurídica
+                return substr($digits, 0, 1) . '-' . substr($digits, 1, 3) . '-' . substr($digits, 4, 6);
+            case 11: // DIMEX
+                return substr($digits, 0, 1) . '-' . substr($digits, 1, 4) . '-' . substr($digits, 5, 6);
+            case 12: // DIMEX (12 dígitos)
+                return substr($digits, 0, 1) . '-' . substr($digits, 1, 4) . '-' . substr($digits, 5, 7);
+        }
+
+        return (string) $identification;
     }
 }
 

@@ -10,14 +10,14 @@ $stateLabels = [
 
 <div class="page-head">
   <div>
-    <h1>Mis créditos</h1>
-    <p class="muted">Reservas financiadas y su saldo pendiente.</p>
+    <h1>Cuentas por pagar</h1>
+    <p class="muted">Reservas financiadas a crédito y su saldo pendiente con el propietario.</p>
   </div>
 </div>
 
 <div class="card" style="margin-bottom:18px;">
   <strong>Saldo total pendiente:</strong>
-  <span style="font-size:1.3rem;color:var(--neutral-900);">&#8353; <?= number_format($outstanding, 2) ?></span>
+  <span style="font-size:1.3rem;color:var(--neutral-900);"><?= format_colones($outstanding) ?></span>
 </div>
 
 <?php if (empty($credits)): ?>
@@ -46,8 +46,8 @@ $stateLabels = [
           <tr>
             <td><?= (int) $c['tbcreditid'] ?></td>
             <td><?= e($c['tbvenuename'] ?? '') ?></td>
-            <td>&#8353; <?= number_format((float) $c['tbcredittotal'], 2) ?></td>
-            <td>&#8353; <?= number_format((float) $c['tbcreditbalance'], 2) ?></td>
+            <td><?= format_colones((float) $c['tbcredittotal']) ?></td>
+            <td><?= format_colones((float) $c['tbcreditbalance']) ?></td>
             <td><?= e($c['tbcreditduedate']) ?></td>
             <td><span class="badge <?= e($tone) ?>"><?= e($label) ?></span></td>
             <td><a class="btn btn-sm btn-outline" href="<?= e(base_url('credit', 'detail', ['id' => (int) $c['tbcreditid']])) ?>">Ver / Abonar</a></td>

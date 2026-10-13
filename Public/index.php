@@ -61,16 +61,19 @@ error_reporting(E_ALL);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
+// Autoloader: resuelve controladores, servicios, repositorios y modelos
+// automáticamente (Deuda Técnica 4.2). Debe registrarse ANTES de
+// session_start() para que la deserialización de sesión también lo use.
+require_once __DIR__ . '/../Configuration/Autoloader.php';
+Autoloader::register();
+
 require_once __DIR__ . '/../Configuration/DataBase.php';
 require_once __DIR__ . '/../App/Service/BusinessRuleException.php';
 
-// Las sesiones pueden contener objetos serializados ($_SESSION['user'] es
-// un objeto Client/Owner/Admin). Para que PHP pueda deserializarlos es
-// OBLIGATORIO que su clase esté definida ANTES de session_start(); por eso
-// se precargan los perfiles aquí, antes de iniciar la sesión.
-require_once __DIR__ . '/../App/Model/Client.php';
-require_once __DIR__ . '/../App/Model/Owner.php';
-require_once __DIR__ . '/../App/Model/Admin.php';
+// $_SESSION['user'] guarda un DTO liviano (UserSessionDTO), no entidades de
+// dominio. El autoloader, ya registrado arriba, resuelve su clase durante la
+// deserialización de la sesión en session_start(), por lo que no hace falta
+// precargar ningún modelo aquí.
 
 // Helpers globales (incluyen is_ajax()/respond_json()/csrf_*), disponibles
 // para todos los controladores y vistas.
@@ -81,6 +84,21 @@ require_once __DIR__ . '/../App/View/_helpers.php';
 // =========================================================
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+}
+
+// Migración transparente: sesiones creadas antes de la introducción del DTO
+// todavía contienen la entidad de dominio completa. Se convierte a DTO para
+// no arrastrar objetos pesados (ni la contraseña) en la sesión.
+if (isset($_SESSION['user']) && !($_SESSION['user'] instanceof UserSessionDTO)) {
+    $legacyUser = $_SESSION['user'];
+
+    if ($legacyUser instanceof Client || $legacyUser instanceof Owner || $legacyUser instanceof Admin) {
+        $_SESSION['user'] = UserSessionDTO::fromObject($legacyUser);
+    } elseif (is_array($legacyUser)) {
+        $_SESSION['user'] = UserSessionDTO::fromArray($legacyUser);
+    } else {
+        unset($_SESSION['user']);
+    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -271,6 +289,15 @@ set_error_handler(static function (int $severity, string $message, string $file,
 });
 
 set_exception_handler(static function (\Throwable $e): void {
+    // Red de seguridad: si una excepción escapó sin que el servicio pudiera
+    // revertir, aquí se revierte cualquier transacción PDO que siga abierta
+    // antes de responder, para no dejar escrituras a medio confirmar.
+    try {
+        DataBase::rollBackActive();
+    } catch (\Throwable $ignored) {
+        // Nunca enmascarar la excepción original.
+    }
+
     $isValidation = $e instanceof BusinessRuleException;
     $status = $isValidation ? 422 : 500;
 
@@ -335,16 +362,10 @@ if ($mapped !== null) {
     renderError(404, 'Acción no encontrada.');
 }
 
-$controllerFile  = __DIR__ . '/../App/Controller/' . $controllerClass . '.php';
-
-if (!file_exists($controllerFile)) {
-    renderError(404, 'Archivo de controlador no encontrado.');
-}
-
-require_once $controllerFile;
-
+// class_exists() dispara el autoloader: resuelve la clase desde
+// App/Controller/ y verifica que esté definida antes de instanciarla.
 if (!class_exists($controllerClass)) {
-    renderError(500, 'Clase de controlador no definida.');
+    renderError(404, 'Archivo de controlador no encontrado.');
 }
 
 // Crear la instancia y ejecutar la acción (el controller valida sesión y roles).

@@ -13,7 +13,7 @@
     <h3 class="card-title">Servicio</h3>
     <div class="detail-item"><div class="k">Nombre</div><div class="v"><strong><?= e($service->getNameService()) ?></strong></div></div>
     <div class="detail-item"><div class="k">Tipo</div><div class="v"><?= $service->getTypeService() !== '' && $service->getTypeService() !== null ? e($service->getTypeService()) : '—' ?></div></div>
-    <div class="detail-item"><div class="k">Precio</div><div class="v">&#8353; <?= number_format($service->getPriceService(), 2) ?></div></div>
+    <div class="detail-item"><div class="k">Precio</div><div class="v"><?= format_colones($service->getPriceService()) ?></div></div>
     <div class="detail-item"><div class="k">Estado</div><div class="v">
       <?php
         $badge = match ($service->getStateService()) {
@@ -40,7 +40,7 @@
       <div class="detail-item"><div class="k">Nombre</div><div class="v"><strong><?= e($venue->getNameVenue()) ?></strong></div></div>
       <div class="detail-item"><div class="k">Tipo</div><div class="v"><?= e($venue->getTypeVenue()) !== '' ? e($venue->getTypeVenue()) : '—' ?></div></div>
       <div class="detail-item"><div class="k">Capacidad</div><div class="v"><?= (int) $venue->getCapacityVenue() ?> personas</div></div>
-      <div class="detail-item"><div class="k">Precio de renta</div><div class="v">&#8353; <?= number_format($venue->getPriceVenue(), 2) ?></div></div>
+      <div class="detail-item"><div class="k">Precio de renta</div><div class="v"><?= format_colones($venue->getPriceVenue()) ?></div></div>
     <?php endif; ?>
   </div>
 </div>
@@ -54,11 +54,11 @@
       <div>
         <div class="detail-item"><div class="k">Nombre</div><div class="v"><?= e($owner->getFirstNameOwner()) ?> <?= e($owner->getLastNameOwner()) ?></div></div>
         <div class="detail-item"><div class="k">Alias</div><div class="v"><?= $owner->getAliasOwner() !== '' ? e($owner->getAliasOwner()) : '—' ?></div></div>
-        <div class="detail-item"><div class="k">No. identificación</div><div class="v"><?= $owner->getIdentificationNumberOwner() !== '' ? e($owner->getIdentificationNumberOwner()) : '—' ?></div></div>
+        <div class="detail-item"><div class="k">No. identificación</div><div class="v"><?= $owner->getIdentificationNumberOwner() !== '' ? e(format_cedula($owner->getIdentificationNumberOwner())) : '—' ?></div></div>
       </div>
       <div>
         <div class="detail-item"><div class="k">Correo</div><div class="v"><?= e($owner->getEmail()) ?></div></div>
-        <div class="detail-item"><div class="k">Teléfono</div><div class="v"><?= $owner->getPhoneNumber() !== null && $owner->getPhoneNumber() !== '' ? e($owner->getPhoneNumber()) : '—' ?></div></div>
+        <div class="detail-item"><div class="k">Teléfono</div><div class="v"><?= $owner->getPhoneNumber() !== null && $owner->getPhoneNumber() !== '' ? e(format_phone($owner->getPhoneNumber())) : '—' ?></div></div>
         <div class="detail-item"><div class="k">Estado</div><div class="v">
           <span class="badge <?= $owner->getIsOwnerActive() ? 'success' : 'neutral' ?>"><?= $owner->getIsOwnerActive() ? 'Activo' : 'Inactivo' ?></span>
         </div></div>

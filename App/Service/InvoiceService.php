@@ -1,6 +1,9 @@
 <?php
 
 require_once __DIR__ . '/BusinessRuleException.php';
+require_once __DIR__ . '/ServiceException.php';
+require_once __DIR__ . '/ErrorLogger.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/PaymentMethodService.php';
 require_once __DIR__ . '/../Repository/InvoiceRepository.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
@@ -8,6 +11,7 @@ require_once __DIR__ . '/../Model/Invoice.php';
 
 class InvoiceService
 {
+    private PDO $connection;
     private InvoiceRepository $invoiceRepo;
     private BookingRepository $bookingRepo;
     private PaymentMethodService $paymentMethodService;
@@ -15,6 +19,7 @@ class InvoiceService
     public function __construct()
     {
         $connection = DataBase::getConnection();
+        $this->connection = $connection;
 
         $this->invoiceRepo = new InvoiceRepository($connection);
         $this->bookingRepo = new BookingRepository($connection);
@@ -67,16 +72,37 @@ class InvoiceService
                 $paymentMethodPk
             );
 
-        return $this->invoiceRepo->save(
-            new Invoice(
+        DataBase::beginTransaction($this->connection);
+
+        try {
+            $idInvoice = $this->invoiceRepo->save(
+                new Invoice(
+                    0,
+                    $booking->getIdBooking(),
+                    $paymentMethodPk,
+                    $date,
+                    'pendiente',
+                    true
+                )
+            );
+
+            DataBase::commit();
+
+            return $idInvoice;
+        } catch (\Throwable $e) {
+            DataBase::rollBack();
+
+            if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+                throw $e;
+            }
+
+            ErrorLogger::log($e, __METHOD__);
+            throw new ServiceException(
+                'No se pudo completar la operación. Intenta de nuevo.',
                 0,
-                $booking->getIdBooking(),
-                $paymentMethodPk,
-                $date,
-                'pendiente',
-                true
-            )
-        );
+                $e
+            );
+        }
     }
 
     public function approve(int $bookingPk): void
@@ -117,15 +143,34 @@ class InvoiceService
             );
         }
 
-        $this->invoiceRepo->updateStatus(
-            $invoice->getIdInvoice(),
-            'pagado'
-        );
+        DataBase::beginTransaction($this->connection);
 
-        $this->bookingRepo->updateStatus(
-            $bookingPk,
-            'confirmado'
-        );
+        try {
+            $this->invoiceRepo->updateStatus(
+                $invoice->getIdInvoice(),
+                'pagado'
+            );
+
+            $this->bookingRepo->updateStatus(
+                $bookingPk,
+                'confirmado'
+            );
+
+            DataBase::commit();
+        } catch (\Throwable $e) {
+            DataBase::rollBack();
+
+            if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+                throw $e;
+            }
+
+            ErrorLogger::log($e, __METHOD__);
+            throw new ServiceException(
+                'No se pudo completar la operación. Intenta de nuevo.',
+                0,
+                $e
+            );
+        }
     }
 
     public function reject(int $bookingPk): void
@@ -169,21 +214,40 @@ class InvoiceService
         /*
          * El pago queda rechazado.
          */
-        $this->invoiceRepo->updateStatus(
-            $invoice->getIdInvoice(),
-            'rechazado'
-        );
+        DataBase::beginTransaction($this->connection);
 
-        /*
-         * La reserva NO se elimina.
-         *
-         * Se conserva para que el cliente pueda verla
-         * en "Mis reservas" con estado "Rechazado".
-         */
-        $this->bookingRepo->updateStatus(
-            $bookingPk,
-            'rechazado'
-        );
+        try {
+            $this->invoiceRepo->updateStatus(
+                $invoice->getIdInvoice(),
+                'rechazado'
+            );
+
+            /*
+             * La reserva NO se elimina.
+             *
+             * Se conserva para que el cliente pueda verla
+             * en "Mis reservas" con estado "Rechazado".
+             */
+            $this->bookingRepo->updateStatus(
+                $bookingPk,
+                'rechazado'
+            );
+
+            DataBase::commit();
+        } catch (\Throwable $e) {
+            DataBase::rollBack();
+
+            if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+                throw $e;
+            }
+
+            ErrorLogger::log($e, __METHOD__);
+            throw new ServiceException(
+                'No se pudo completar la operación. Intenta de nuevo.',
+                0,
+                $e
+            );
+        }
     }
 
   public function updatePaymentStatus(
@@ -222,22 +286,41 @@ class InvoiceService
             );
         }
 
-        $this->invoiceRepo->updateStatus(
-            $invoice->getIdInvoice(),
-            $status
-        );
+        DataBase::beginTransaction($this->connection);
 
-        if ($status === 'pagado') {
-
-            $this->bookingRepo->updateStatus(
-                $bookingPk,
-                'confirmado'
+        try {
+            $this->invoiceRepo->updateStatus(
+                $invoice->getIdInvoice(),
+                $status
             );
-        } else {
 
-            $this->bookingRepo->updateStatus(
-                $bookingPk,
-                'pendiente'
+            if ($status === 'pagado') {
+
+                $this->bookingRepo->updateStatus(
+                    $bookingPk,
+                    'confirmado'
+                );
+            } else {
+
+                $this->bookingRepo->updateStatus(
+                    $bookingPk,
+                    'pendiente'
+                );
+            }
+
+            DataBase::commit();
+        } catch (\Throwable $e) {
+            DataBase::rollBack();
+
+            if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
+                throw $e;
+            }
+
+            ErrorLogger::log($e, __METHOD__);
+            throw new ServiceException(
+                'No se pudo completar la operación. Intenta de nuevo.',
+                0,
+                $e
             );
         }
     }

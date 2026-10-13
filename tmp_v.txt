@@ -1,5 +1,0 @@
-<?php
-$pageCss = 'venue/form';
-$pageJs = ['venue/form', 'venue/location', 'venue/location-map'];
-?>
-<?php require_once _

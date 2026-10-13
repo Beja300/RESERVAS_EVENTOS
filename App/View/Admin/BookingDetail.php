@@ -122,25 +122,25 @@
               <?php endif; ?>
             </td>
             <td><?= (int) $d->getQuantityDetail() ?></td>
-            <td>&#8353; <?= number_format($d->getUnitPrice(), 2) ?></td>
-            <td>&#8353; <?= number_format($d->getQuantityDetail() * $d->getUnitPrice() - $d->getDiscount(), 2) ?></td>
+            <td><?= format_colones($d->getUnitPrice()) ?></td>
+            <td><?= format_colones($d->getQuantityDetail() * $d->getUnitPrice() - $d->getDiscount()) ?></td>
           </tr>
         <?php endforeach; ?>
       </tbody>
       <tfoot>
         <tr><th colspan="3" style="text-align:right;">Subtotal</th>
-          <th>&#8353; <?= number_format($totals['subtotal'] ?? 0, 2) ?></th></tr>
+          <th><?= format_colones($totals['subtotal'] ?? 0) ?></th></tr>
         <tr><th colspan="3" style="text-align:right;">Comisión (<?= e(number_format($totals['commissionPct'] ?? 0, 2)) ?>%)</th>
-          <th>&#8353; <?= number_format($totals['commission'] ?? 0, 2) ?></th></tr>
+          <th><?= format_colones($totals['commission'] ?? 0) ?></th></tr>
         <tr><th colspan="3" style="text-align:right;">IVA (<?= e(number_format($totals['taxPct'] ?? 0, 2)) ?>%)</th>
-          <th>&#8353; <?= number_format($totals['tax'] ?? 0, 2) ?></th></tr>
+          <th><?= format_colones($totals['tax'] ?? 0) ?></th></tr>
         <tr><th colspan="3" style="text-align:right;">Total</th>
-          <th>&#8353; <?= number_format($totals['total'] ?? 0, 2) ?></th></tr>
+          <th><?= format_colones($totals['total'] ?? 0) ?></th></tr>
       </tfoot>
     </table>
   </div>
   <?php if ($earning !== null): ?>
-    <p class="muted" style="margin-top:8px;">Ganancia registrada: &#8353; <?= number_format($earning->getTotal(), 2) ?></p>
+    <p class="muted" style="margin-top:8px;">Ganancia registrada: <?= format_colones($earning->getTotal()) ?></p>
   <?php endif; ?>
 </div>
 

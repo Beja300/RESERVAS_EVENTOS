@@ -53,7 +53,7 @@
             <tr>
               <td><strong><?= e($s->getNameService()) ?></strong></td>
               <td><?= $s->getTypeService() !== '' ? e($s->getTypeService()) : '—' ?></td>
-              <td>&#8353; <?= number_format($s->getPriceService(), 2) ?></td>
+              <td><?= format_colones($s->getPriceService()) ?></td>
               <td>#<?= (int) $s->getIdLocal() ?></td>
               <td><span class="badge warning"><?= e($s->getStateService()) ?></span></td>
               <td>
@@ -113,7 +113,7 @@
             <tr>
               <td><strong><?= e($h['tbservicename']) ?></strong></td>
               <td><?= !empty($h['tbservicetype']) ? e($h['tbservicetype']) : '—' ?></td>
-              <td>&#8353; <?= number_format((float) $h['tbserviceprice'], 2) ?></td>
+              <td><?= format_colones((float) $h['tbserviceprice']) ?></td>
               <td><?= !empty($h['venueName']) ? e($h['venueName']) : '—' ?></td>
               <td>
                 <?php $badge = $h['tbservicestate'] === 'aprobado' ? 'success' : 'danger'; ?>

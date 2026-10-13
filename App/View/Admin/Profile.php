@@ -78,9 +78,9 @@ if ($admin === null) {
     <div class="form-group">
       <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
       <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
-             data-validate="phone" inputmode="numeric" pattern="\d{8}"
-             maxlength="8" value="<?= e($_POST['phoneNumber'] ?? $admin->getPhoneNumber() ?? '') ?>">
-      <div class="form-hint">Ej: 8888-7777</div>
+             data-mask="phone" data-validate="phone" inputmode="numeric" pattern="[0-9]{4}-?[0-9]{4}"
+             maxlength="9" value="<?= e($_POST['phoneNumber'] ?? $admin->getPhoneNumber() ?? '') ?>">
+      <div class="form-hint">Ej: 8888-8888</div>
     </div>
 
     <?php $showPasswordFields = !empty($_POST['changePassword']); ?>

@@ -47,7 +47,7 @@ if ($venue === null) {
       <?php endif; ?>
       <span class="muted" style="display:block;"><?= e($owner->getEmail()) ?></span>
       <?php if ($owner->getPhoneNumber() !== null && $owner->getPhoneNumber() !== ''): ?>
-        <span class="muted" style="display:block;"><?= e($owner->getPhoneNumber()) ?></span>
+        <span class="muted" style="display:block;"><?= e(format_phone($owner->getPhoneNumber())) ?></span>
       <?php endif; ?>
       <span class="muted" style="display:block;margin-top:4px;">Ver información del propietario &rarr;</span>
     </span>
@@ -66,7 +66,7 @@ if ($venue === null) {
   <div class="detail-grid">
     <div class="detail-item"><div class="k">Tipo</div><div class="v"><?= $venue->getTypeVenue() !== '' ? e($venue->getTypeVenue()) : 'General' ?></div></div>
     <div class="detail-item"><div class="k">Capacidad</div><div class="v"><?= (int) $venue->getCapacityVenue() ?> personas</div></div>
-    <div class="detail-item"><div class="k">Precio de renta</div><div class="v">&#8353; <?= number_format($venue->getPriceVenue(), 2) ?> <span class="muted">por evento</span></div></div>
+    <div class="detail-item"><div class="k">Precio de renta</div><div class="v"><?= format_colones($venue->getPriceVenue()) ?> <span class="muted">por evento</span></div></div>
 
     <div class="detail-item"><div class="k">Estado</div><div class="v"><span class="badge success">Disponible</span></div></div>
     <div class="detail-item"><div class="k">Calificación</div>
@@ -156,7 +156,7 @@ if ($venue === null) {
           <tr>
             <td><?= e($s->getNameService()) ?></td>
             <td><?= $s->getTypeService() !== null ? e($s->getTypeService()) : '—' ?></td>
-            <td>&#8353; <?= number_format($s->getPriceService(), 2) ?></td>
+            <td><?= format_colones($s->getPriceService()) ?></td>
             <td id="serviceAvg-<?= (int) $s->getIdService() ?>">
               <?php if (isset($ratingByService[$s->getIdService()])): ?>
                 <span class="rating-stars"><?= str_repeat('&#9733;', (int) round($ratingByService[$s->getIdService()])) . str_repeat('&#9734;', 5 - (int) round($ratingByService[$s->getIdService()])) ?></span>

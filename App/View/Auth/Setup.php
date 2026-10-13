@@ -45,8 +45,8 @@
 
       <div class="form-group">
         <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
-        <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" required value="<?= e($_POST['phoneNumber'] ?? '') ?>" data-mask="phone" maxlength="8" placeholder="8 dígitos">
-        <div class="form-hint">Ej: 8888-7777</div>
+        <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" pattern="[0-9]{4}-?[0-9]{4}" required value="<?= e($_POST['phoneNumber'] ?? '') ?>" maxlength="9" placeholder="8888-8888">
+        <div class="form-hint">Ej: 8888-8888</div>
       </div>
 
       <button class="btn btn-primary btn-block" type="submit">Crear administrador</button>

@@ -442,39 +442,6 @@ CREATE TABLE tbcreditpayment (
     tbcreditpaymentactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
-
-CREATE TABLE IF NOT EXISTS tbcreditconfig (
-    tbcreditconfigid INT AUTO_INCREMENT PRIMARY KEY,
-    tbownerid INT NOT NULL,
-    tbcreditconfigenabled BOOLEAN NOT NULL DEFAULT FALSE,
-    tbcreditconfigdays INT NOT NULL DEFAULT 30,
-    tbcreditconfigfrequentmin INT NOT NULL DEFAULT 3,
-    tbcreditconfigactive BOOLEAN NOT NULL DEFAULT TRUE
-) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS tbcredit (
-    tbcreditid INT AUTO_INCREMENT PRIMARY KEY,
-    tbbookingid INT NOT NULL,
-    tbclientid INT NOT NULL,
-    tbownerid INT NOT NULL,
-    tbcredittotal DECIMAL(12,2) NOT NULL,
-    tbcreditbalance DECIMAL(12,2) NOT NULL,
-    tbcreditduedate DATE NOT NULL,
-    tbcreditstate VARCHAR(30) DEFAULT 'pendiente',
-    tbcreditdate DATETIME DEFAULT CURRENT_TIMESTAMP,
-    tbcreditactive BOOLEAN NOT NULL DEFAULT TRUE
-) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS tbcreditpayment (
-    tbcreditpaymentid INT AUTO_INCREMENT PRIMARY KEY,
-    tbcreditid INT NOT NULL,
-    tbcreditpaymentamount DECIMAL(12,2) NOT NULL,
-    tbcreditpaymentnote VARCHAR(255),
-    tbroleid INT,
-    tbcreditpaymentdate DATETIME DEFAULT CURRENT_TIMESTAMP,
-    tbcreditpaymentactive BOOLEAN NOT NULL DEFAULT TRUE
-) ENGINE=InnoDB;
-
 CREATE TABLE IF NOT EXISTS tbvenueimage (
     tbvenueimageid INT AUTO_INCREMENT PRIMARY KEY,
     tbvenueid INT NOT NULL,
@@ -482,3 +449,85 @@ CREATE TABLE IF NOT EXISTS tbvenueimage (
     tbvenueimagesort INT NOT NULL DEFAULT 0,
     tbvenueimageactive TINYINT(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB;
+
+-- =========================================================
+-- 32) CLAVES FORÁNEAS (FOREIGN KEY)
+--     Se añaden al final con ALTER TABLE para no depender del
+--     orden de creación de las tablas (p. ej. tbbookingticket
+--     se define antes que su padre tbpaymentmethod).
+--     Políticas:
+--       * Maestras/transaccionales -> ON DELETE RESTRICT
+--       * Dependientes directas      -> ON DELETE CASCADE
+--       * Columnas nullable          -> ON DELETE SET NULL
+--       * Historial de identidad (NOT NULL) -> ON DELETE RESTRICT
+--     Todas con ON UPDATE CASCADE (las PK son AUTO_INCREMENT y
+--     no cambian, pero es la política estándar del proyecto).
+-- =========================================================
+
+-- Identidad (junctions rol <-> perfil)
+ALTER TABLE tbroleadmin ADD CONSTRAINT fk_tbroleadmin_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbroleadmin ADD CONSTRAINT fk_tbroleadmin_tbadminid FOREIGN KEY (tbadminid) REFERENCES tbadmin (tbadminid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbroleclient ADD CONSTRAINT fk_tbroleclient_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbroleclient ADD CONSTRAINT fk_tbroleclient_tbclientid FOREIGN KEY (tbclientid) REFERENCES tbclient (tbclientid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbroleowner ADD CONSTRAINT fk_tbroleowner_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbroleowner ADD CONSTRAINT fk_tbroleowner_tbownerid FOREIGN KEY (tbownerid) REFERENCES tbowner (tbownerid) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Ubicación
+ALTER TABLE tbclient ADD CONSTRAINT fk_tbclient_tblocationid FOREIGN KEY (tblocationid) REFERENCES tblocation (tblocationid) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE tbvenue ADD CONSTRAINT fk_tbvenue_tblocationid FOREIGN KEY (tblocationid) REFERENCES tblocation (tblocationid) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Local / propietario / galería
+ALTER TABLE tbvenue ADD CONSTRAINT fk_tbvenue_tbownerid FOREIGN KEY (tbownerid) REFERENCES tbowner (tbownerid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbvenueimage ADD CONSTRAINT fk_tbvenueimage_tbvenueid FOREIGN KEY (tbvenueid) REFERENCES tbvenue (tbvenueid) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Servicios / promociones
+ALTER TABLE tbservice ADD CONSTRAINT fk_tbservice_tbvenueid FOREIGN KEY (tbvenueid) REFERENCES tbvenue (tbvenueid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbservice ADD CONSTRAINT fk_tbservice_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE tbservicehistory ADD CONSTRAINT fk_tbservicehistory_tbserviceid FOREIGN KEY (tbserviceid) REFERENCES tbservice (tbserviceid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbpromotion ADD CONSTRAINT fk_tbpromotion_tbvenueid FOREIGN KEY (tbvenueid) REFERENCES tbvenue (tbvenueid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbpromotionservice ADD CONSTRAINT fk_tbpromotionservice_tbpromotionid FOREIGN KEY (tbpromotionid) REFERENCES tbpromotion (tbpromotionid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbpromotionservice ADD CONSTRAINT fk_tbpromotionservice_tbserviceid FOREIGN KEY (tbserviceid) REFERENCES tbservice (tbserviceid) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Reservas / detalle
+ALTER TABLE tbbooking ADD CONSTRAINT fk_tbbooking_tbclientid FOREIGN KEY (tbclientid) REFERENCES tbclient (tbclientid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbbooking ADD CONSTRAINT fk_tbbooking_tbvenueid FOREIGN KEY (tbvenueid) REFERENCES tbvenue (tbvenueid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbdetail ADD CONSTRAINT fk_tbdetail_tbserviceid FOREIGN KEY (tbserviceid) REFERENCES tbservice (tbserviceid) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE tbdetail ADD CONSTRAINT fk_tbdetail_tbvenueid FOREIGN KEY (tbvenueid) REFERENCES tbvenue (tbvenueid) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE tbbookingdetail ADD CONSTRAINT fk_tbbookingdetail_tbbookingid FOREIGN KEY (tbbookingid) REFERENCES tbbooking (tbbookingid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbbookingdetail ADD CONSTRAINT fk_tbbookingdetail_tbdetailid FOREIGN KEY (tbdetailid) REFERENCES tbdetail (tbdetailid) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- Cobros / facturas / ganancias
+ALTER TABLE tbbookingticket ADD CONSTRAINT fk_tbbookingticket_tbbookingid FOREIGN KEY (tbbookingid) REFERENCES tbbooking (tbbookingid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbbookingticket ADD CONSTRAINT fk_tbbookingticket_tbpaymentmethodid FOREIGN KEY (tbpaymentmethodid) REFERENCES tbpaymentmethod (tbpaymentmethodid) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE tbownerpayment ADD CONSTRAINT fk_tbownerpayment_tbownerid FOREIGN KEY (tbownerid) REFERENCES tbowner (tbownerid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbownerpayment ADD CONSTRAINT fk_tbownerpayment_tbpaymentmethodid FOREIGN KEY (tbpaymentmethodid) REFERENCES tbpaymentmethod (tbpaymentmethodid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbinvoice ADD CONSTRAINT fk_tbinvoice_tbbookingid FOREIGN KEY (tbbookingid) REFERENCES tbbooking (tbbookingid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbinvoice ADD CONSTRAINT fk_tbinvoice_tbpaymentmethodid FOREIGN KEY (tbpaymentmethodid) REFERENCES tbpaymentmethod (tbpaymentmethodid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbeearning ADD CONSTRAINT fk_tbeearning_tbbookingid FOREIGN KEY (tbbookingid) REFERENCES tbbooking (tbbookingid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbeearning ADD CONSTRAINT fk_tbeearning_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- Auditoría / historial
+ALTER TABLE tbbookinghistory ADD CONSTRAINT fk_tbbookinghistory_tbbookingid FOREIGN KEY (tbbookingid) REFERENCES tbbooking (tbbookingid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbbookinghistory ADD CONSTRAINT fk_tbbookinghistory_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE tbbookingrefund ADD CONSTRAINT fk_tbbookingrefund_tbbookingid FOREIGN KEY (tbbookingid) REFERENCES tbbooking (tbbookingid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbbookingrefund ADD CONSTRAINT fk_tbbookingrefund_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbownerhistory ADD CONSTRAINT fk_tbownerhistory_tbownerid FOREIGN KEY (tbownerid) REFERENCES tbowner (tbownerid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbuserhistory ADD CONSTRAINT fk_tbuserhistory_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbrolpasswordhistorical ADD CONSTRAINT fk_tbrolpasswordhistorical_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbrolphonehistorical ADD CONSTRAINT fk_tbrolphonehistorical_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbrolemailhistorical ADD CONSTRAINT fk_tbrolemailhistorical_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- Calificaciones / notificaciones
+ALTER TABLE tbvenuerating ADD CONSTRAINT fk_tbvenuerating_tbvenueid FOREIGN KEY (tbvenueid) REFERENCES tbvenue (tbvenueid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbvenuerating ADD CONSTRAINT fk_tbvenuerating_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbservicerating ADD CONSTRAINT fk_tbservicerating_tbserviceid FOREIGN KEY (tbserviceid) REFERENCES tbservice (tbserviceid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbservicerating ADD CONSTRAINT fk_tbservicerating_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbnotification ADD CONSTRAINT fk_tbnotification_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- Crédito
+ALTER TABLE tbcreditconfig ADD CONSTRAINT fk_tbcreditconfig_tbownerid FOREIGN KEY (tbownerid) REFERENCES tbowner (tbownerid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbcredit ADD CONSTRAINT fk_tbcredit_tbbookingid FOREIGN KEY (tbbookingid) REFERENCES tbbooking (tbbookingid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbcredit ADD CONSTRAINT fk_tbcredit_tbclientid FOREIGN KEY (tbclientid) REFERENCES tbclient (tbclientid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbcredit ADD CONSTRAINT fk_tbcredit_tbownerid FOREIGN KEY (tbownerid) REFERENCES tbowner (tbownerid) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE tbcreditpayment ADD CONSTRAINT fk_tbcreditpayment_tbcreditid FOREIGN KEY (tbcreditid) REFERENCES tbcredit (tbcreditid) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE tbcreditpayment ADD CONSTRAINT fk_tbcreditpayment_tbroleid FOREIGN KEY (tbroleid) REFERENCES tbrole (tbroleid) ON DELETE SET NULL ON UPDATE CASCADE;

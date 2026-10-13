@@ -7,9 +7,6 @@ $prevMonth = $prevMonth ?? date('Y-m', strtotime('-1 month'));
 $nextMonth = $nextMonth ?? date('Y-m', strtotime('+1 month'));
 $topVenue = $topVenue ?? [];
 $topServices = $topServices ?? [];
-$m = function (float $v): string {
-  return '&#8353; ' . number_format($v, 2);
-};
 $next = $stats['proximaReserva'] ?? null;
 ?>
 <!--
@@ -37,9 +34,9 @@ $next = $stats['proximaReserva'] ?? null;
 <div style="margin-bottom:24px; background:linear-gradient(135deg, #081c15 0%, #1b4332 40%, #036666 70%, #fbb02d 100%); padding:16px; border-radius:6px;">
   <p class="muted" style="margin-bottom:12px;">Resumen de <?= e($monthLabel) ?></p>
   <div class="grid grid-3" style="margin-bottom:16px;">
-    <div class="stat"><div class="value"><?= $m((float) ($stats['comision'] ?? 0)) ?></div><div class="label">Comisión al admin</div></div>
-    <div class="stat"><div class="value"><?= $m((float) ($stats['ganancias'] ?? 0)) ?></div><div class="label">Ganancias del mes</div></div>
-    <div class="stat"><div class="value"><?= $m((float) ($stats['totalBruto'] ?? 0)) ?></div><div class="label">Total recaudado</div></div>
+    <div class="stat"><div class="value"><?= format_colones((float) ($stats['comision'] ?? 0)) ?></div><div class="label">Comisión al admin</div></div>
+    <div class="stat"><div class="value"><?= format_colones((float) ($stats['ganancias'] ?? 0)) ?></div><div class="label">Ganancias del mes</div></div>
+    <div class="stat"><div class="value"><?= format_colones((float) ($stats['totalBruto'] ?? 0)) ?></div><div class="label">Total recaudado</div></div>
   </div>
   <div class="grid grid-4">
     <div class="stat"><div class="value"><?= (int) ($stats['locales'] ?? 0) ?></div><div class="label">Locales</div></div>

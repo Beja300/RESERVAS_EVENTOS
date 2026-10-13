@@ -83,9 +83,9 @@ $curLng    = $location !== null ? ($location->getLongitudeLocation() !== null ? 
     <div class="form-group">
       <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
       <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" required
-             data-validate="phone"
-             maxlength="8" value="<?= e($_POST['phoneNumber'] ?? $client->getPhoneNumber() ?? '') ?>">
-      <div class="form-hint">Ej: 8888-7777</div>
+             data-validate="phone" pattern="[0-9]{4}-?[0-9]{4}"
+             maxlength="9" value="<?= e($_POST['phoneNumber'] ?? $client->getPhoneNumber() ?? '') ?>">
+      <div class="form-hint">Ej: 8888-8888</div>
     </div>
 
     <?php $showPasswordFields = !empty($_POST['changePassword']); ?>

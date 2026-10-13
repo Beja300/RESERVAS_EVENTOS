@@ -33,7 +33,7 @@ if ($client === null) {
       </div>
       <div class="form-group">
         <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
-        <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" required data-mask="phone" maxlength="8" value="<?= e($client->getPhoneNumber() ?? '') ?>">
+        <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" pattern="[0-9]{4}-?[0-9]{4}" required maxlength="9" placeholder="8888-8888" value="<?= e($client->getPhoneNumber() ?? '') ?>">
       </div>
       <button class="btn btn-primary btn-block" type="submit">Guardar</button>
     </form>
