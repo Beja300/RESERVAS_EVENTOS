@@ -29,11 +29,11 @@ if ($client === null) {
       </div>
       <div class="form-group">
         <label for="email">Correo <span class="required-mark">*</span></label>
-        <input class="form-control" type="email" id="email" name="email" required value="<?= e($client->getEmail()) ?>">
+        <input class="form-control" type="email" id="email" name="email" data-validate="email" required value="<?= e($client->getEmail()) ?>">
       </div>
       <div class="form-group">
         <label for="phoneNumber">Teléfono</label>
-        <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" maxlength="8" value="<?= e($client->getPhoneNumber() ?? '') ?>">
+        <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" data-mask="phone" maxlength="8" value="<?= e($client->getPhoneNumber() ?? '') ?>">
       </div>
       <button class="btn btn-primary btn-block" type="submit">Guardar</button>
     </form>

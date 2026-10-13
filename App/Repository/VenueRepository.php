@@ -232,6 +232,19 @@ class VenueRepository
       $params[':type'] = $filters['type'];
     }
 
+    // Categorización por TIPO DE SERVICIO: locales que ofrecen al menos un
+    // servicio aprobado de esa categoría (reutiliza tbservicetype).
+    if (!empty($filters['serviceType'])) {
+      $conditions[] = "EXISTS (
+        SELECT 1 FROM tbservice s
+        WHERE s.tbvenueid = v.tbvenueid
+          AND s.tbserviceactive = true
+          AND s.tbservicestate = 'aprobado'
+          AND s.tbservicetype = :serviceType
+      )";
+      $params[':serviceType'] = $filters['serviceType'];
+    }
+
     if (!empty($filters['q'])) {
       $conditions[] = '(v.tbvenuename LIKE :q OR v.tbvenuetype LIKE :q)';
       $params[':q'] = '%' . $filters['q'] . '%';
@@ -280,6 +293,32 @@ class VenueRepository
     ]);
 
     return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+  }
+
+
+  // =========================================================
+  // ¿YA EXISTE UN LOCAL CON ESE NOMBRE PARA EL MISMO DUEÑO?
+  // (control de duplicados desde PHP, case-insensitive)
+  // =========================================================
+  public function existsByNameForOwner(int $idOwner, string $name, ?int $excludeId = null): bool
+  {
+    $sql = "
+      SELECT COUNT(*) FROM tbvenue
+      WHERE tbownerid = :idOwner
+        AND LOWER(TRIM(tbvenuename)) = LOWER(:name)
+    ";
+
+    $params = [':idOwner' => $idOwner, ':name' => trim($name)];
+
+    if ($excludeId !== null) {
+      $sql .= " AND tbvenueid <> :excludeId";
+      $params[':excludeId'] = $excludeId;
+    }
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute($params);
+
+    return (int) $stmt->fetchColumn() > 0;
   }
 
 

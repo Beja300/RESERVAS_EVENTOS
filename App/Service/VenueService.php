@@ -44,6 +44,10 @@ class VenueService
             throw new BusinessRuleException("El nombre del local es obligatorio.");
         }
 
+        if ($this->venueRepo->existsByNameForOwner($ownerPk, $name)) {
+            throw new BusinessRuleException("Ya tienes un local registrado con ese nombre.");
+        }
+
         $locationPk = $this->locationService->validateAndCreate(
             $province,
             $canton,
@@ -85,6 +89,14 @@ class VenueService
 
         if ($price <= 0) {
             throw new BusinessRuleException("El precio de renta del local debe ser mayor a 0.");
+        }
+
+        if (trim($name) === '') {
+            throw new BusinessRuleException("El nombre del local es obligatorio.");
+        }
+
+        if ($this->venueRepo->existsByNameForOwner($venue->getIdOwner(), $name, $venue->getIdVenue())) {
+            throw new BusinessRuleException("Ya tienes un local registrado con ese nombre.");
         }
 
         $venue->setNameVenue($name);

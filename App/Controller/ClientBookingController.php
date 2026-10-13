@@ -149,6 +149,7 @@ class ClientBookingController
   public function cancel(): void
   {
     require_role('client');
+    require_post();
 
     $client = $_SESSION['user'];
     $idBooking = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
@@ -174,6 +175,7 @@ class ClientBookingController
   public function requestRefund(): void
   {
     require_role('client');
+    require_post();
 
     $client = $_SESSION['user'];
     $idBooking = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);

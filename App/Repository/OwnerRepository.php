@@ -137,7 +137,7 @@ class OwnerRepository
             FROM tbrole r
             INNER JOIN tbroleowner o ON o.tbroleid = r.tbroleid
             INNER JOIN tbowner p ON p.tbownerid = o.tbownerid
-            WHERE r.tbroleemail = :email
+            WHERE LOWER(r.tbroleemail) = LOWER(:email)
             LIMIT 1
         ";
 

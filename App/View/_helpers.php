@@ -235,12 +235,16 @@ if (!function_exists('input')) {
 
 if (!function_exists('require_login')) {
     /**
-     * Exige sesión iniciada (cualquier rol). Redirige al login si falta.
+     * Exige sesión iniciada (cualquier rol). Sin sesión:
+     *  - AJAX -> responde 401 JSON.
+     *  - Normal -> redirige al login.
      */
     function require_login(): void
     {
         if (empty($_SESSION['type'])) {
-            $target = $_SERVER['HTTP_REFERER'] ?? 'index.php';
+            if (is_ajax()) {
+                respond_json(['ok' => false, 'error' => 'Debes iniciar sesión para continuar.'], 401);
+            }
             header('Location: ' . base_url('auth', 'showLogin'));
             exit;
         }
@@ -249,15 +253,40 @@ if (!function_exists('require_login')) {
 
 if (!function_exists('require_role')) {
     /**
-     * Exige que el usuario autenticado sea del rol dado.
-     * Redirige al login si no hay sesión o el rol no coincide.
+     * Exige que el usuario autenticado sea del rol dado. Sin sesión o con
+     * rol distinto:
+     *  - AJAX -> responde 401 (sin sesión) o 403 (rol incorrecto) JSON.
+     *  - Normal -> redirige al login.
      */
     function require_role(string $expectedType): void
     {
-        require_login();
+        if (empty($_SESSION['type'])) {
+            require_login();
+            return;
+        }
         if (($_SESSION['type'] ?? '') !== $expectedType) {
+            if (is_ajax()) {
+                respond_json(['ok' => false, 'error' => 'No tienes permisos para realizar esta acción.'], 403);
+            }
             header('Location: ' . base_url('auth', 'showLogin'));
             exit;
+        }
+    }
+}
+
+if (!function_exists('require_post')) {
+    /**
+     * Exige método POST para operaciones que mutan estado. Evita que una
+     * acción sensible se dispare por GET (enlace/imagen) saltándose el CSRF.
+     */
+    function require_post(): void
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            if (is_ajax()) {
+                respond_json(['ok' => false, 'error' => 'Método no permitido.'], 405);
+            }
+            http_response_code(405);
+            exit('Método no permitido.');
         }
     }
 }

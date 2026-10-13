@@ -35,7 +35,6 @@ class PaymentMethodController
   // =========================================================
   public function showForm(): void
   {
-    session_start();
     $this->requireAdmin();
 
     require_once __DIR__ . '/../View/PaymentMethod/Form.php';
@@ -46,7 +45,6 @@ class PaymentMethodController
   // =========================================================
   public function create(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -75,7 +73,6 @@ class PaymentMethodController
   // =========================================================
   public function edit(): void
   {
-    session_start();
     $this->requireAdmin();
 
     $idPaymentMethod = (int) ($_GET['id'] ?? 0);
@@ -94,7 +91,6 @@ class PaymentMethodController
   // =========================================================
   public function update(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -131,7 +127,6 @@ class PaymentMethodController
   // =========================================================
   public function delete(): void
   {
-    session_start();
     $this->requireAdmin();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

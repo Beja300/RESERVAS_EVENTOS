@@ -51,6 +51,7 @@ if ($userType !== null && isset($_SESSION['user']) && is_object($_SESSION['user'
         <a href="<?= e(base_url('client', 'recommendations')) ?>">Recomendaciones</a>
         <a href="<?= e(base_url('client', 'favorites')) ?>">Mis favoritos</a>
         <a href="<?= e(base_url('invoice', 'list')) ?>">Mis facturas</a>
+        <a href="<?= e(base_url('credit', 'clientList')) ?>">Mis créditos</a>
         <?= $notificationNav ?>
         <a href="<?= e(base_url('client', 'profile')) ?>">Perfil</a>
       <?php elseif ($userType === 'owner'): ?>
@@ -58,6 +59,7 @@ if ($userType !== null && isset($_SESSION['user']) && is_object($_SESSION['user'
         <a href="<?= e(base_url('venue', 'list')) ?>">Mis locales</a>
         <a href="<?= e(base_url('booking', 'pendingBookings')) ?>">Reservas pendientes</a>
         <a href="<?= e(base_url('owner', 'paymentData')) ?>">Métodos de pago</a>
+        <a href="<?= e(base_url('credit', 'ownerConfig')) ?>">Crédito</a>
         <?= $notificationNav ?>
         <a href="<?= e(base_url('owner', 'profile')) ?>">Perfil</a>
       <?php elseif ($userType === 'admin'): ?>
@@ -68,6 +70,7 @@ if ($userType !== null && isset($_SESSION['user']) && is_object($_SESSION['user'
         <a href="<?= e(base_url('admin', 'bookings')) ?>">Reservas</a>
         <a href="<?= e(base_url('paymentMethod', 'list')) ?>">Métodos de pago</a>
         <a href="<?= e(base_url('admin', 'commissionConfig')) ?>">Comisión e IVA</a>
+        <a href="<?= e(base_url('credit', 'adminList')) ?>">Créditos</a>
         <?= $notificationNav ?>
         <a href="<?= e(base_url('admin', 'profile')) ?>">Perfil</a>
       <?php else: ?>

@@ -26,14 +26,20 @@ $action = $isEdit ? base_url('service', 'update') : base_url('service', 'create'
     <div class="form-group">
       <label for="name">Nombre del servicio <span class="required-mark">*</span></label>
       <input class="form-control" type="text" id="name" name="name" required
-             value="<?= e($isEdit ? $service->getNameService() : ($_POST['name'] ?? '')) ?>">
+             value="<?= e($_POST['name'] ?? ($isEdit ? $service->getNameService() : '')) ?>">
     </div>
 
     <div class="form-group">
-      <label for="type">Tipo</label>
-      <input class="form-control" type="text" id="type" name="type"
-             placeholder="Ej: Catering, DJ, Decoración..."
+      <label for="type">Tipo / categoría</label>
+      <input class="form-control" type="text" id="type" name="type" list="serviceTypeOptions"
+             placeholder="Elige o escribe una categoría"
              value="<?= e($isEdit && $service->getTypeService() !== '' ? $service->getTypeService() : ($_POST['type'] ?? '')) ?>">
+      <datalist id="serviceTypeOptions">
+        <?php foreach (['Catering', 'Decoración', 'Producción', 'Mobiliario', 'DJ', 'Fotografía', 'Animación', 'Seguridad', 'Transporte', 'Iluminación', 'Sonido'] as $opt): ?>
+          <option value="<?= e($opt) ?>"></option>
+        <?php endforeach; ?>
+      </datalist>
+      <div class="form-hint">Categorías sugeridas; el catálogo se filtra por este valor.</div>
     </div>
 
     <div class="form-group">

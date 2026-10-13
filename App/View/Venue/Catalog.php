@@ -3,12 +3,15 @@
 $pageJs = ['venue/location', 'venue/catalog'];
 
 $filters = $filters ?? [
-  'province' => '',
-  'canton'   => '',
-  'district' => '',
-  'type'     => '',
-  'q'        => '',
+  'province'    => '',
+  'canton'      => '',
+  'district'    => '',
+  'type'        => '',
+  'serviceType' => '',
+  'q'           => '',
 ];
+
+$serviceTypes = $serviceTypes ?? [];
 ?>
 
 <div class="page-head">
@@ -52,6 +55,15 @@ $filters = $filters ?? [
       <input class="form-control" type="text" id="type" name="type"
              placeholder="Ej: Salón"
              value="<?= e($filters['type']) ?>">
+    </div>
+    <div class="form-group" style="min-width:160px;margin:0;">
+      <label for="serviceType">Categoría de servicio</label>
+      <select class="form-control" id="serviceType" name="serviceType">
+        <option value="">— Todas —</option>
+        <?php foreach ($serviceTypes as $st): ?>
+          <option value="<?= e($st) ?>" <?= $filters['serviceType'] === $st ? 'selected' : '' ?>><?= e($st) ?></option>
+        <?php endforeach; ?>
+      </select>
     </div>
     <button class="btn btn-primary" type="submit">Filtrar</button>
     <a class="btn btn-ghost" href="<?= e(base_url('venue', 'catalog')) ?>">Limpiar</a>

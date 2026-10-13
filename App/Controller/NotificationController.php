@@ -23,7 +23,6 @@ class NotificationController
   // =========================================================
   public function list(): void
   {
-    session_start();
     $this->requireLogin();
 
     $role = $_SESSION['user'];
@@ -39,7 +38,7 @@ class NotificationController
   // =========================================================
   public function markAsRead(): void
   {
-    session_start();
+    require_post();
     $this->requireLogin();
 
     $role = $_SESSION['user'];
@@ -65,7 +64,6 @@ class NotificationController
   // =========================================================
   public function open(): void
   {
-    session_start();
     $this->requireLogin();
 
     $role = $_SESSION['user'];
@@ -88,7 +86,7 @@ class NotificationController
   // =========================================================
   public function markAllAsRead(): void
   {
-    session_start();
+    require_post();
     $this->requireLogin();
 
     $role = $_SESSION['user'];

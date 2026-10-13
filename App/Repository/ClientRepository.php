@@ -93,7 +93,7 @@ class ClientRepository
             FROM tbrole r
             INNER JOIN tbroleclient c ON c.tbroleid = r.tbroleid
             INNER JOIN tbclient p ON p.tbclientid = c.tbclientid
-            WHERE r.tbroleemail = :email
+            WHERE LOWER(r.tbroleemail) = LOWER(:email)
             LIMIT 1
         ";
 

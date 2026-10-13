@@ -82,6 +82,28 @@ if ($venue === null) {
 
   </div>
 
+  <?php
+    $breakdown = $venueRatingBreakdown ?? [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+    $breakdownTotal = array_sum($breakdown);
+  ?>
+  <?php if ($breakdownTotal > 0): ?>
+  <div class="rating-breakdown" style="margin-top:14px;">
+    <h4 style="margin:0 0 8px;">Distribución de calificaciones (<?= (int) $breakdownTotal ?>)</h4>
+    <?php for ($star = 5; $star >= 1; $star--):
+      $count = (int) $breakdown[$star];
+      $pct = $breakdownTotal > 0 ? round($count * 100 / $breakdownTotal) : 0;
+    ?>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span class="muted" style="width:52px;"><?= $star ?> &#9733;</span>
+        <span style="flex:1;background:var(--neutral-200);border-radius:6px;height:10px;overflow:hidden;">
+          <span style="display:block;height:100%;width:<?= $pct ?>%;background:var(--primary-500,#f59e0b);"></span>
+        </span>
+        <span class="muted" style="width:70px;text-align:right;"><?= $count ?> (<?= $pct ?>%)</span>
+      </div>
+    <?php endfor; ?>
+  </div>
+  <?php endif; ?>
+
   <div class="detail-item"><div class="k">Ubicación</div>
       <div class="v">
         <?php if ($location !== null): ?>

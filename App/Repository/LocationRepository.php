@@ -117,6 +117,37 @@ class LocationRepository
     }
 
     // =========================================================
+    // ACTUALIZAR UNA UBICACIÓN COMPLETA
+    // =========================================================
+    public function update(Location $location): bool
+    {
+        $sql = "
+            UPDATE tblocation
+            SET tblocationprovince = :province,
+                tblocationcanton = :canton,
+                tblocationdistrict = :district,
+                tblocationtown = :town,
+                tblocationdescription = :description,
+                tblocationlatitude = :latitude,
+                tblocationlongitude = :longitude
+            WHERE tblocationid = :idLocation
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+
+        return $stmt->execute([
+            ':province'    => $location->getProvinceLocation(),
+            ':canton'      => $location->getCantonLocation(),
+            ':district'    => $location->getDistrictLocation(),
+            ':town'        => $location->getTownLocation(),
+            ':description' => $location->getDescriptionLocation(),
+            ':latitude'    => $location->getLatitudeLocation(),
+            ':longitude'   => $location->getLongitudeLocation(),
+            ':idLocation'  => $location->getIdLocation(),
+        ]);
+    }
+
+    // =========================================================
     // BUSCAR ID POR PROVINCIA/CANTÓN/DISTRITO (para historial)
     // =========================================================
     public function findIdByParts(string $province, string $canton, string $district): ?int

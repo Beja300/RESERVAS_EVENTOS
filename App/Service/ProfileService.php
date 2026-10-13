@@ -51,6 +51,8 @@ class ProfileService
 
   public function validateUniqueEmail(?string $currentEmail, string $newEmail): void
   {
+    $this->authService->validateEmailFormat($newEmail);
+
     if (strtolower($newEmail) !== strtolower((string) $currentEmail)) {
       $this->authService->validateEmailIsUnique($newEmail);
     }
@@ -61,6 +63,19 @@ class ProfileService
     if ($new !== '' && strtolower($new) !== strtolower((string) $current)) {
       $this->authService->validateIdentificationIsUnique($new);
     }
+  }
+
+  public function validateIdentificationFormat(?string $identificationNumber): void
+  {
+    $this->authService->validateIdentificationFormat($identificationNumber);
+  }
+
+  /**
+   * Deja solo dígitos (las máscaras del formulario pueden enviar guiones).
+   */
+  public function normalizeIdentification(?string $identificationNumber): string
+  {
+    return (string) preg_replace('/\D/', '', (string) $identificationNumber);
   }
 
   public function validatePhone(?string $phoneNumber): void

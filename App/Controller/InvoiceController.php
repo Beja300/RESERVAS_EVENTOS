@@ -47,7 +47,6 @@ class InvoiceController
   // =========================================================
   public function showForm(): void
   {
-    session_start();
     $this->requireClient();
 
     $idBooking = (int) ($_GET['bookingId'] ?? 0);
@@ -72,7 +71,6 @@ class InvoiceController
   // =========================================================
   public function generate(): void
   {
-    session_start();
     $this->requireClient();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -83,7 +81,7 @@ class InvoiceController
     $client = $_SESSION['user'];
     $idBooking = (int) ($_POST['bookingId'] ?? 0);
     $idPaymentMethod = (int) ($_POST['paymentMethodId'] ?? 0);
-    $date = trim($_POST['date'] ?? date('Y-m-d'));
+    $date = trim($_POST['date'] ?? '');
 
     try {
 
@@ -116,7 +114,6 @@ class InvoiceController
   // =========================================================
   public function detail(): void
   {
-    session_start();
     $this->requireLogin();
 
     $idBooking = (int) ($_GET['bookingId'] ?? 0);
@@ -162,7 +159,6 @@ class InvoiceController
   // =========================================================
   public function list(): void
   {
-    session_start();
     $this->requireClient();
 
     $client = $_SESSION['user'];

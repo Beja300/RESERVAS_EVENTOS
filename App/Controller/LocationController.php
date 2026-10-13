@@ -24,6 +24,8 @@ class LocationController
   // =========================================================
   public function list(): void
   {
+    require_role('admin');
+
     $locations = $this->locationRepo->findAll();
 
     require_once __DIR__ . '/../View/Location/List.php';
@@ -34,6 +36,8 @@ class LocationController
   // =========================================================
   public function showForm(): void
   {
+    require_role('admin');
+
     require_once __DIR__ . '/../View/Location/Form.php';
   }
 
@@ -42,6 +46,8 @@ class LocationController
   // =========================================================
   public function create(): void
   {
+    require_role('admin');
+
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
       $this->showForm();
       return;
@@ -61,6 +67,52 @@ class LocationController
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+
+      require_once __DIR__ . '/../View/Location/Form.php';
+    }
+  }
+
+  // =========================================================
+  // MOSTRAR FORMULARIO DE EDICIÓN
+  // =========================================================
+  public function edit(): void
+  {
+    require_role('admin');
+
+    $idLocation = (int) ($_GET['id'] ?? 0);
+    $location = $this->locationRepo->findById($idLocation);
+
+    if ($location === null) {
+      redirect_to('location', 'list');
+    }
+
+    require_once __DIR__ . '/../View/Location/Form.php';
+  }
+
+  // =========================================================
+  // ACTUALIZAR UBICACIÓN
+  // =========================================================
+  public function update(): void
+  {
+    require_role('admin');
+    require_post();
+
+    $idLocation = (int) ($_POST['id'] ?? 0);
+    $province = trim($_POST['province'] ?? '');
+    $canton = trim($_POST['canton'] ?? '');
+    $district = trim($_POST['district'] ?? '');
+    $town = trim($_POST['town'] ?? '') ?: null;
+    $description = trim($_POST['description'] ?? '') ?: null;
+
+    try {
+
+      $this->locationService->validateAndUpdate($idLocation, $province, $canton, $district, $town, $description);
+
+      redirect_to('location', 'list', ['updated' => 1]);
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+      $location = $this->locationRepo->findById($idLocation);
 
       require_once __DIR__ . '/../View/Location/Form.php';
     }

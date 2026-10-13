@@ -76,7 +76,7 @@ class RoleRepository
 
             FROM tbrole
 
-            WHERE tbroleemail = :email
+            WHERE LOWER(tbroleemail) = LOWER(:email)
 
             LIMIT 1
         ";

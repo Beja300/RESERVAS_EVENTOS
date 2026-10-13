@@ -19,6 +19,10 @@ $hasTicket = $ticket !== null;
   </div>
 </div>
 
+<?php if (!empty($_GET['creditError'])): ?>
+  <div class="alert alert-error"><?= e($_GET['creditError']) ?></div>
+<?php endif; ?>
+
 <div class="card">
   <div class="detail-grid">
 <div class="detail-item"><div class="k">Local</div><div class="v">#<?= (int) $booking->getIdLocal() ?> <?= $venue !== null ? '— ' . e($venue->getNameVenue()) : '' ?></div></div>
@@ -217,6 +221,35 @@ $hasTicket = $ticket !== null;
         <button class="btn btn-outline" type="submit" data-upload-btn disabled>Subir comprobante</button>
       </form>
     </div>
+  <?php endif; ?>
+
+  <?php if ($isClient && isset($creditInfo) && $creditInfo !== null): ?>
+    <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
+    <h3 style="margin:0 0 10px;">Financiar con crédito</h3>
+    <?php if (isset($bookingCredit) && $bookingCredit !== null): ?>
+      <div class="alert alert-info" style="text-align:left;">
+        <p style="margin:0 0 8px;">
+          Esta reserva tiene un crédito por &#8353; <?= number_format($bookingCredit->getTotal(), 2) ?>
+          (saldo &#8353; <?= number_format($bookingCredit->getBalance(), 2) ?>,
+          vence <?= e($bookingCredit->getDueDate()) ?>).
+        </p>
+        <a class="btn btn-sm btn-outline" href="<?= e(base_url('credit', 'detail', ['id' => $bookingCredit->getIdCredit()])) ?>">
+          Ver crédito y abonar
+        </a>
+      </div>
+    <?php elseif ($isPending && $creditInfo['allowed']): ?>
+      <form method="post" action="<?= e(base_url('credit', 'request')) ?>" style="max-width:460px;">
+        <?= csrf_field() ?>
+        <input type="hidden" name="bookingId" value="<?= (int) $booking->getIdBooking() ?>">
+        <p class="form-hint">
+          El propietario acepta crédito. Tu reserva quedará confirmada y podrás pagar en abonos
+          dentro del plazo acordado.
+        </p>
+        <button class="btn btn-outline" type="submit">Solicitar crédito</button>
+      </form>
+    <?php elseif ($isPending): ?>
+      <p class="muted" style="margin:0;"><?= e($creditInfo['reason']) ?></p>
+    <?php endif; ?>
   <?php endif; ?>
 
   <?php if ($isClient && $isPending && !$hasTicket): ?>

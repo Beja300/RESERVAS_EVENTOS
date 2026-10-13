@@ -86,7 +86,7 @@ if ($owner === null) {
 
     <div class="form-group">
       <label for="ownerIdentification">Cédula / identificación</label>
-      <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification"
+      <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification" data-mask="identification" data-validate="identification"
              value="<?= e($_POST['ownerIdentification'] ?? $owner->getIdentificationNumberOwner()) ?>">
       <div class="form-hint">Ej: 1-2345-0678</div>
     </div>
@@ -100,7 +100,7 @@ if ($owner === null) {
 
     <div class="form-group">
       <label for="phoneNumber">Teléfono</label>
-      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
+      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone"
              data-validate="phone"
              maxlength="8" value="<?= e($_POST['phoneNumber'] ?? $owner->getPhoneNumber() ?? '') ?>">
       <div class="form-hint">Ej: 8888-7777</div>

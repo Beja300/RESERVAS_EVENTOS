@@ -69,8 +69,16 @@ class BookingAdminService
       throw new BusinessRuleException('No se puede reprogramar una reserva cancelada o rechazada.');
     }
 
+    if (!$this->isRealDate($newDate)) {
+      throw new BusinessRuleException('La fecha de inicio no es una fecha válida.');
+    }
+
     if ($newDate < date('Y-m-d')) {
       throw new BusinessRuleException('La fecha de inicio no puede ser anterior a hoy.');
+    }
+
+    if ($newDate > date('Y-m-d', strtotime('+1 year'))) {
+      throw new BusinessRuleException('La nueva fecha no puede superar un año desde hoy.');
     }
 
     if ($newDate === $booking->getBookingDate()) {
@@ -237,8 +245,6 @@ class BookingAdminService
 
     return $booking;
   }
-
-  private function requirePendingRefund(int $refundRequestId): BookingRefund
   {
     $refund = $this->refundRepo->findById($refundRequestId);
 
@@ -266,8 +272,11 @@ class BookingAdminService
     );
   }
 
-  private function text(?string $value): string
+  private function isRealDate(string $value): bool
   {
-    return trim((string) $value);
+    if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m)) {
+      return false;
+    }
+
+    return checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
   }
-}

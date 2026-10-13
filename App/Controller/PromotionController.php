@@ -31,7 +31,6 @@ class PromotionController
   // =========================================================
   public function list(): void
   {
-    session_start();
     $this->requireOwner();
 
     $owner = $_SESSION['user'];
@@ -66,7 +65,6 @@ class PromotionController
   // =========================================================
   public function showForm(): void
   {
-    session_start();
     $this->requireOwner();
 
     $owner = $_SESSION['user'];
@@ -83,7 +81,6 @@ class PromotionController
   // =========================================================
   public function create(): void
   {
-    session_start();
     $this->requireOwner();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -126,11 +123,90 @@ class PromotionController
   }
 
   // =========================================================
+  // MOSTRAR FORMULARIO DE EDICIÓN
+  // =========================================================
+  public function edit(): void
+  {
+    $this->requireOwner();
+
+    $owner = $_SESSION['user'];
+    $idPromotion = (int) ($_GET['id'] ?? 0);
+
+    try {
+
+      $promotion = $this->promotionService->find($idPromotion);
+
+      if ($promotion === null) {
+        throw new BusinessRuleException('La promoción no existe.');
+      }
+
+      $this->ownerService->assertOwnsVenue($owner->getIdOwner(), $promotion->getIdVenue());
+
+      $idVenue = $promotion->getIdVenue();
+      $venues = $this->venueRepo->findByOwner($owner->getIdOwner());
+
+      require_once __DIR__ . '/../View/Promotion/Form.php';
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+      $this->list();
+    }
+  }
+
+  // =========================================================
+  // ACTUALIZAR PROMOCIÓN
+  // =========================================================
+  public function update(): void
+  {
+    $this->requireOwner();
+    require_post();
+
+    $owner = $_SESSION['user'];
+    $idPromotion = (int) ($_POST['id'] ?? 0);
+    $label = trim($_POST['label'] ?? '');
+    $description = trim($_POST['description'] ?? '') ?: null;
+    $startDate = trim($_POST['startDate'] ?? '') ?: null;
+    $endDate = trim($_POST['endDate'] ?? '') ?: null;
+    $minServices = (int) ($_POST['minServices'] ?? 1);
+    $isActive = isset($_POST['active']);
+
+    try {
+
+      $promotion = $this->promotionService->find($idPromotion);
+
+      if ($promotion === null) {
+        throw new BusinessRuleException('La promoción no existe.');
+      }
+
+      $this->ownerService->assertOwnsVenue($owner->getIdOwner(), $promotion->getIdVenue());
+
+      $this->promotionService->update(
+        $idPromotion,
+        $label,
+        $description,
+        $startDate,
+        $endDate,
+        $minServices,
+        $isActive
+      );
+
+      redirect_to('promotion', 'list', ['venueId' => $promotion->getIdVenue(), 'updated' => 1]);
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+      $promotion = $this->promotionService->find($idPromotion);
+      $idVenue = $promotion !== null ? $promotion->getIdVenue() : 0;
+      $venues = $this->venueRepo->findByOwner($owner->getIdOwner());
+
+      require_once __DIR__ . '/../View/Promotion/Form.php';
+    }
+  }
+
+  // =========================================================
   // AGREGAR SERVICIO A UNA PROMOCIÓN
   // =========================================================
   public function addService(): void
   {
-    session_start();
     $this->requireOwner();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -165,9 +241,6 @@ class PromotionController
   // =========================================================
   private function requireOwner(): void
   {
-    if (($_SESSION['type'] ?? null) !== 'owner') {
-      header('Location: ' . base_url('auth', 'showLogin'));
-      exit;
-    }
+    require_role('owner');
   }
 }

@@ -44,8 +44,18 @@ class AdminFinanceController
       redirect_to('admin', 'commissionConfig');
     }
 
-    $percentage = (float) trim($_POST['percentage'] ?? '');
-    $tax        = (float) trim($_POST['tax'] ?? '');
+    $percentage = trim($_POST['percentage'] ?? '');
+    $tax        = trim($_POST['tax'] ?? '');
+
+    if (!is_numeric($percentage)) {
+      throw new BusinessRuleException('El porcentaje de comisión debe ser numérico.');
+    }
+    if (!is_numeric($tax)) {
+      throw new BusinessRuleException('El porcentaje de IVA debe ser numérico.');
+    }
+
+    $percentage = (float) $percentage;
+    $tax = (float) $tax;
 
     try {
       $this->commissionConfigService->setPercentage($percentage);
@@ -84,11 +94,14 @@ class AdminFinanceController
     // NO se tocan datos maestros: roles, perfiles, ubicaciones,
     // métodos de pago ni configuración de comisión.
     $tables = [
+      'tbcreditpayment',
+      'tbcredit',
       'tbeearning',
       'tbinvoice',
       'tbbookingticket',
       'tbbookingdetail',
       'tbbooking',
+      'tbcreditconfig',
       'tbvenuerating',
       'tbservicerating',
       'tbpromotionservice',

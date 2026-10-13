@@ -46,15 +46,17 @@ class VenueCatalogController
   public function catalog(): void
   {
     $filters = [
-      'province' => trim($_GET['province'] ?? ''),
-      'canton'   => trim($_GET['canton'] ?? ''),
-      'district' => trim($_GET['district'] ?? ''),
-      'type'     => trim($_GET['type'] ?? ''),
-      'q'        => trim($_GET['q'] ?? ''),
+      'province'    => trim($_GET['province'] ?? ''),
+      'canton'      => trim($_GET['canton'] ?? ''),
+      'district'    => trim($_GET['district'] ?? ''),
+      'type'        => trim($_GET['type'] ?? ''),
+      'serviceType' => trim($_GET['serviceType'] ?? ''),
+      'q'           => trim($_GET['q'] ?? ''),
     ];
 
     $hasFilters = implode('', $filters) !== '';
     $venues = $this->venueService->findByFilters($filters);
+    $serviceTypes = $this->serviceService->getDistinctTypes();
 
     if ($hasFilters && ($_SESSION['type'] ?? null) === 'client') {
       $this->historyService->logVenueSearch(
@@ -140,6 +142,7 @@ class VenueCatalogController
     $owner = $this->ownerRepository->findByOwnerPk($venue->getIdOwner());
 
     $avgRating = $this->venueRatingService->getAverage($idVenue);
+    $venueRatingBreakdown = $this->venueRatingService->getBreakdown($idVenue);
     $promotions = $this->promotionService->getActiveByVenue($idVenue);
 
     $services = $this->serviceService->findAvailableByLocal($idVenue);

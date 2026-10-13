@@ -185,6 +185,31 @@ class ServiceRatingRepository
   }
 
   // =========================================================
+  // DESGLOSE POR ESTRELLAS DE UN SERVICIO (1..5 -> cantidades)
+  // =========================================================
+  public function findBreakdownByService(int $idService): array
+  {
+    $sql = "
+      SELECT tbserviceratingstars AS stars, COUNT(*) AS total
+      FROM tbservicerating
+      WHERE tbserviceid = :idService
+        AND tbserviceratingactive = true
+      GROUP BY tbserviceratingstars
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([':idService' => $idService]);
+
+    $breakdown = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+      $breakdown[(int) $row['stars']] = (int) $row['total'];
+    }
+
+    return $breakdown;
+  }
+
+  // =========================================================
   // PROMEDIO GLOBAL DE ESTRELLAS (todos los servicios)
   // =========================================================
   public function averageStars(): ?float

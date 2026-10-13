@@ -30,13 +30,13 @@ $u = $user;
     </div>
     <div class="form-group">
       <label for="email">Correo electrónico <span class="required-mark">*</span></label>
-      <input class="form-control" type="email" id="email" name="email"
+      <input class="form-control" type="email" id="email" name="email" data-validate="email"
              value="<?= e($_POST['email'] ?? $u->getEmail()) ?>" required>
       <div class="form-hint">Ej: analucia@correo.com</div>
     </div>
     <div class="form-group">
       <label for="phoneNumber">Teléfono</label>
-      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
+      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" data-mask="phone"
              value="<?= e($_POST['phoneNumber'] ?? $u->getPhoneNumber() ?? '') ?>"
              maxlength="8" placeholder="8 dígitos">
       <div class="form-hint">Ej: 8888-7777</div>

@@ -41,20 +41,20 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
     <div class="form-group">
       <label for="name">Nombre del local <span class="required-mark">*</span></label>
       <input class="form-control" type="text" id="name" name="name" required
-        value="<?= e($isEdit ? $venue->getNameVenue() : ($_POST['name'] ?? '')) ?>">
+        value="<?= e($_POST['name'] ?? ($isEdit ? $venue->getNameVenue() : '')) ?>">
     </div>
 
     <div class="form-group">
       <label for="type">Tipo de local</label>
       <input class="form-control" type="text" id="type" name="type"
         placeholder="Ej: Salón de eventos, Restaurante, Jardín..."
-        value="<?= e($isEdit && $venue->getTypeVenue() !== '' ? $venue->getTypeVenue() : ($_POST['type'] ?? '')) ?>">
+        value="<?= e($_POST['type'] ?? ($isEdit && $venue->getTypeVenue() !== '' ? $venue->getTypeVenue() : '')) ?>">
     </div>
 
     <div class="form-group">
       <label for="capacity">Capacidad</label>
       <input class="form-control" type="number" id="capacity" name="capacity" min="1"
-        value="<?= e($isEdit ? (string) $venue->getCapacityVenue() : ($_POST['capacity'] ?? '')) ?>">
+        value="<?= e($_POST['capacity'] ?? ($isEdit ? (string) $venue->getCapacityVenue() : '')) ?>">
     </div>
 
     <div class="form-group">

@@ -18,7 +18,7 @@ class PaymentMethodService
 
     public function validateTypeIsUnique(string $type, int $excludeId = 0): void
     {
-        foreach ($this->paymentMethodRepo->findActive() as $method) {
+        foreach ($this->paymentMethodRepo->findAll() as $method) {
             if ($method->getIdPaymentMethod() === $excludeId) {
                 continue;
             }

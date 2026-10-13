@@ -294,6 +294,8 @@ class AuthController
   // =========================================================
   public function cleanDemo(): void
   {
+    require_role('admin');
+
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
       header('Location: ' . base_url('auth', 'showLogin'));
       exit;

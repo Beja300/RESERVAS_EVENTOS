@@ -54,6 +54,7 @@ class AdminUserController
   public function activateUser(): void
   {
     require_role('admin');
+    require_post();
 
     $idRole = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
 
@@ -72,6 +73,7 @@ class AdminUserController
   public function deactivateUser(): void
   {
     require_role('admin');
+    require_post();
 
     $idRole = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
     $targetType = trim($_POST['type'] ?? $_GET['type'] ?? '');
@@ -262,6 +264,8 @@ class AdminUserController
         throw new BusinessRuleException('El nombre es obligatorio.');
       }
 
+      $this->authService->validateEmailFormat($email);
+
       if (strtolower($email) !== strtolower($user->getEmail())) {
         $this->authService->validateEmailIsUnique($email);
       }
@@ -282,11 +286,14 @@ class AdminUserController
       if ($type === 'owner') {
         $ownerLastName = trim($_POST['ownerLastName'] ?? '');
         $ownerAlias = trim($_POST['ownerAlias'] ?? '');
-        $ownerIdentification = trim($_POST['ownerIdentification'] ?? '');
+        $ownerIdentification = preg_replace('/\D/', '', trim($_POST['ownerIdentification'] ?? ''));
 
-        if ($ownerIdentification !== ''
-            && strtolower($ownerIdentification) !== strtolower($user->getIdentificationNumberOwner())) {
-          $this->authService->validateIdentificationIsUnique($ownerIdentification);
+        if ($ownerIdentification !== '') {
+          $this->authService->validateIdentificationFormat($ownerIdentification);
+
+          if (strtolower($ownerIdentification) !== strtolower($user->getIdentificationNumberOwner())) {
+            $this->authService->validateIdentificationIsUnique($ownerIdentification);
+          }
         }
 
         $user->setLastNameOwner($ownerLastName);

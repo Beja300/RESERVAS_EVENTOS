@@ -251,6 +251,32 @@ class ServiceRepository
 
 
   // =========================================================
+  // ¿YA EXISTE UN SERVICIO CON ESE NOMBRE EN EL MISMO LOCAL?
+  // (control de duplicados desde PHP, case-insensitive)
+  // =========================================================
+  public function existsByNameForLocal(int $idLocal, string $name, ?int $excludeId = null): bool
+  {
+    $sql = "
+      SELECT COUNT(*) FROM tbservice
+      WHERE tbvenueid = :idLocal
+        AND LOWER(TRIM(tbservicename)) = LOWER(:name)
+    ";
+
+    $params = [':idLocal' => $idLocal, ':name' => trim($name)];
+
+    if ($excludeId !== null) {
+      $sql .= " AND tbserviceid <> :excludeId";
+      $params[':excludeId'] = $excludeId;
+    }
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute($params);
+
+    return (int) $stmt->fetchColumn() > 0;
+  }
+
+
+  // =========================================================
   // CAMBIAR ESTADO
   // =========================================================
   public function updateState(int $idService, string $stateService): bool
@@ -336,6 +362,32 @@ class ServiceRepository
       ':isActive'     => $this->toDb($service->getIsActive()),
       ':idService'    => $service->getIdService()
     ]);
+  }
+
+
+  // =========================================================
+  // CATEGORÍAS (tipos) DISTINTAS DE SERVICIOS APROBADOS
+  // Se usan para el filtro de categorización del catálogo.
+  // =========================================================
+  public function distinctTypes(): array
+  {
+    $sql = "
+      SELECT DISTINCT tbservicetype
+      FROM tbservice
+      WHERE tbserviceactive = true
+        AND tbservicestate = 'aprobado'
+        AND tbservicetype IS NOT NULL
+        AND TRIM(tbservicetype) <> ''
+      ORDER BY tbservicetype ASC
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute();
+
+    return array_map(
+      static fn(array $row): string => (string) $row['tbservicetype'],
+      $stmt->fetchAll(PDO::FETCH_ASSOC)
+    );
   }
 
 

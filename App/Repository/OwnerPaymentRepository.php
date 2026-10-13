@@ -140,6 +140,34 @@ class OwnerPaymentRepository
   // =========================================================
   // BUSCAR POR OWNER Y MÉTODO DE PAGO (ambos activos)
   // =========================================================
+  public function existsByAccount(int $idOwner, int $idPaymentMethod, string $account, int $excludeId = 0): bool
+  {
+    $account = trim($account);
+    if ($account === '') {
+      return false;
+    }
+
+    $sql = "
+      SELECT COUNT(*) as cnt
+      FROM tbownerpayment
+      WHERE tbownerid = :idOwner
+        AND tbpaymentmethodid = :idPaymentMethod
+        AND LOWER(TRIM(tbownerpaymentaccount)) = LOWER(:account)
+        AND (:excludeId = 0 OR tbownerpaymentid <> :excludeId)
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([
+      ':idOwner' => $idOwner,
+      ':idPaymentMethod' => $idPaymentMethod,
+      ':account' => $account,
+      ':excludeId' => $excludeId,
+    ]);
+
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return !empty($row) && (int) $row['cnt'] > 0;
+  }
+
   public function findByOwnerAndMethod(int $idOwner, int $idPaymentMethod): ?array
   {
     $rows = $this->findByOwner($idOwner);

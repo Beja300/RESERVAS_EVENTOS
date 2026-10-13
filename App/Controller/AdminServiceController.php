@@ -55,6 +55,7 @@ class AdminServiceController
   public function approve(): void
   {
     require_role('admin');
+    require_post();
 
     $idService = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
     $admin = $_SESSION['user'] ?? null;
@@ -85,6 +86,7 @@ class AdminServiceController
   public function reject(): void
   {
     require_role('admin');
+    require_post();
 
     $idService = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
     $admin = $_SESSION['user'] ?? null;

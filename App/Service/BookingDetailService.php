@@ -124,6 +124,7 @@ class BookingDetailService
     return [
       'booking'              => $booking,
       'details'              => $details,
+      'totals'               => $totals,
       'total'                => $totals['total'],
       'venue'                => $venue,
       'client'               => $client,

@@ -52,7 +52,17 @@
  * ---------------------------------------------------------------------
  */
 
+// =========================================================
+// MANEJO DE ERRORES
+// Nunca mostrar detalles de PHP/SQL al usuario final: se registran
+// en el log del servidor y se responde con un mensaje claro y genérico.
+// =========================================================
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+
 require_once __DIR__ . '/../Configuration/DataBase.php';
+require_once __DIR__ . '/../App/Service/BusinessRuleException.php';
 
 // Las sesiones pueden contener objetos serializados ($_SESSION['user'] es
 // un objeto Client/Owner/Admin). Para que PHP pueda deserializarlos es
@@ -190,6 +200,7 @@ $fallbackControllers = [
   'notification'  => 'NotificationController',
   'promotion'     => 'PromotionController',
   'api'           => 'ApiController',
+  'credit'        => 'CreditController',
 ];
 
 // =========================================================
@@ -206,10 +217,11 @@ $allowedActions = [
   'owner'         => ['dashboard', 'profile', 'updateProfile', 'removePhoto', 'deactivateAccount', 'paymentData', 'savePayment', 'removePayment'],
   'invoice'       => ['showForm', 'generate', 'detail', 'list'],
   'paymentmethod' => ['list', 'showForm', 'create', 'edit', 'update', 'delete'],
-  'location'      => ['list', 'showForm', 'create'],
+  'location'      => ['list', 'showForm', 'create', 'edit', 'update'],
   'notification'  => ['list', 'markAsRead', 'markAllAsRead', 'open'],
-  'promotion'     => ['list', 'showForm', 'create', 'addService'],
+  'promotion'     => ['list', 'showForm', 'create', 'edit', 'update', 'addService'],
   'api'           => ['locations', 'geolocate', 'venueComments', 'serviceComments'],
+  'credit'        => ['ownerConfig', 'saveConfig', 'ownerList', 'clientList', 'request', 'pay', 'detail', 'adminList'],
 ];
 
 // Ruta por defecto (acceso a /Public/index.php sin parámetros)
@@ -234,6 +246,67 @@ function renderError(int $code, string $message): void
         . "</div></body></html>";
     exit;
 }
+
+// =========================================================
+// HANDLERS GLOBALES
+// -------------------------------------------------------
+// - set_error_handler: convierte warnings/notices en excepciones para
+//   que nunca se impriman crudos en la respuesta.
+// - set_exception_handler: categoriza el error (validación vs servidor),
+//   lo registra en el log y responde de forma amigable (HTML o JSON).
+// =========================================================
+set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
+    if (!(error_reporting() & $severity)) {
+        return false;
+    }
+
+    // Avisos menores (notices/deprecations) se registran pero NO se convierten
+    // en excepción: son benignos y no deben tumbar la petición.
+    if (in_array($severity, [E_NOTICE, E_USER_NOTICE, E_DEPRECATED, E_USER_DEPRECATED], true)) {
+        error_log(sprintf('[EventHall] Aviso: %s en %s:%d', $message, $file, $line));
+        return true;
+    }
+
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
+set_exception_handler(static function (\Throwable $e): void {
+    $isValidation = $e instanceof BusinessRuleException;
+    $status = $isValidation ? 422 : 500;
+
+    error_log(sprintf(
+        '[EventHall] %s: %s en %s:%d',
+        $isValidation ? 'Validación' : 'Error',
+        $e->getMessage(),
+        $e->getFile(),
+        $e->getLine()
+    ));
+
+    $isAjaxRequest = function_exists('is_ajax') && is_ajax();
+
+    if ($isValidation) {
+        $message = $e->getMessage();
+    } else {
+        $message = 'Ocurrió un error inesperado. Intenta de nuevo o contacta al administrador.';
+    }
+
+    if ($isAjaxRequest && function_exists('respond_json') && !headers_sent()) {
+        respond_json(['ok' => false, 'error' => $message], $status);
+    }
+
+    if (php_sapi_name() === 'cli') {
+        http_response_code($status);
+        exit($message);
+    }
+
+    // Si ya se envió salida no podemos cambiar el código HTTP ni las
+    // cabeceras; solo registramos y cortamos la respuesta.
+    if (headers_sent()) {
+        exit($message);
+    }
+
+    renderError($status, $message);
+});
 
 // =========================================================
 // LEER PARÁMETROS DE RUTA

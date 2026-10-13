@@ -40,6 +40,11 @@ if ($booking === null) {
     <input type="hidden" name="bookingId" value="<?= (int) $booking->getIdBooking() ?>">
 
     <div class="form-group">
+      <label for="date">Fecha de emisión <span class="required-mark">*</span></label>
+      <input class="form-control" type="date" id="date" name="date" value="<?= $_POST['date'] ?? date('Y-m-d') ?>" required>
+    </div>
+
+    <div class="form-group">
       <label for="paymentMethodId">Método de pago <span class="required-mark">*</span></label>
       <?php if (empty($paymentMethods)): ?>
         <p class="muted">No tienes métodos de pago registrados.</p>

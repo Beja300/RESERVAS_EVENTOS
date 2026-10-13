@@ -94,7 +94,7 @@ class AdminRepository
             FROM tbrole r
             INNER JOIN tbroleadmin a ON a.tbroleid = r.tbroleid
             INNER JOIN tbadmin p ON p.tbadminid = a.tbadminid
-            WHERE r.tbroleemail = :email
+            WHERE LOWER(r.tbroleemail) = LOWER(:email)
             LIMIT 1
         ";
 

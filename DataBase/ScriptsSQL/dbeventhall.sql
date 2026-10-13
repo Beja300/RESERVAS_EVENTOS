@@ -8,7 +8,7 @@ USE dbeventhall;
 CREATE TABLE tbrole (
     tbroleid INT AUTO_INCREMENT PRIMARY KEY,
     tbrolename VARCHAR(300) NOT NULL,
-    tbroleemail VARCHAR(300) NOT NULL UNIQUE,
+    tbroleemail VARCHAR(300) NOT NULL,
     tbrolepassword VARCHAR(300) NOT NULL,
     tbrolephone VARCHAR(25),
     tbroleactive BOOLEAN NOT NULL DEFAULT TRUE
@@ -20,7 +20,7 @@ CREATE TABLE tbrole (
 -- =========================================================
 CREATE TABLE tbroleadmin (
     tbroleadminid INT AUTO_INCREMENT PRIMARY KEY,
-    tbroleid INT NOT NULL UNIQUE,
+    tbroleid INT NOT NULL,
     tbadminid INT NOT NULL,
     tbroleadminactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
@@ -31,7 +31,7 @@ CREATE TABLE tbroleadmin (
 -- =========================================================
 CREATE TABLE tbroleclient (
     tbroleclientid INT AUTO_INCREMENT PRIMARY KEY,
-    tbroleid INT NOT NULL UNIQUE,
+    tbroleid INT NOT NULL,
     tbclientid INT NOT NULL,
     tbroleclientactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
@@ -42,7 +42,7 @@ CREATE TABLE tbroleclient (
 -- =========================================================
 CREATE TABLE tbroleowner (
     tbroleownerid INT AUTO_INCREMENT PRIMARY KEY,
-    tbroleid INT NOT NULL UNIQUE,
+    tbroleid INT NOT NULL,
     tbownerid INT NOT NULL,
     tbroleowneractive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
@@ -76,7 +76,7 @@ CREATE TABLE tbowner (
     tbownerfirstname VARCHAR(300) NOT NULL,
     tbownerlastname VARCHAR(250),
     tbowneralias VARCHAR(100),
-    tbowneridentificationnumber VARCHAR(30) UNIQUE,
+    tbowneridentificationnumber VARCHAR(30),
     tbownerimage VARCHAR(255),
     tbowneractive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
@@ -241,7 +241,7 @@ CREATE TABLE tbownerpayment (
 -- =========================================================
 CREATE TABLE tbinvoice (
     tbinvoiceid INT AUTO_INCREMENT PRIMARY KEY,
-    tbbookingid INT NOT NULL UNIQUE,
+    tbbookingid INT NOT NULL,
     tbpaymentmethodid INT NOT NULL,
     tbinvoicedate DATETIME DEFAULT CURRENT_TIMESTAMP,
     tbinvoicestatus VARCHAR(30) DEFAULT 'pendiente',
@@ -396,4 +396,48 @@ CREATE TABLE tbrolemailhistorical (
     tbrolemailhistoricalactualemail VARCHAR(300),
     tbrolemailhistoricalnewemail VARCHAR(300) NOT NULL,
     tbrolemailhistoricaldate DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 29) tbcreditconfig: política de crédito definida por el
+--     propietario (plazo en días y umbral de cliente frecuente).
+-- =========================================================
+CREATE TABLE tbcreditconfig (
+    tbcreditconfigid INT AUTO_INCREMENT PRIMARY KEY,
+    tbownerid INT NOT NULL,
+    tbcreditconfigenabled BOOLEAN NOT NULL DEFAULT FALSE,
+    tbcreditconfigdays INT NOT NULL DEFAULT 30,
+    tbcreditconfigfrequentmin INT NOT NULL DEFAULT 3,
+    tbcreditconfigactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 30) tbcredit: cuenta por cobrar generada al otorgar crédito
+--     sobre una reserva (relación 1:1 con la reserva).
+--     estados: pendiente | parcial | pagado | vencido
+-- =========================================================
+CREATE TABLE tbcredit (
+    tbcreditid INT AUTO_INCREMENT PRIMARY KEY,
+    tbbookingid INT NOT NULL,
+    tbclientid INT NOT NULL,
+    tbownerid INT NOT NULL,
+    tbcredittotal DECIMAL(12,2) NOT NULL,
+    tbcreditbalance DECIMAL(12,2) NOT NULL,
+    tbcreditduedate DATE NOT NULL,
+    tbcreditstate VARCHAR(30) DEFAULT 'pendiente',
+    tbcreditdate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    tbcreditactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 31) tbcreditpayment: abonos (pagos parciales) de un crédito.
+-- =========================================================
+CREATE TABLE tbcreditpayment (
+    tbcreditpaymentid INT AUTO_INCREMENT PRIMARY KEY,
+    tbcreditid INT NOT NULL,
+    tbcreditpaymentamount DECIMAL(12,2) NOT NULL,
+    tbcreditpaymentnote VARCHAR(255),
+    tbroleid INT,
+    tbcreditpaymentdate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    tbcreditpaymentactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;

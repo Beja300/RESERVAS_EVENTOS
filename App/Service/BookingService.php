@@ -54,15 +54,41 @@ class BookingService
             );
         }
 
+        if (!$this->isRealDate($date)) {
+            throw new BusinessRuleException(
+                'La fecha de inicio no tiene un formato válido (AAAA-MM-DD).'
+            );
+        }
+
         if ($endDate === null || $endDate === '') {
             throw new BusinessRuleException(
                 'Debes indicar la fecha final de la reserva.'
             );
         }
 
+        if (!$this->isRealDate($endDate)) {
+            throw new BusinessRuleException(
+                'La fecha final no tiene un formato válido (AAAA-MM-DD).'
+            );
+        }
+
         if ($endDate < $date) {
             throw new BusinessRuleException(
                 'La fecha final no puede ser anterior a la fecha de inicio.'
+            );
+        }
+
+        $maxDate = date('Y-m-d', strtotime('+1 year'));
+
+        if ($date > $maxDate) {
+            throw new BusinessRuleException(
+                'La fecha de inicio no puede superar un año desde hoy.'
+            );
+        }
+
+        if ($endDate > $maxDate) {
+            throw new BusinessRuleException(
+                'La fecha final no puede superar un año desde hoy.'
             );
         }
 
@@ -253,5 +279,18 @@ public function cancel(int $bookingPk): void
         detail: $motivo
       )
     );
+  }
+
+  /**
+   * Comprueba que una cadena sea una fecha real en formato AAAA-MM-DD
+   * (rechaza "2026-02-31", "2050-13-01", etc.).
+   */
+  private function isRealDate(string $value): bool
+  {
+    if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m)) {
+      return false;
+    }
+
+    return checkdate((int) $m[2], (int) $m[3], (int) $m[1]);
   }
 }

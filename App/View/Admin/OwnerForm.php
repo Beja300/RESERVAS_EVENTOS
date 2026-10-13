@@ -20,32 +20,32 @@ require_once __DIR__ . '/../_header.php';
     <?= csrf_field() ?>
     <div class="form-group">
       <label for="ownerFirstName">Nombre <span class="required-mark">*</span></label>
-      <input class="form-control" type="text" id="ownerFirstName" name="ownerFirstName" required>
+      <input class="form-control" type="text" id="ownerFirstName" name="ownerFirstName" value="<?= e($_POST['ownerFirstName'] ?? '') ?>" required>
       <div class="form-hint">Ej: María José</div>
     </div>
     <div class="form-group">
       <label for="ownerLastName">Apellidos</label>
-      <input class="form-control" type="text" id="ownerLastName" name="ownerLastName">
+      <input class="form-control" type="text" id="ownerLastName" name="ownerLastName" value="<?= e($_POST['ownerLastName'] ?? '') ?>">
       <div class="form-hint">Ej: Pérez Rodríguez</div>
     </div>
     <div class="form-group">
       <label for="ownerAlias">Alias (apodo)</label>
-      <input class="form-control" type="text" id="ownerAlias" name="ownerAlias">
+      <input class="form-control" type="text" id="ownerAlias" name="ownerAlias" value="<?= e($_POST['ownerAlias'] ?? '') ?>">
       <div class="form-hint">Ej: Mari</div>
     </div>
     <div class="form-group">
       <label for="ownerBusinessName">Nombre de negocio <span class="required-mark">*</span></label>
-      <input class="form-control" type="text" id="ownerBusinessName" name="ownerBusinessName" required>
+      <input class="form-control" type="text" id="ownerBusinessName" name="ownerBusinessName" value="<?= e($_POST['ownerBusinessName'] ?? '') ?>" required>
       <div class="form-hint">Ej: Pastelería Doña Tere</div>
     </div>
     <div class="form-group">
       <label for="ownerIdentification">Cédula / identificación</label>
-      <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification">
+      <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification" data-mask="identification" data-validate="identification" value="<?= e($_POST['ownerIdentification'] ?? '') ?>">
       <div class="form-hint">Ej: 1-2345-0678</div>
     </div>
     <div class="form-group">
       <label for="email">Correo electrónico <span class="required-mark">*</span></label>
-      <input class="form-control" type="email" id="email" name="email" required>
+      <input class="form-control" type="email" id="email" name="email" data-validate="email" value="<?= e($_POST['email'] ?? '') ?>" required>
       <div class="form-hint">Ej: mariosepe@correo.com</div>
     </div>
     <div class="form-group">
@@ -59,7 +59,7 @@ require_once __DIR__ . '/../_header.php';
     </div>
     <div class="form-group">
       <label for="phoneNumber">Teléfono</label>
-      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" maxlength="8" placeholder="8 dígitos">
+      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" value="<?= e($_POST['phoneNumber'] ?? '') ?>" data-mask="phone" maxlength="8" placeholder="8 dígitos">
       <div class="form-hint">Ej: 8888-7777</div>
     </div>
     <div class="form-group" style="display:flex;gap:10px;margin-bottom:0;">

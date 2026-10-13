@@ -71,7 +71,10 @@ class OwnerProfileController
       $this->profileService->validateUniqueEmail($currentEmail, $email);
       $this->profileService->validatePhone($phoneNumber);
 
+      $ownerIdentification = $this->profileService->normalizeIdentification($ownerIdentification);
+
       if ($ownerIdentification !== '') {
+        $this->profileService->validateIdentificationFormat($ownerIdentification);
         $this->profileService->validateUniqueIdentification($owner->getIdentificationNumberOwner(), $ownerIdentification);
       }
 

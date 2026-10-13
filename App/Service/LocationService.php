@@ -27,6 +27,10 @@ class LocationService
 
         self::assertValidCoordinates($latitude, $longitude);
 
+        if ($this->locationRepo->findIdByParts($province, $canton, $district) !== null) {
+            throw new BusinessRuleException('Ya existe una ubicación con esa provincia, cantón y distrito.');
+        }
+
         $newLocation = new Location(
             idLocation: 0,
             provinceLocation: $province,
@@ -44,6 +48,48 @@ class LocationService
     public function findById(int $idLocation): ?Location
     {
         return $this->locationRepo->findById($idLocation);
+    }
+
+    public function validateAndUpdate(int $idLocation, string $province, string $canton, string $district, ?string $town = null, ?string $description = null, ?float $latitude = null, ?float $longitude = null): void
+    {
+        $current = $this->locationRepo->findById($idLocation);
+
+        if ($current === null) {
+            throw new BusinessRuleException('La ubicación no existe.');
+        }
+
+        $province = trim($province);
+        $canton = trim($canton);
+        $district = trim($district);
+        $town = $town !== null ? trim($town) : null;
+        $description = $description !== null ? trim($description) : null;
+
+        if ($province === '' || $canton === '' || $district === '') {
+            throw new BusinessRuleException('Provincia, cantón y distrito son obligatorios.');
+        }
+
+        self::assertValidCoordinates($latitude, $longitude);
+
+        // Integridad lógica: no permitir una ubicación duplicada exacta
+        // (misma provincia + cantón + distrito) controlada desde PHP.
+        $duplicateId = $this->locationRepo->findIdByParts($province, $canton, $district);
+
+        if ($duplicateId !== null && $duplicateId !== $idLocation) {
+            throw new BusinessRuleException('Ya existe una ubicación con esa provincia, cantón y distrito.');
+        }
+
+        $location = new Location(
+            idLocation: $idLocation,
+            provinceLocation: $province,
+            cantonLocation: $canton,
+            districtLocation: $district,
+            townLocation: $town,
+            descriptionLocation: $description,
+            latitudeLocation: $latitude,
+            longitudeLocation: $longitude
+        );
+
+        $this->locationRepo->update($location);
     }
 
     /**

@@ -108,9 +108,18 @@ class VenueRatingService
   public function getDetail(int $venuePk): array
   {
     return [
-      'ratings' => $this->ratingRepo->findByVenue($venuePk),
-      'count'   => $this->ratingRepo->countByVenue($venuePk),
-      'average' => $this->ratingRepo->findAverageByVenue($venuePk),
+      'ratings'   => $this->ratingRepo->findByVenue($venuePk),
+      'count'     => $this->ratingRepo->countByVenue($venuePk),
+      'average'   => $this->ratingRepo->findAverageByVenue($venuePk),
+      'breakdown' => $this->ratingRepo->findBreakdownByVenue($venuePk),
     ];
+  }
+
+  // =========================================================
+  // DESGLOSE POR ESTRELLAS (cuántas calificaciones hay de 1..5)
+  // =========================================================
+  public function getBreakdown(int $venuePk): array
+  {
+    return $this->ratingRepo->findBreakdownByVenue($venuePk);
   }
 }

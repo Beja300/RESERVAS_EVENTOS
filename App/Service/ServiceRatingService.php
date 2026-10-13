@@ -80,9 +80,18 @@ class ServiceRatingService
   public function getDetail(int $servicePk): array
   {
     return [
-      'ratings' => $this->ratingRepo->findByService($servicePk),
-      'count'   => $this->ratingRepo->countByService($servicePk),
-      'average' => $this->ratingRepo->findAverageByService($servicePk),
+      'ratings'   => $this->ratingRepo->findByService($servicePk),
+      'count'     => $this->ratingRepo->countByService($servicePk),
+      'average'   => $this->ratingRepo->findAverageByService($servicePk),
+      'breakdown' => $this->ratingRepo->findBreakdownByService($servicePk),
     ];
+  }
+
+  // =========================================================
+  // DESGLOSE POR ESTRELLAS (cuántas calificaciones hay de 1..5)
+  // =========================================================
+  public function getBreakdown(int $servicePk): array
+  {
+    return $this->ratingRepo->findBreakdownByService($servicePk);
   }
 }

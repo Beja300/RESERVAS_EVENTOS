@@ -27,6 +27,23 @@ class AuthService
     // =========================================================
     // VALIDACIONES
     // =========================================================
+    public function validateEmailFormat(string $email): void
+    {
+        $email = trim($email);
+
+        if ($email === '') {
+            throw new BusinessRuleException("El correo electrónico es obligatorio.");
+        }
+
+        if (strlen($email) > 300) {
+            throw new BusinessRuleException("El correo electrónico no puede superar 300 caracteres.");
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new BusinessRuleException("El formato del correo electrónico no es válido.");
+        }
+    }
+
     public function validateEmailIsUnique(string $email): void
     {
         if ($this->roleRepo->findByEmail($email) !== null) {
@@ -55,12 +72,24 @@ class AuthService
         }
     }
 
+    public function validateIdentificationFormat(?string $identificationNumber): void
+    {
+        if ($identificationNumber === null || trim($identificationNumber) === '') {
+            return;
+        }
+
+        if (!preg_match('/^[0-9]{9}$/', trim($identificationNumber))) {
+            throw new BusinessRuleException("La identificación debe tener 9 dígitos numéricos.");
+        }
+    }
+
 
     // =========================================================
     // REGISTRAR CLIENTE
     // =========================================================
     public function registerClient(string $name, string $email, string $password, ?string $phoneNumber = null): Client
     {
+        $this->validateEmailFormat($email);
         $this->validateEmailIsUnique($email);
         $this->validatePasswordStrength($password);
         $this->validatePhoneFormat($phoneNumber);
@@ -97,11 +126,18 @@ class AuthService
         ?string $ownerAlias = null,
         ?string $ownerIdentification = null
     ): Owner {
+        $this->validateEmailFormat($email);
         $this->validateEmailIsUnique($email);
         $this->validatePasswordStrength($password);
         $this->validatePhoneFormat($phoneNumber);
 
-        if ($ownerIdentification !== null && trim($ownerIdentification) !== '') {
+        if ($ownerIdentification !== null) {
+            $ownerIdentification = preg_replace('/\D/', '', $ownerIdentification);
+            $ownerIdentification = $ownerIdentification === '' ? null : $ownerIdentification;
+        }
+
+        if ($ownerIdentification !== null) {
+            $this->validateIdentificationFormat($ownerIdentification);
             $this->validateIdentificationIsUnique($ownerIdentification);
         }
 
@@ -141,6 +177,7 @@ class AuthService
     // =========================================================
     public function registerAdmin(string $name, string $email, string $password, ?string $phoneNumber = null): Admin
     {
+        $this->validateEmailFormat($email);
         $this->validateEmailIsUnique($email);
         $this->validatePasswordStrength($password);
         $this->validatePhoneFormat($phoneNumber);

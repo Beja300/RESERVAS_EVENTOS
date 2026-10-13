@@ -126,6 +126,7 @@ class AdminBookingController
   public function approvePayment(): void
   {
     require_role('admin');
+    require_post();
 
     $idBooking = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
 
@@ -158,6 +159,7 @@ class AdminBookingController
   public function rejectPayment(): void
   {
     require_role('admin');
+    require_post();
 
     $idBooking = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
 
@@ -182,6 +184,7 @@ class AdminBookingController
   public function cancelBooking(): void
   {
     require_role('admin');
+    require_post();
 
     $idBooking = (int) ($_POST['id'] ?? 0);
     $note = trim($_POST['note'] ?? '') ?: null;
@@ -206,6 +209,7 @@ class AdminBookingController
   public function rescheduleBooking(): void
   {
     require_role('admin');
+    require_post();
 
     $idBooking = (int) ($_POST['id'] ?? 0);
     $newDate = trim($_POST['date'] ?? '');
@@ -230,6 +234,7 @@ class AdminBookingController
   public function changeBookingVenue(): void
   {
     require_role('admin');
+    require_post();
 
     $idBooking = (int) ($_POST['id'] ?? 0);
     $newVenueId = (int) ($_POST['venueId'] ?? 0);
@@ -254,9 +259,10 @@ class AdminBookingController
   public function refundBooking(): void
   {
     require_role('admin');
+    require_post();
 
     $idBooking = (int) ($_POST['id'] ?? 0);
-    $refundRequestId = (int) ($_POST['refundId'] ?? 0);
+    $refundRequestId = (int) ($_POST['refundRequestId'] ?? 0);
     $note = trim($_POST['note'] ?? '') ?: null;
     $adminRoleId = $this->currentAdminRoleId();
 
@@ -279,6 +285,7 @@ class AdminBookingController
   public function rejectRefundBooking(): void
   {
     require_role('admin');
+    require_post();
 
     $idBooking = (int) ($_POST['id'] ?? 0);
     $refundRequestId = (int) ($_POST['refundId'] ?? 0);

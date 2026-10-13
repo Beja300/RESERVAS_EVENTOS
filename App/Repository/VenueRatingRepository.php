@@ -231,6 +231,31 @@ return (int) $this->connection->lastInsertId();
   }
 
   // =========================================================
+  // DESGLOSE POR ESTRELLAS DE UN LOCAL (1..5 -> cantidades)
+  // =========================================================
+  public function findBreakdownByVenue(int $idVenue): array
+  {
+    $sql = "
+      SELECT tbvenueratingstars AS stars, COUNT(*) AS total
+      FROM tbvenuerating
+      WHERE tbvenueid = :idVenue
+        AND tbvenueratingactive = true
+      GROUP BY tbvenueratingstars
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([':idVenue' => $idVenue]);
+
+    $breakdown = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+      $breakdown[(int) $row['stars']] = (int) $row['total'];
+    }
+
+    return $breakdown;
+  }
+
+  // =========================================================
   // PROMEDIO GLOBAL DE ESTRELLAS (todos los locales)
   // =========================================================
   public function averageStars(): ?float

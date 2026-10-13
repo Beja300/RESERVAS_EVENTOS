@@ -172,6 +172,7 @@ class RoleSecurityService
       return;
     }
 
+    $this->authService->validateEmailFormat($newEmail);
     $this->authService->validateEmailIsUnique($newEmail);
 
     $this->emailRepo->save(new RoleEmailHistorical(

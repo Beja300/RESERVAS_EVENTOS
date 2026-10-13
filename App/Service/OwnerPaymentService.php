@@ -25,11 +25,17 @@ class OwnerPaymentService
       throw new BusinessRuleException('El titular es obligatorio para este método de cobro.');
     }
 
+    $accountTrimmed = trim((string) $account);
+
     if ($ownerPaymentPk > 0) {
       $op = $this->repo->findById($ownerPaymentPk);
 
       if ($op === null || $op->getIdOwner() !== $ownerPk) {
         throw new BusinessRuleException('Este método de cobro no existe.');
+      }
+
+      if ($accountTrimmed !== '' && $this->repo->existsByAccount($ownerPk, $paymentMethodPk, $accountTrimmed, $ownerPaymentPk)) {
+        throw new BusinessRuleException('Ya existe una cuenta registrada para este método de pago.');
       }
 
       $op->setIdPaymentMethod($paymentMethodPk);
@@ -43,10 +49,17 @@ class OwnerPaymentService
       return $op->getIdOwnerPayment();
     }
 
+    if ($accountTrimmed !== '' && $this->repo->existsByAccount($ownerPk, $paymentMethodPk, $accountTrimmed)) {
+      throw new BusinessRuleException('Ya existe una cuenta registrada para este método de pago.');
+    }
+
     $existing = $this->repo->findByOwnerAndMethod($ownerPk, $paymentMethodPk);
 
     if ($existing !== null) {
       $op = $this->repo->findById((int) $existing['tbownerpaymentid']);
+      if ($accountTrimmed !== '' && $this->repo->existsByAccount($ownerPk, $paymentMethodPk, $accountTrimmed, $op->getIdOwnerPayment())) {
+        throw new BusinessRuleException('Ya existe una cuenta registrada para este método de pago.');
+      }
       $op->setHolder($holder);
       $op->setAccount($account);
       $op->setInstructions($instructions);

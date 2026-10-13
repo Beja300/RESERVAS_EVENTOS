@@ -93,10 +93,10 @@ class PromotionRepository
         tbpromotionlabel,
         tbpromotionstart,
         tbpromotionend,
-        tbpromotionminservices
+        tbpromotionminservices,
+        tbpromotionactive
       FROM tbpromotion
       WHERE tbpromotionid = :idPromotion
-        AND tbpromotionactive = true
       LIMIT 1
     ";
 
@@ -152,7 +152,8 @@ class PromotionRepository
         tbpromotionlabel,
         tbpromotionstart,
         tbpromotionend,
-        tbpromotionminservices
+        tbpromotionminservices,
+        tbpromotionactive
       FROM tbpromotion
       WHERE tbvenueid = :idVenue
       ORDER BY tbpromotionid DESC
@@ -167,6 +168,23 @@ class PromotionRepository
   // =========================================================
   // MAPEO FILA -> OBJETO
   // =========================================================
+  public function existsByLabel(int $idVenue, string $label, int $excludeId = 0): bool
+  {
+    $label = trim($label);
+    $sql = "
+      SELECT COUNT(*) as cnt
+      FROM tbpromotion
+      WHERE tbvenueid = :idVenue
+        AND LOWER(TRIM(tbpromotionlabel)) = LOWER(:label)
+        AND (:excludeId = 0 OR tbpromotionid <> :excludeId)
+    ";
+    $stmt = $this->connection->prepare($sql);
+    $stmt->execute([':idVenue'=>$idVenue, ':label'=>$label, ':excludeId'=>$excludeId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    return !empty($row) && (int)$row['cnt'] > 0;
+  }
+
+
   private function mapRow(array $row): Promotion
   {
     return new Promotion(
@@ -176,7 +194,8 @@ class PromotionRepository
       label: $row['tbpromotionlabel'],
       startDate: $row['tbpromotionstart'],
       endDate: $row['tbpromotionend'],
-      minServices: (int) $row['tbpromotionminservices']
+      minServices: (int) $row['tbpromotionminservices'],
+      isActive: (bool) ($row['tbpromotionactive'] ?? true)
     );
   }
 

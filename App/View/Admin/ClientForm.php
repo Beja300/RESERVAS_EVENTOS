@@ -20,12 +20,12 @@ require_once __DIR__ . '/../_header.php';
     <?= csrf_field() ?>
     <div class="form-group">
       <label for="name">Nombre <span class="required-mark">*</span></label>
-      <input class="form-control" type="text" id="name" name="name" required>
+      <input class="form-control" type="text" id="name" name="name" value="<?= e($_POST['name'] ?? '') ?>" required>
       <div class="form-hint">Ej: Ana Lucía</div>
     </div>
     <div class="form-group">
       <label for="email">Correo electrónico <span class="required-mark">*</span></label>
-      <input class="form-control" type="email" id="email" name="email" required>
+      <input class="form-control" type="email" id="email" name="email" data-validate="email" value="<?= e($_POST['email'] ?? '') ?>" required>
       <div class="form-hint">Ej: analucia@correo.com</div>
     </div>
     <div class="form-group">
@@ -39,7 +39,7 @@ require_once __DIR__ . '/../_header.php';
     </div>
     <div class="form-group">
       <label for="phoneNumber">Teléfono</label>
-      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" maxlength="8" placeholder="8 dígitos">
+      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" value="<?= e($_POST['phoneNumber'] ?? '') ?>" data-mask="phone" maxlength="8" placeholder="8 dígitos">
       <div class="form-hint">Ej: 8888-7777</div>
     </div>
     <div class="form-group" style="display:flex;gap:10px;margin-bottom:0;">

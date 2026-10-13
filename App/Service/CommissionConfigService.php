@@ -34,6 +34,10 @@ class CommissionConfigService
   // =========================================================
   public function setPercentage(float $percentage): CommissionConfig
   {
+    if (!is_numeric($percentage)) {
+      throw new BusinessRuleException('El porcentaje de comisión debe ser numérico.');
+    }
+
     if ($percentage < 0 || $percentage > 100) {
       throw new BusinessRuleException('El porcentaje de comisión debe estar entre 0 y 100.');
     }
@@ -53,6 +57,10 @@ class CommissionConfigService
   // =========================================================
   public function setTax(float $tax): CommissionConfig
   {
+    if (!is_numeric($tax)) {
+      throw new BusinessRuleException('El porcentaje de IVA debe ser numérico.');
+    }
+
     if ($tax < 0 || $tax > 100) {
       throw new BusinessRuleException('El porcentaje de IVA debe estar entre 0 y 100.');
     }

@@ -7,6 +7,7 @@ require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
 require_once __DIR__ . '/../Repository/ClientRepository.php';
+require_once __DIR__ . '/../Service/CreditService.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../View/_helpers.php';
 
@@ -55,6 +56,15 @@ class BookingDetailController
     $data = $this->detailService->assemble($idBooking);
 
     extract($data, EXTR_SKIP);
+
+    // Estado de crédito (solo relevante para el cliente dueño de la reserva).
+    $creditInfo = null;
+    $bookingCredit = null;
+    if ($type === 'client') {
+      $creditService = new CreditService(DataBase::getConnection());
+      $creditInfo = $creditService->canRequestCredit($idBooking, $client->getIdClient());
+      $bookingCredit = $creditService->findByBooking($idBooking);
+    }
 
     require_once __DIR__ . '/../View/Booking/Detail.php';
   }
