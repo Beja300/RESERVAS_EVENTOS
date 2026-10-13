@@ -43,7 +43,6 @@
       <div class="form-group">
         <label for="email">Correo electrónico <span class="required-mark">*</span></label>
         <input class="form-control" type="email" id="email" name="email"
-               data-validate="email"
                value="<?= e($_POST['email'] ?? '') ?>" required autofocus>
         <div class="form-hint">Ej: analucia@correo.com</div>
       </div>
