@@ -132,7 +132,7 @@ class BookingService
             $venuePk,
             $date,
             'pendiente',
-            false,
+            true,
             $endDate,
             $eventType,
             $eventDetail
