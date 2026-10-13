@@ -274,6 +274,13 @@ class BookingAdminService
     );
   }
 
+  private function text(?string $value, string $default = ''): string
+  {
+    $value = trim((string) $value);
+
+    return $value !== '' ? $value : $default;
+  }
+
   private function isRealDate(string $value): bool
   {
     if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $value, $m)) {
