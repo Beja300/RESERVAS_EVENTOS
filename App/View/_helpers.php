@@ -331,6 +331,75 @@ if (!function_exists('venue_comments_html')) {
     }
 }
 
+if (!function_exists('detect_gender')) {
+    /**
+     * Intenta inferir el género ('f' o 'm') a partir del primer nombre.
+     *
+     * No existe un campo de género en la base de datos, por lo que se usa
+     * una heurística: se revisan listas de excepciones conocidas y, si el
+     * nombre no está en ellas, se asume femenino cuando termina en "a" y
+     * masculino en cualquier otro caso. Devuelve null si no hay nombre.
+     */
+    function detect_gender(?string $name): ?string
+    {
+        $name = trim((string) $name);
+
+        if ($name === '') {
+            return null;
+        }
+
+        $firstName = strtolower(preg_replace('/\s+/', ' ', $name));
+        $firstName = explode(' ', $firstName)[0];
+        $firstName = str_replace(
+            ['á', 'é', 'í', 'ó', 'ú', 'ü', 'ñ'],
+            ['a', 'e', 'i', 'o', 'u', 'u', 'n'],
+            $firstName
+        );
+
+        $feminineNames = [
+            'raquel', 'beatriz', 'pilar', 'carmen', 'isabel', 'ines', 'mercedes',
+            'soledad', 'ruth', 'esther', 'elizabeth', 'consuelo', 'rosario',
+            'dolores', 'luz', 'sol', 'yolanda', 'miriam', 'noemi', 'abigail',
+        ];
+
+        $masculineNames = [
+            'jose', 'joshua', 'noa', 'elias', 'isaias', 'tomas', 'matias',
+            'lucas', 'andres', 'nicolas', 'diego', 'borja',
+        ];
+
+        if (in_array($firstName, $feminineNames, true)) {
+            return 'f';
+        }
+
+        if (in_array($firstName, $masculineNames, true)) {
+            return 'm';
+        }
+
+        return substr($firstName, -1) === 'a' ? 'f' : 'm';
+    }
+}
+
+if (!function_exists('welcome_greeting')) {
+    /**
+     * Devuelve el saludo de bienvenida usando solo el primer nombre del
+     * usuario: "Bienvenida <nombre>", "Bienvenido <nombre>" o el saludo
+     * genérico cuando no hay nombre disponible.
+     */
+    function welcome_greeting(?string $name): string
+    {
+        $name = trim((string) $name);
+
+        if ($name === '') {
+            return 'Bienvenid@ a Event Hall';
+        }
+
+        $firstName = explode(' ', preg_replace('/\s+/', ' ', $name))[0];
+        $treatment = detect_gender($firstName) === 'f' ? 'Bienvenida' : 'Bienvenido';
+
+        return $treatment . ' ' . $firstName;
+    }
+}
+
 if (!function_exists('service_comments_html')) {
     /**
      * HTML de los comentarios de un servicio (para refresco AJAX sin recargar).

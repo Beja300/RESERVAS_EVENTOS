@@ -18,27 +18,29 @@ $u = $user;
 <?php endif; ?>
 
 <div class="card" style="max-width:520px;">
-  <form method="post" action="<?= e(base_url('admin', 'updateUser')) ?>">
+  <form method="post" action="<?= e(base_url('admin', 'updateUser')) ?>" data-validate-form>
     <?= csrf_field() ?>
     <input type="hidden" name="id" value="<?= (int) $u->getIdRol() ?>">
     <input type="hidden" name="type" value="client">
     <div class="form-group">
       <label for="name">Nombre <span class="required-mark">*</span></label>
       <input class="form-control" type="text" id="name" name="name"
-             value="<?= e($_POST['name'] ?? $u->getName()) ?>" required>
+             value="<?= e($_POST['name'] ?? $u->getName()) ?>"
+             data-validate="required" maxlength="300" required>
       <div class="form-hint">Ej: Ana Lucía</div>
     </div>
     <div class="form-group">
       <label for="email">Correo electrónico <span class="required-mark">*</span></label>
       <input class="form-control" type="email" id="email" name="email"
-             value="<?= e($_POST['email'] ?? $u->getEmail()) ?>" required>
+             value="<?= e($_POST['email'] ?? $u->getEmail()) ?>"
+             data-validate="required email" maxlength="300" required>
       <div class="form-hint">Ej: analucia@correo.com</div>
     </div>
     <div class="form-group">
       <label for="phoneNumber">Teléfono</label>
       <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
              value="<?= e($_POST['phoneNumber'] ?? $u->getPhoneNumber() ?? '') ?>"
-             maxlength="8" placeholder="8 dígitos">
+             data-validate="phone" inputmode="numeric" pattern="\d{8}" maxlength="8" placeholder="8 dígitos">
       <div class="form-hint">Ej: 8888-7777</div>
     </div>
     <div class="form-group">

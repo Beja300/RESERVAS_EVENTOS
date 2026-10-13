@@ -29,8 +29,19 @@ class AuthService
     // =========================================================
     public function validateEmailIsUnique(string $email): void
     {
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new BusinessRuleException("El correo electrónico no es válido.");
+        }
+
         if ($this->roleRepo->findByEmail($email) !== null) {
             throw new BusinessRuleException("Ya existe una cuenta registrada con ese correo.");
+        }
+    }
+
+    public function validateNameNotEmpty(string $name, string $message = "El nombre es obligatorio."): void
+    {
+        if (trim($name) === '') {
+            throw new BusinessRuleException($message);
         }
     }
 
@@ -61,6 +72,7 @@ class AuthService
     // =========================================================
     public function registerClient(string $name, string $email, string $password, ?string $phoneNumber = null): Client
     {
+        $this->validateNameNotEmpty($name);
         $this->validateEmailIsUnique($email);
         $this->validatePasswordStrength($password);
         $this->validatePhoneFormat($phoneNumber);
@@ -97,6 +109,8 @@ class AuthService
         ?string $ownerAlias = null,
         ?string $ownerIdentification = null
     ): Owner {
+        $this->validateNameNotEmpty($name, "El nombre de negocio es obligatorio.");
+        $this->validateNameNotEmpty($ownerFirstName, "El nombre del propietario es obligatorio.");
         $this->validateEmailIsUnique($email);
         $this->validatePasswordStrength($password);
         $this->validatePhoneFormat($phoneNumber);
@@ -112,6 +126,7 @@ class AuthService
             password: $password,
             isActive: true,
             idOwner: 0,
+            firstName: $ownerFirstName,
             lastName: $ownerLastName ?? '',
             alias: $ownerAlias ?? '',
             identificationNumber: $ownerIdentification ?? '',

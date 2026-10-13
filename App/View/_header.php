@@ -7,6 +7,10 @@ require_once __DIR__ . '/_helpers.php';
 
 $userType = current_user_type();
 
+$welcomeName = (isset($_SESSION['user']) && is_object($_SESSION['user']) && method_exists($_SESSION['user'], 'getName'))
+  ? $_SESSION['user']->getName()
+  : null;
+
 $notificationNav = '';
 if ($userType !== null && isset($_SESSION['user']) && is_object($_SESSION['user'])) {
   $notificationUser = $_SESSION['user'];
@@ -42,7 +46,7 @@ if ($userType !== null && isset($_SESSION['user']) && is_object($_SESSION['user'
 <header class="topbar">
   <div class="container">
     <a class="brand" href="<?= e(base_url('venue', 'catalog')) ?>">
-      Bienvenid@ a Event Hall
+      <?= e(welcome_greeting($userType !== null ? $welcomeName : null)) ?>
     </a>
     <nav class="nav">
       <?php if ($userType === 'client'): ?>

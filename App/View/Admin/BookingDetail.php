@@ -156,7 +156,7 @@
           <input type="hidden" name="id" value="<?= (int) $booking->getIdBooking() ?>">
           <input type="hidden" name="refundId" value="<?= (int) $refundRequest->getId() ?>">
           <input class="form-control" style="max-width:300px;margin-bottom:8px;"
-                 type="text" name="note" placeholder="Nota (opcional)">
+                 type="text" name="note" placeholder="Nota (opcional)" maxlength="500">
           <button class="btn btn-sm btn-success" type="submit">Aprobar reembolso</button>
         </form>
         <form method="post" action="<?= e(base_url('admin', 'rejectRefundBooking')) ?>"
@@ -197,7 +197,7 @@
           <p class="form-hint">Al reprogramar se mantiene la duración (<?= (int) $durationDays ?> día<?= $durationDays > 1 ? 's' : '' ?>).</p>
         </div>
         <div class="form-group" style="max-width:300px;">
-          <input class="form-control" type="text" name="note" placeholder="Nota (opcional)">
+          <input class="form-control" type="text" name="note" placeholder="Nota (opcional)" maxlength="500">
         </div>
         <button class="btn btn-sm btn-primary" type="submit">Reprogramar</button>
       </form>
@@ -220,7 +220,7 @@
           </select>
         </div>
         <div class="form-group" style="max-width:300px;">
-          <input class="form-control" type="text" name="note" placeholder="Nota (opcional)">
+          <input class="form-control" type="text" name="note" placeholder="Nota (opcional)" maxlength="500">
         </div>
         <button class="btn btn-sm btn-primary" type="submit">Cambiar local</button>
       </form>

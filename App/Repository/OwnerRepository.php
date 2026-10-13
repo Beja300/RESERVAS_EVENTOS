@@ -332,6 +332,7 @@ class OwnerRepository
             password: $row['tbrolepassword'],
             isActive: $this->toBool($row['tbroleactive']),
             idOwner: (int) ($row['tbownerid'] ?? 0),
+            firstName: $row['tbownerfirstname'] ?? '',
             lastName: $row['tbownerlastname'] ?? '',
             alias: $row['tbowneralias'] ?? '',
             identificationNumber: $row['tbowneridentificationnumber'] ?? '',
