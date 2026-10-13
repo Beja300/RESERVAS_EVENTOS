@@ -27,27 +27,21 @@ class AuthService
     // =========================================================
     // VALIDACIONES
     // =========================================================
-    public function validateEmailFormat(string $email): void
+    public function validateEmailIsUnique(string $email): void
     {
-        $email = trim($email);
-
-        if ($email === '') {
-            throw new BusinessRuleException("El correo electrónico es obligatorio.");
-        }
-
-        if (strlen($email) > 300) {
-            throw new BusinessRuleException("El correo electrónico no puede superar 300 caracteres.");
-        }
-
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            throw new BusinessRuleException("El formato del correo electrónico no es válido.");
+            throw new BusinessRuleException("El correo electrónico no es válido.");
+        }
+
+        if ($this->roleRepo->findByEmail($email) !== null) {
+            throw new BusinessRuleException("Ya existe una cuenta registrada con ese correo.");
         }
     }
 
-    public function validateEmailIsUnique(string $email): void
+    public function validateNameNotEmpty(string $name, string $message = "El nombre es obligatorio."): void
     {
-        if ($this->roleRepo->findByEmail($email) !== null) {
-            throw new BusinessRuleException("Ya existe una cuenta registrada con ese correo.");
+        if (trim($name) === '') {
+            throw new BusinessRuleException($message);
         }
     }
 
@@ -72,24 +66,13 @@ class AuthService
         }
     }
 
-    public function validateIdentificationFormat(?string $identificationNumber): void
-    {
-        if ($identificationNumber === null || trim($identificationNumber) === '') {
-            return;
-        }
-
-        if (!preg_match('/^[0-9]{9}$/', trim($identificationNumber))) {
-            throw new BusinessRuleException("La identificación debe tener 9 dígitos numéricos.");
-        }
-    }
-
 
     // =========================================================
     // REGISTRAR CLIENTE
     // =========================================================
     public function registerClient(string $name, string $email, string $password, ?string $phoneNumber = null): Client
     {
-        $this->validateEmailFormat($email);
+        $this->validateNameNotEmpty($name);
         $this->validateEmailIsUnique($email);
         $this->validatePasswordStrength($password);
         $this->validatePhoneFormat($phoneNumber);
@@ -126,18 +109,13 @@ class AuthService
         ?string $ownerAlias = null,
         ?string $ownerIdentification = null
     ): Owner {
-        $this->validateEmailFormat($email);
+        $this->validateNameNotEmpty($name, "El nombre de negocio es obligatorio.");
+        $this->validateNameNotEmpty($ownerFirstName, "El nombre del propietario es obligatorio.");
         $this->validateEmailIsUnique($email);
         $this->validatePasswordStrength($password);
         $this->validatePhoneFormat($phoneNumber);
 
-        if ($ownerIdentification !== null) {
-            $ownerIdentification = preg_replace('/\D/', '', $ownerIdentification);
-            $ownerIdentification = $ownerIdentification === '' ? null : $ownerIdentification;
-        }
-
-        if ($ownerIdentification !== null) {
-            $this->validateIdentificationFormat($ownerIdentification);
+        if ($ownerIdentification !== null && trim($ownerIdentification) !== '') {
             $this->validateIdentificationIsUnique($ownerIdentification);
         }
 
@@ -148,6 +126,7 @@ class AuthService
             password: $password,
             isActive: true,
             idOwner: 0,
+            firstName: $ownerFirstName,
             lastName: $ownerLastName ?? '',
             alias: $ownerAlias ?? '',
             identificationNumber: $ownerIdentification ?? '',
@@ -177,7 +156,6 @@ class AuthService
     // =========================================================
     public function registerAdmin(string $name, string $email, string $password, ?string $phoneNumber = null): Admin
     {
-        $this->validateEmailFormat($email);
         $this->validateEmailIsUnique($email);
         $this->validatePasswordStrength($password);
         $this->validatePhoneFormat($phoneNumber);

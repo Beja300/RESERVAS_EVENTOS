@@ -63,7 +63,7 @@ if ($admin === null) {
 
     <div class="form-group">
       <label for="name">Nombre <span class="required-mark">*</span></label>
-      <input class="form-control" type="text" id="name" name="name" required
+      <input class="form-control" type="text" id="name" name="name" required maxlength="300"
              value="<?= e($_POST['name'] ?? $admin->getName()) ?>">
       <div class="form-hint">Ej: Laura Fernández</div>
     </div>
@@ -71,14 +71,14 @@ if ($admin === null) {
     <div class="form-group">
       <label for="email">Correo electrónico <span class="required-mark">*</span></label>
       <input class="form-control" type="email" id="email" name="email" required
-             data-validate="email"
+             data-validate="email" maxlength="300"
              value="<?= e($_POST['email'] ?? $admin->getEmail()) ?>">
     </div>
 
     <div class="form-group">
       <label for="phoneNumber">Teléfono</label>
-      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone"
-             data-validate="phone"
+      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
+             data-validate="phone" inputmode="numeric" pattern="\d{8}"
              maxlength="8" value="<?= e($_POST['phoneNumber'] ?? $admin->getPhoneNumber() ?? '') ?>">
       <div class="form-hint">Ej: 8888-7777</div>
     </div>

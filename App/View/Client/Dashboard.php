@@ -5,7 +5,7 @@ $client = $_SESSION['user'] ?? null;
 
 <div class="page-head">
   <div>
-    <h1>Hola, <?= e($client ? $client->getName() : '') ?> &#128075;</h1>
+    <h1>Hola, <?= e($client ? $client->getName() : '') ?></h1>
     <p class="muted">Tu panel de alquileres</p>
   </div>
   <a class="btn btn-primary" href="<?= e(base_url('venue', 'catalog')) ?>">+ Reservar local</a>

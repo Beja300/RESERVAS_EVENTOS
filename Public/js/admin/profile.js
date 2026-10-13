@@ -45,6 +45,23 @@
       pForm.addEventListener('submit', function (e) {
         e.preventDefault();
 
+        // Si el usuario quiere cambiar la contraseña, exigir ambos campos.
+        var pwBox = document.getElementById('changePasswordCheck');
+        if (pwBox && pwBox.checked) {
+          var curEl = document.getElementById('currentPassword');
+          var newEl = document.getElementById('newPassword');
+          var curEmpty = curEl && curEl.value.trim() === '';
+          var newEmpty = newEl && newEl.value.trim() === '';
+          if (curEl) curEl.classList.toggle('is-invalid', curEmpty);
+          if (newEl) newEl.classList.toggle('is-invalid', newEmpty);
+          if (curEmpty || newEmpty) {
+            var firstPw = curEmpty ? curEl : newEl;
+            if (firstPw) firstPw.focus();
+            window.App && App.toast('Escribe la contraseña actual y la nueva.', 'error');
+            return;
+          }
+        }
+
         var valid = true;
         var fs = pForm.querySelectorAll('[data-validate]');
         for (var i = 0; i < fs.length; i++) {
