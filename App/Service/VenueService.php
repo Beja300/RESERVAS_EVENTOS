@@ -48,7 +48,9 @@ class VenueService
             throw new BusinessRuleException("El tipo de local es obligatorio.");
         }
 
-        $locationPk = $this->locationService->validateAndCreate(
+        // La ubicación es opcional: si no se completa provincia/cantón/distrito
+        // findOrCreateByParts() devuelve null y el local se guarda sin ubicación.
+        $locationPk = $this->locationService->findOrCreateByParts(
             $province,
             $canton,
             $district,
@@ -81,7 +83,7 @@ class VenueService
         float $price,
         ?string $image,
         bool $active,
-        int $idLocation
+        ?int $idLocation
     ): void {
         if ($capacity === null || $capacity <= 0) {
             throw new BusinessRuleException("La capacidad del local debe ser mayor a 0.");

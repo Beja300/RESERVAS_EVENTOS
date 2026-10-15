@@ -55,15 +55,15 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
 
     <div class="form-group">
       <label for="capacity">Capacidad *</label>
-      <input class="form-control" type="number" id="capacity" name="capacity" min="1" required
+      <input class="form-control no-spinners" type="text" inputmode="numeric" pattern="[0-9]*" id="capacity" name="capacity" required
         data-validate="required positive"
         value="<?= e($isEdit ? (string) $venue->getCapacityVenue() : ($_POST['capacity'] ?? '')) ?>">
     </div>
 
     <div class="form-group">
       <label for="price">Precio de renta por evento *</label>
-      <input class="form-control" type="number" id="price" name="price" min="0.01" step="0.01" required
-        data-validate="required positive"
+      <input class="form-control no-spinners" type="text" inputmode="decimal" id="price" name="price" required
+        data-currency-mask data-validate="required positive"
         value="<?= e($isEdit ? number_format($venue->getPriceVenue(), 2, '.', '') : ($_POST['price'] ?? '')) ?>">
       <p class="form-hint">Este precio se incluye siempre en la factura de cada reserva de este local.</p>
     </div>
@@ -90,41 +90,42 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
 
     <div class="grid grid-3">
       <div class="form-group">
-        <label for="province">Provincia *</label>
-        <select class="form-control" id="province" name="province" data-level="province" required
-                data-validate="required" data-value="<?= e($curProvince) ?>">
+        <label for="province">Provincia</label>
+        <select class="form-control" id="province" name="province" data-level="province"
+                data-value="<?= e($curProvince) ?>">
           <option value="">— Selecciona —</option>
         </select>
       </div>
       <div class="form-group">
-        <label for="canton">Cantón *</label>
-        <select class="form-control" id="canton" name="canton" data-level="canton" disabled required
-                data-validate="required" data-value="<?= e($curCanton) ?>">
+        <label for="canton">Cantón</label>
+        <select class="form-control" id="canton" name="canton" data-level="canton" disabled
+                data-value="<?= e($curCanton) ?>">
           <option value="">— Selecciona —</option>
         </select>
       </div>
       <div class="form-group">
-        <label for="district">Distrito *</label>
-        <select class="form-control" id="district" name="district" data-level="district" disabled required
-                data-validate="required" data-value="<?= e($curDistrict) ?>">
+        <label for="district">Distrito</label>
+        <select class="form-control" id="district" name="district" data-level="district" disabled
+                data-value="<?= e($curDistrict) ?>">
           <option value="">— Selecciona —</option>
         </select>
       </div>
     </div>
 
     <div class="form-group">
-      <label for="town">Pueblo <span class="required-mark">*</span></label>
-      <input class="form-control" type="text" id="town" name="town" required
+      <label for="town">Pueblo</label>
+      <input class="form-control" type="text" id="town" name="town"
         value="<?= e($curTown ?? '') ?>">
     </div>
     <div class="form-group">
-      <label for="description">Descripción <span class="required-mark">*</span></label>
-      <input class="form-control" type="text" id="description" name="description" required
+      <label for="description">Otras señas de la ubicación</label>
+      <input class="form-control" type="text" id="description" name="description"
+        placeholder="Ej: frente al parque, portón azul, 200 m norte de..."
         value="<?= e($curDesc ?? '') ?>">
     </div>
 
     <div class="form-group">
-      <label for="venue-map">Ubicación exacta en el mapa *</label>
+      <label for="venue-map">Ubicación exacta en el mapa</label>
       <div class="geo-search-box">
         <input class="form-control" type="search" id="venue-map-search"
           placeholder="Buscar dirección o cantón (ej. San José)...">
@@ -140,7 +141,7 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
       </span>
       <input type="hidden" name="latitude" id="latitude" value="<?= e($curLat ?? '') ?>">
       <input type="hidden" name="longitude" id="longitude" value="<?= e($curLng ?? '') ?>">
-      <p class="form-hint">Haz clic en el mapa o arrastra el marcador para marcar la ubicación del local (obligatorio).</p>
+      <p class="form-hint">Opcional: haz clic en el mapa o arrastra el marcador para marcar la ubicación del local.</p>
     </div>
 
     <button class="btn btn-primary" type="submit"><?= $isEdit ? 'Guardar cambios' : 'Crear local' ?></button>

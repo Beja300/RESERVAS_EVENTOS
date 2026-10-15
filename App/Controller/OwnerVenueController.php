@@ -46,7 +46,7 @@ class OwnerVenueController
     $idVenue = (int) ($_GET['id'] ?? 0);
     $venue = $idVenue > 0 ? $this->venueService->findById($idVenue) : null;
     $location = null;
-    if ($venue !== null && $venue->getIdLocation() > 0) {
+    if ($venue !== null && $venue->getIdLocation() !== null && $venue->getIdLocation() > 0) {
       $location = $this->locationService->findById($venue->getIdLocation());
     }
 
@@ -77,11 +77,9 @@ class OwnerVenueController
     $name = trim($_POST['name'] ?? '');
     $type = trim($_POST['type'] ?? '') ?: null;
     $capacity = isset($_POST['capacity']) && $_POST['capacity'] !== '' ? (int) $_POST['capacity'] : null;
-    $price = isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : 0.0;
+    $price = $this->sanitizePrice($_POST['price'] ?? '');
 
     try {
-      $this->requireCoordinates($latitude, $longitude);
-
       $image = $this->resolveVenueImage($owner->getIdOwner(), '');
 
       if ($image === '') {
@@ -139,7 +137,7 @@ class OwnerVenueController
     $name = trim($_POST['name'] ?? '');
     $type = trim($_POST['type'] ?? '') ?: null;
     $capacity = isset($_POST['capacity']) && $_POST['capacity'] !== '' ? (int) $_POST['capacity'] : null;
-    $price = isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : 0.0;
+    $price = $this->sanitizePrice($_POST['price'] ?? '');
     $active = isset($_POST['active']);
 
     $province = trim($_POST['province'] ?? '');
@@ -153,8 +151,6 @@ class OwnerVenueController
     $venue = null;
 
     try {
-      $this->requireCoordinates($latitude, $longitude);
-
       $venue = $this->venueService->findById($idVenue);
 
       if ($venue === null) {
@@ -191,7 +187,7 @@ class OwnerVenueController
       }
 
       $location = null;
-      if ($venue !== null && $venue->getIdLocation() > 0) {
+      if ($venue !== null && $venue->getIdLocation() !== null && $venue->getIdLocation() > 0) {
         $location = $this->locationService->findById($venue->getIdLocation());
       }
 
@@ -216,12 +212,34 @@ class OwnerVenueController
   }
 
   // =========================================================
-  // COORDENADAS OBLIGATORIAS: el local debe marcarse en el mapa.
+  // PRECIO: sanitiza el valor recibido quitando el símbolo de colón
+  // (₡), espacios, separadores de miles y normalizando el decimal.
   // =========================================================
-  private function requireCoordinates(?float $latitude, ?float $longitude): void
+  private function sanitizePrice(mixed $raw): float
   {
-    if ($latitude === null || $longitude === null) {
-      throw new BusinessRuleException("Debes marcar la ubicación exacta del local en el mapa.");
+    $value = trim((string) $raw);
+
+    if ($value === '') {
+      return 0.0;
     }
+
+    // Deja solo dígitos, punto y coma.
+    $value = preg_replace('/[^\d.,]/u', '', $value) ?? '';
+
+    if ($value === '') {
+      return 0.0;
+    }
+
+    $lastDot = strrpos($value, '.');
+    $lastComma = strrpos($value, ',');
+    $lastSep = max($lastDot === false ? -1 : $lastDot, $lastComma === false ? -1 : $lastComma);
+
+    if ($lastSep >= 0) {
+      $intPart = str_replace(['.', ','], '', substr($value, 0, $lastSep));
+      $decPart = substr($value, $lastSep + 1);
+      $value = $intPart . '.' . $decPart;
+    }
+
+    return (float) $value;
   }
 }

@@ -1,3 +1,15 @@
+/* Oculta los spinners (flechas de incremento) en precio y capacidad. */
+.no-spinners::-webkit-outer-spin-button,
+.no-spinners::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.no-spinners {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 .geo-search-box {
   position: relative;
   margin-bottom: 10px;

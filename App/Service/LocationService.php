@@ -97,15 +97,18 @@ class LocationService
      * reutilizando filas existentes (por partes exactas o solo por cantón)
      * para no duplicar registros; solo crea una nueva si no existe ninguna.
      * Si la fila ya existe pero recibe coordenadas nuevas, las actualiza.
+     *
+     * La ubicación es opcional: si no se provee provincia, cantón y distrito
+     * (los tres), devuelve null y no crea ningún registro.
      */
-    public function findOrCreateByParts(string $province, string $canton, string $district, ?string $town = null, ?string $description = null, ?float $latitude = null, ?float $longitude = null): int
+    public function findOrCreateByParts(string $province, string $canton, string $district, ?string $town = null, ?string $description = null, ?float $latitude = null, ?float $longitude = null): ?int
     {
         $province = trim($province);
         $canton = trim($canton);
         $district = trim($district);
 
         if ($province === '' || $canton === '' || $district === '') {
-            throw new BusinessRuleException("Provincia, cantón y distrito son obligatorios.");
+            return null;
         }
 
         self::assertValidCoordinates($latitude, $longitude);
