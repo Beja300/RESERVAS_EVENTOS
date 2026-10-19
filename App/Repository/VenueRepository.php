@@ -42,16 +42,20 @@ class VenueRepository
 
     $stmt = $this->connection->prepare($sql);
 
-    $stmt->execute([
-      ':idOwner'       => $venue->getIdOwner(),
-      ':idLocation'   => $venue->getIdLocation(),
-      ':nameVenue'     => $venue->getNameVenue(),
-      ':typeVenue'     => $venue->getTypeVenue(),
-      ':capacityVenue' => $venue->getCapacityVenue(),
-      ':priceVenue'    => $venue->getPriceVenue(),
-      ':imageVenue'    => $venue->getImageVenue(),
-      ':isActive'      => $this->toDb($venue->getIsActive())
-    ]);
+    $stmt->bindValue(':idOwner', $venue->getIdOwner(), PDO::PARAM_INT);
+    $stmt->bindValue(
+      ':idLocation',
+      $venue->getIdLocation(),
+      $venue->getIdLocation() === null ? PDO::PARAM_NULL : PDO::PARAM_INT
+    );
+    $stmt->bindValue(':nameVenue', $venue->getNameVenue());
+    $stmt->bindValue(':typeVenue', $venue->getTypeVenue());
+    $stmt->bindValue(':capacityVenue', $venue->getCapacityVenue(), PDO::PARAM_INT);
+    $stmt->bindValue(':priceVenue', $venue->getPriceVenue());
+    $stmt->bindValue(':imageVenue', $venue->getImageVenue());
+    $stmt->bindValue(':isActive', $this->toDb($venue->getIsActive()), PDO::PARAM_INT);
+
+    $stmt->execute();
 
     return (int) $this->connection->lastInsertId();
   }
@@ -342,16 +346,20 @@ class VenueRepository
 
     $stmt = $this->connection->prepare($sql);
 
-    return $stmt->execute([
-      ':nameVenue'     => $venue->getNameVenue(),
-      ':typeVenue'     => $venue->getTypeVenue(),
-      ':capacityVenue' => $venue->getCapacityVenue(),
-      ':priceVenue'    => $venue->getPriceVenue(),
-      ':imageVenue'    => $venue->getImageVenue(),
-      ':idLocation'    => $venue->getIdLocation(),
-      ':isActive'      => $this->toDb($venue->getIsActive()),
-      ':idVenue'       => $venue->getIdVenue()
-    ]);
+    $stmt->bindValue(':nameVenue', $venue->getNameVenue());
+    $stmt->bindValue(':typeVenue', $venue->getTypeVenue());
+    $stmt->bindValue(':capacityVenue', $venue->getCapacityVenue(), PDO::PARAM_INT);
+    $stmt->bindValue(':priceVenue', $venue->getPriceVenue());
+    $stmt->bindValue(':imageVenue', $venue->getImageVenue());
+    $stmt->bindValue(
+      ':idLocation',
+      $venue->getIdLocation(),
+      $venue->getIdLocation() === null ? PDO::PARAM_NULL : PDO::PARAM_INT
+    );
+    $stmt->bindValue(':isActive', $this->toDb($venue->getIsActive()), PDO::PARAM_INT);
+    $stmt->bindValue(':idVenue', $venue->getIdVenue(), PDO::PARAM_INT);
+
+    return $stmt->execute();
   }
 
 
@@ -363,7 +371,7 @@ class VenueRepository
     return new Venue(
       idVenue: (int) $row['tbvenueid'],
       idOwner: (int) $row['tbownerid'],
-      idLocation: (int) $row['tblocationid'],
+      idLocation: $row['tblocationid'] === null ? null : (int) $row['tblocationid'],
       nameVenue: $row['tbvenuename'],
       typeVenue: $row['tbvenuetype'] ?? '',
       capacityVenue: (int) $row['tbvenuecapacity'],
