@@ -174,6 +174,37 @@ class LocationRepository
     }
 
     // =========================================================
+    // BUSCAR ID POR PROVINCIA/CANTÓN/DISTRITO Y DETALLE EXACTO
+    // (una misma zona puede tener varios locales con señas distintas)
+    // =========================================================
+    public function findIdByPartsAndDetail(string $province, string $canton, string $district, ?string $town, ?string $description): ?int
+    {
+        $sql = "
+            SELECT tblocationid
+            FROM tblocation
+            WHERE tblocationprovince = :province
+              AND tblocationcanton = :canton
+              AND tblocationdistrict = :district
+              AND COALESCE(tblocationtown, '') = :town
+              AND COALESCE(tblocationdescription, '') = :description
+            LIMIT 1
+        ";
+
+        $stmt = $this->connection->prepare($sql);
+        $stmt->execute([
+            ':province'    => $province,
+            ':canton'      => $canton,
+            ':district'    => $district,
+            ':town'        => $town ?? '',
+            ':description' => $description ?? '',
+        ]);
+
+        $id = $stmt->fetchColumn();
+
+        return $id !== false ? (int) $id : null;
+    }
+
+    // =========================================================
     // BUSCAR ID SOLO POR PROVINCIA/CANTÓN (para ubicación detectada)
     // =========================================================
     public function findIdByCanton(string $province, string $canton): ?int

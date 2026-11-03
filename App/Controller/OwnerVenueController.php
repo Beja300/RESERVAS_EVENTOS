@@ -76,8 +76,8 @@ class OwnerVenueController
     $longitude = isset($_POST['longitude']) && $_POST['longitude'] !== '' ? (float) $_POST['longitude'] : null;
     $name = trim($_POST['name'] ?? '');
     $type = trim($_POST['type'] ?? '') ?: null;
-    $capacity = isset($_POST['capacity']) && $_POST['capacity'] !== '' ? (int) $_POST['capacity'] : null;
-    $price = isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : 0.0;
+    $capacity = $this->parseCapacity($_POST['capacity'] ?? null);
+    $price = $this->parsePrice($_POST['price'] ?? '');
 
     try {
       $this->requireCoordinates($latitude, $longitude);
@@ -138,8 +138,8 @@ class OwnerVenueController
 
     $name = trim($_POST['name'] ?? '');
     $type = trim($_POST['type'] ?? '') ?: null;
-    $capacity = isset($_POST['capacity']) && $_POST['capacity'] !== '' ? (int) $_POST['capacity'] : null;
-    $price = isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : 0.0;
+    $capacity = $this->parseCapacity($_POST['capacity'] ?? null);
+    $price = $this->parsePrice($_POST['price'] ?? '');
     $active = isset($_POST['active']);
 
     $province = trim($_POST['province'] ?? '');
@@ -197,6 +197,76 @@ class OwnerVenueController
 
       require_once __DIR__ . '/../View/Venue/Form.php';
     }
+  }
+
+  // =========================================================
+  // PRECIO: acepta el valor con formato de colones (₡, comas y puntos)
+  // y lo normaliza a un decimal compatible con la base de datos.
+  // =========================================================
+  private function parsePrice($raw): float
+  {
+    if (!is_scalar($raw)) {
+      return 0.0;
+    }
+
+    $value = str_replace(["\u{20A1}", "\u{00A0}", ' '], '', trim((string) $raw));
+    $value = preg_replace('/[^\d.,-]/u', '', $value);
+
+    if ($value === '' || $value === '-') {
+      return 0.0;
+    }
+
+    $negative = str_starts_with($value, '-');
+    if ($negative) {
+      $value = substr($value, 1);
+    }
+
+    $lastComma = strrpos($value, ',');
+    $lastDot = strrpos($value, '.');
+    $decimalSep = null;
+
+    if ($lastComma !== false && $lastDot !== false) {
+      $decimalSep = $lastComma > $lastDot ? ',' : '.';
+    } elseif ($lastComma !== false) {
+      $parts = explode(',', $value);
+      if (count($parts) === 2 && strlen($parts[1]) <= 2) {
+        $decimalSep = ',';
+      }
+    } elseif ($lastDot !== false) {
+      $parts = explode('.', $value);
+      if (count($parts) === 2 && strlen($parts[1]) <= 2) {
+        $decimalSep = '.';
+      }
+    }
+
+    if ($decimalSep !== null) {
+      $idx = strrpos($value, $decimalSep);
+      $intPart = str_replace([',', '.'], '', substr($value, 0, $idx));
+      $decPart = preg_replace('/\D/', '', substr($value, $idx + 1));
+      $value = $intPart . '.' . $decPart;
+    } else {
+      $value = str_replace([',', '.'], '', $value);
+    }
+
+    if (!is_numeric($value)) {
+      return 0.0;
+    }
+
+    return ($negative ? -1 : 1) * (float) $value;
+  }
+
+  // =========================================================
+  // CAPACIDAD: acepta solo dígitos y descarta cualquier separador.
+  // =========================================================
+  private function parseCapacity($raw): ?int
+  {
+    if (!is_scalar($raw) || trim((string) $raw) === '') {
+      return null;
+    }
+
+    $digits = preg_replace('/\D/', '', (string) $raw);
+
+    return $digits === '' ? null : (int) $digits;
   }
 
   // =========================================================

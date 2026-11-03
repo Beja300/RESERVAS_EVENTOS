@@ -55,16 +55,18 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
 
     <div class="form-group">
       <label for="capacity">Capacidad *</label>
-      <input class="form-control" type="number" id="capacity" name="capacity" min="1" required
+      <input class="form-control" type="text" id="capacity" name="capacity" inputmode="numeric"
+        pattern="[0-9]*" autocomplete="off" required
         data-validate="required positive"
         value="<?= e($isEdit ? (string) $venue->getCapacityVenue() : ($_POST['capacity'] ?? '')) ?>">
     </div>
 
     <div class="form-group">
       <label for="price">Precio de renta por evento *</label>
-      <input class="form-control" type="number" id="price" name="price" min="0.01" step="0.01" required
+      <input class="form-control" type="text" id="price" name="price" inputmode="decimal"
+        data-mask="money" autocomplete="off" placeholder="₡ 0.00" required
         data-validate="required positive"
-        value="<?= e($isEdit ? number_format($venue->getPriceVenue(), 2, '.', '') : ($_POST['price'] ?? '')) ?>">
+        value="<?= e($isEdit ? format_colones($venue->getPriceVenue()) : ($_POST['price'] ?? '')) ?>">
       <p class="form-hint">Este precio se incluye siempre en la factura de cada reserva de este local.</p>
     </div>
 
@@ -118,9 +120,11 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
         value="<?= e($curTown ?? '') ?>">
     </div>
     <div class="form-group">
-      <label for="description">Descripción <span class="required-mark">*</span></label>
+      <label for="description">Otras señas de la ubicación <span class="required-mark">*</span></label>
       <input class="form-control" type="text" id="description" name="description" required
+        placeholder="Ej: 200 m al norte de la iglesia, portón verde"
         value="<?= e($curDesc ?? '') ?>">
+      <p class="form-hint">Indica cómo llegar o cualquier referencia adicional de la ubicación.</p>
     </div>
 
     <div class="form-group">

@@ -1,5 +1,13 @@
 (function () {
   function base() { var p=(window.location.pathname||'').split('/'); p.pop(); return p.join('/'); }
+  var capacity = document.getElementById('capacity');
+  if (capacity) {
+    capacity.addEventListener('input', function () {
+      var digits = capacity.value.replace(/\D/g, '');
+      if (capacity.value !== digits) capacity.value = digits;
+    });
+  }
+
   var form = document.querySelector('form[data-ajax-venue-form]');
   if (form) {
     form.addEventListener('submit', function (e) {

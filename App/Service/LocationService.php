@@ -27,8 +27,10 @@ class LocationService
 
         self::assertValidCoordinates($latitude, $longitude);
 
-        if ($this->locationRepo->findIdByParts($province, $canton, $district) !== null) {
-            throw new BusinessRuleException('Ya existe una ubicación con esa provincia, cantón y distrito.');
+        // La unicidad es del detalle completo: dos locales pueden compartir
+        // provincia/cantón/distrito siempre que tengan pueblo o señas distintas.
+        if ($this->locationRepo->findIdByPartsAndDetail($province, $canton, $district, $town, $description) !== null) {
+            throw new BusinessRuleException('Ya existe una ubicación con esa provincia, cantón, distrito y detalle.');
         }
 
         $newLocation = new Location(
@@ -70,12 +72,13 @@ class LocationService
 
         self::assertValidCoordinates($latitude, $longitude);
 
-        // Integridad lógica: no permitir una ubicación duplicada exacta
-        // (misma provincia + cantón + distrito) controlada desde PHP.
-        $duplicateId = $this->locationRepo->findIdByParts($province, $canton, $district);
+        // Integridad lógica: no permitir un duplicado exacto (misma provincia,
+        // cantón, distrito y detalle) controlada desde PHP. Un mismo distrito
+        // puede contener varios locales con direcciones diferentes.
+        $duplicateId = $this->locationRepo->findIdByPartsAndDetail($province, $canton, $district, $town, $description);
 
         if ($duplicateId !== null && $duplicateId !== $idLocation) {
-            throw new BusinessRuleException('Ya existe una ubicación con esa provincia, cantón y distrito.');
+            throw new BusinessRuleException('Ya existe una ubicación con esa provincia, cantón, distrito y detalle.');
         }
 
         $location = new Location(

@@ -186,10 +186,12 @@ INSERT INTO tbpromotionservice (tbpromotionid, tbserviceid, tbpromotionserviceac
 INSERT INTO tbpaymentmethod (tbpaymentmethodtype, tbpaymentmethodactive) VALUES
 ('Efectivo', TRUE),
 ('Tarjeta',  TRUE),
-('Transferencia', TRUE);
+('Transferencia Bancaria', TRUE),
+('SINPE Móvil', TRUE);
 SET @pmEfectivo       = 1;
 SET @pmTarjeta       = 2;
 SET @pmTransferencia = 3;
+SET @pmSinpe         = 4;
 
 -- =========================================================
 -- 7b) DATOS DE COBRO DEL PROPIETARIO (tbownerpayment)
@@ -197,7 +199,8 @@ SET @pmTransferencia = 3;
 INSERT INTO tbownerpayment (tbownerid, tbpaymentmethodid, tbownerpaymentholder, tbownerpaymentaccount, tbownerpaymentinstructions, tbownerpaymentactive) VALUES
 (@ownerId, @pmEfectivo,       'María Fernanda Rodríguez',       NULL,      'Realizar el pago en efectivo el día del evento.', TRUE),
 (@ownerId, @pmTarjeta,        'María Fernanda Rodríguez',       NULL,      'Aceptamos tarjetas Visa y Mastercard.', TRUE),
-(@ownerId, @pmTransferencia,  'Salón La Quinta S.A.',           'CR12 1234 5678 9012 3456 7', 'Transferencia SINPE a la cuenta indicada.', TRUE);
+(@ownerId, @pmTransferencia,  'Salón La Quinta S.A.',           'CR12 1234 5678 9012 3456 7', 'Transferencia bancaria a la cuenta indicada.', TRUE),
+(@ownerId, @pmSinpe,          'María Fernanda Rodríguez',       '88887777', 'Pago por SINPE Móvil al número indicado.', TRUE);
 
 -- =========================================================
 -- 8) CONFIGURACIÓN DE COMISIÓN (5% + IVA 13%)
@@ -511,7 +514,9 @@ SET @venue5Id = LAST_INSERT_ID();
 -- Datos de cobro del segundo propietario
 INSERT INTO tbownerpayment (tbownerid, tbpaymentmethodid, tbownerpaymentholder, tbownerpaymentaccount, tbownerpaymentinstructions, tbownerpaymentactive) VALUES
 (@owner2Id, @pmEfectivo,      'Pedro Hernández',     NULL, 'Pago en efectivo el día del evento.', TRUE),
-(@owner2Id, @pmTarjeta,       'Pedro Hernández',     NULL, 'Visa y Mastercard.', TRUE);
+(@owner2Id, @pmTarjeta,       'Pedro Hernández',     NULL, 'Visa y Mastercard.', TRUE),
+(@owner2Id, @pmTransferencia, 'Terraza Bambú S.A.',  'CR34 5678 9012 3456 7890 1', 'Transferencia bancaria a la cuenta indicada.', TRUE),
+(@owner2Id, @pmSinpe,         'Pedro Hernández',     '88886666', 'Pago por SINPE Móvil al número indicado.', TRUE);
 
 -- =========================================================
 -- 18) SERVICIOS DEL SEGUNDO LOCAL

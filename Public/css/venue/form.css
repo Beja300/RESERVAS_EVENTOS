@@ -50,3 +50,17 @@
   font-size: 0.9rem;
   color: var(--neutral-700);
 }
+
+#price::-webkit-outer-spin-button,
+#price::-webkit-inner-spin-button,
+#capacity::-webkit-outer-spin-button,
+#capacity::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+#price,
+#capacity {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

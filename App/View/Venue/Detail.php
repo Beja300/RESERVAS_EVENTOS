@@ -112,7 +112,7 @@ if ($venue === null) {
             <div class="muted">Pueblo: <?= e($location->getTownLocation()) ?></div>
           <?php endif; ?>
           <?php if ($location->getDescriptionLocation() !== null && $location->getDescriptionLocation() !== ''): ?>
-            <div class="muted">Señas: <?= e($location->getDescriptionLocation()) ?></div>
+            <div class="muted">Otras señas: <?= e($location->getDescriptionLocation()) ?></div>
           <?php endif; ?>
         <?php else: ?>
           <span class="muted">Sin ubicación registrada</span>

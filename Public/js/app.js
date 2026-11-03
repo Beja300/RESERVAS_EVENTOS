@@ -20,15 +20,55 @@
       .replace(/'/g, '&#039;');
   };
 
+  App.normalizeMoney = function (value) {
+    var s = String(value == null ? '' : value).replace(/[^\d.,-]/g, '');
+    if (s === '') return '';
+
+    var negative = s.charAt(0) === '-';
+    if (negative) s = s.slice(1);
+
+    var lastComma = s.lastIndexOf(',');
+    var lastDot = s.lastIndexOf('.');
+    var decSep = null;
+
+    if (lastComma !== -1 && lastDot !== -1) {
+      decSep = lastComma > lastDot ? ',' : '.';
+    } else if (lastComma !== -1) {
+      var commaParts = s.split(',');
+      if (commaParts.length === 2 && commaParts[1].length <= 2) decSep = ',';
+    } else if (lastDot !== -1) {
+      var dotParts = s.split('.');
+      if (dotParts.length === 2 && dotParts[1].length <= 2) decSep = '.';
+    }
+
+    if (decSep !== null) {
+      var idx = s.lastIndexOf(decSep);
+      var intPart = s.slice(0, idx).replace(/[.,]/g, '');
+      var decPart = s.slice(idx + 1).replace(/\D/g, '');
+      s = intPart + '.' + decPart;
+    } else {
+      s = s.replace(/[.,]/g, '');
+    }
+
+    return (negative ? '-' : '') + s;
+  };
+
   App.parseMoney = function (value) {
-    return parseFloat(String(value).replace(/[^\d.-]/g, '')) || 0;
+    var amount = parseFloat(App.normalizeMoney(value));
+    return isNaN(amount) ? 0 : amount;
   };
 
   App.formatMoney = function (amount) {
-    return '\u20A1 ' + Number(amount).toLocaleString('es-CR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
+    var n = Number(amount);
+    if (!isFinite(n)) n = 0;
+
+    var negative = n < 0;
+    n = Math.abs(n);
+
+    var fixed = n.toFixed(2).split('.');
+    var intPart = fixed[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    return (negative ? '-' : '') + '\u20A1 ' + intPart + '.' + fixed[1];
   };
 
   // ---------- Formato de cédula (solo dígitos) ----------
@@ -193,6 +233,24 @@
       return digits.length > 4 ? digits.slice(0, 4) + '-' + digits.slice(4) : digits;
     };
 
+    var formatMoneyInput = function (v) {
+      var normalized = App.normalizeMoney(v);
+      if (normalized === '' || normalized === '-') return '';
+
+      var negative = normalized.charAt(0) === '-';
+      if (negative) normalized = normalized.slice(1);
+
+      var dot = normalized.indexOf('.');
+      var intPart = dot === -1 ? normalized : normalized.slice(0, dot);
+      var decPart = dot === -1 ? '' : normalized.slice(dot + 1).slice(0, 2);
+
+      intPart = intPart.replace(/^0+(?=\d)/, '');
+      if (intPart === '') intPart = '0';
+      intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+      return (negative ? '-' : '') + '\u20A1 ' + intPart + (dot === -1 ? '' : '.' + decPart);
+    };
+
     for (var i = 0; i < fields.length; i++) {
       (function (field) {
         var kind = field.getAttribute('data-mask');
@@ -210,6 +268,36 @@
             field.value = App.formatCedula(field.value);
           });
           if (field.value) field.value = App.formatCedula(field.value);
+        } else if (kind === 'money') {
+          field.addEventListener('input', function () {
+            var value = field.value;
+            var start = field.selectionStart || 0;
+            var atEnd = start >= value.length;
+            var sigBefore = value.slice(0, start).replace(/[^\d.]/g, '').length;
+            var formatted = formatMoneyInput(value);
+
+            field.value = formatted;
+
+            if (document.activeElement === field) {
+              if (atEnd) {
+                field.setSelectionRange(formatted.length, formatted.length);
+              } else {
+                var pos = 0;
+                var seen = 0;
+                while (pos < formatted.length && seen < sigBefore) {
+                  if (/[\d.]/.test(formatted.charAt(pos))) seen++;
+                  pos++;
+                }
+                field.setSelectionRange(pos, pos);
+              }
+            }
+          });
+          field.addEventListener('blur', function () {
+            if (field.value.trim() !== '') {
+              field.value = App.formatMoney(App.parseMoney(field.value));
+            }
+          });
+          if (field.value) field.value = formatMoneyInput(field.value);
         }
       })(fields[i]);
     }
@@ -243,9 +331,9 @@
         && !/^\d{8}$/.test(value.replace(/[\s-]/g, ''))
         && !/^[A-Za-z]{2}[\dA-Za-z]{18,22}$/.test(value.replace(/[\s-]/g, ''))) {
         message = 'Cuenta no válida (8 dígitos SINPE o IBAN).';
-      } else if (rules.indexOf('minprice') !== -1 && (isNaN(value) || parseFloat(value) < 0)) {
+      } else if (rules.indexOf('minprice') !== -1 && App.parseMoney(value) < 0) {
         message = 'El precio no puede ser negativo.';
-      } else if (rules.indexOf('positive') !== -1 && (isNaN(value) || parseFloat(value) <= 0)) {
+      } else if (rules.indexOf('positive') !== -1 && App.parseMoney(value) <= 0) {
         message = 'Debe ser un número mayor que 0.';
       }
     }

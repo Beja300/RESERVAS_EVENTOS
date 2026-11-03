@@ -30,7 +30,7 @@
 
   var base = getBasePath();
 
-  L.Icon.Default.imagePath = base + '/vendor/leaflet/images';
+  L.Icon.Default.imagePath = base + '/vendor/leaflet/images/';
 
   var mapEl = document.getElementById('venue-map');
   var latInput = document.getElementById('latitude');
