@@ -1,0 +1,16 @@
+.password-wrapper { position: relative; }
+.password-wrapper .form-control { padding-right: 44px; }
+.password-toggle {
+  position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+  border: none; background: none; cursor: pointer; color: var(--neutral-500);
+  font-size: 0.85rem; font-weight: 600; padding: 4px 8px; font-family: inherit;
+}
+.password-toggle:hover { color: var(--primary); }
+
+.suspicious-list { margin: 0; padding: 0; list-style: none; }
+.suspicious-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 0; border-bottom: 1px solid var(--neutral-200);
+  color: var(--neutral-800);
+}
+.suspicious-item:last-child { border-bottom: none; }

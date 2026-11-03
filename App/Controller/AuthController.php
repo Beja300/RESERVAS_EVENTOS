@@ -1,0 +1,319 @@
+<?php
+
+require_once __DIR__ . '/../Service/AuthService.php';
+require_once __DIR__ . '/../Service/BusinessRuleException.php';
+require_once __DIR__ . '/../Model/UserSessionDTO.php';
+require_once __DIR__ . '/../../Configuration/DataBase.php';
+
+class AuthController
+{
+  private AuthService $authService;
+
+  public function __construct()
+  {
+    $this->authService = new AuthService();
+  }
+
+  // =========================================================
+  // MOSTRAR LOGIN
+  // =========================================================
+  public function showLogin(): void
+  {
+    $hasAdmins = $this->authService->hasAnyAdmin();
+
+    require_once __DIR__ . '/../View/Auth/Login.php';
+  }
+
+  // =========================================================
+  // LOGIN
+  // =========================================================
+  public function login(): void
+  {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->showLogin();
+      return;
+    }
+
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+
+    try {
+
+      $result = $this->authService->login(
+        $email,
+        $password
+      );
+
+      if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+      }
+
+      session_regenerate_id(true);
+
+      $_SESSION['type'] = $result['type'];
+      $_SESSION['user'] = $result['user'];
+
+      switch ($result['type']) {
+
+        case 'admin':
+          header('Location: ' . base_url('admin', 'dashboard'));
+          break;
+
+        case 'client':
+          header('Location: ' . base_url('client', 'dashboard'));
+          break;
+
+        case 'owner':
+          header('Location: ' . base_url('owner', 'dashboard'));
+          break;
+
+        default:
+          header('Location: ' . base_url('auth', 'showLogin'));
+          break;
+      }
+
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+      $hasAdmins = $this->authService->hasAnyAdmin();
+
+      require_once __DIR__ . '/../View/Auth/Login.php';
+    }
+  }
+
+  // =========================================================
+  // MOSTRAR FORMULARIO DEL PRIMER ADMINISTRADOR (setup)
+  // Público SOLO mientras no exista ningún admin en la BD.
+  // =========================================================
+  public function showSetup(): void
+  {
+    if ($this->authService->hasAnyAdmin()) {
+      header('Location: ' . base_url('auth', 'showLogin'));
+      exit;
+    }
+
+    require_once __DIR__ . '/../View/Auth/Setup.php';
+  }
+
+  // =========================================================
+  // CREAR EL PRIMER ADMINISTRADOR (setup)
+  // Re-verifica que no exista ningún admin antes de crear.
+  // =========================================================
+  public function createFirstAdmin(): void
+  {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      header('Location: ' . base_url('auth', 'showSetup'));
+      exit;
+    }
+
+    if ($this->authService->hasAnyAdmin()) {
+      header('Location: ' . base_url('auth', 'showLogin'));
+      exit;
+    }
+
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $phoneNumber = trim($_POST['phoneNumber'] ?? '') ?: null;
+
+    try {
+      $admin = $this->authService->registerAdmin($name, $email, $password, $phoneNumber);
+
+      if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+      }
+
+      session_regenerate_id(true);
+
+      $_SESSION['type'] = 'admin';
+      $_SESSION['user'] = UserSessionDTO::fromObject($admin);
+
+      header('Location: ' . base_url('admin', 'dashboard'));
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+
+      require_once __DIR__ . '/../View/Auth/Setup.php';
+    } catch (\Throwable $e) {
+
+      $error = 'No se pudo crear el administrador. Verifica que el correo no esté en uso.';
+
+      require_once __DIR__ . '/../View/Auth/Setup.php';
+    }
+  }
+
+  // =========================================================
+  // MOSTRAR REGISTRO
+  // =========================================================
+  public function showRegister(): void
+  {
+    require_once __DIR__ . '/../View/Auth/Register.php';
+  }
+
+  // =========================================================
+  // REGISTRAR CLIENTE
+  // =========================================================
+  public function registerClient(): void
+  {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->showRegister();
+      return;
+    }
+
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $phoneNumber = trim($_POST['phoneNumber'] ?? '');
+
+    if ($phoneNumber === '') {
+      $phoneNumber = null;
+    }
+
+    try {
+
+      $client = $this->authService->registerClient(
+        $name,
+        $email,
+        $password,
+        $phoneNumber
+      );
+
+      if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+      }
+
+      session_regenerate_id(true);
+
+      $_SESSION['type'] = 'client';
+      $_SESSION['user'] = UserSessionDTO::fromObject($client);
+
+      header('Location: ' . base_url('client', 'dashboard'));
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+
+      require_once __DIR__ . '/../View/Auth/Register.php';
+    }
+  }
+
+  // =========================================================
+  // REGISTRAR PROPIETARIO
+  // =========================================================
+  public function registerOwner(): void
+  {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      $this->showRegister();
+      return;
+    }
+
+    $name = trim($_POST['ownerBusinessName'] ?? $_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+
+    $ownerFirstName = trim($_POST['ownerFirstName'] ?? '');
+    $ownerLastName = trim($_POST['ownerLastName'] ?? '');
+    $phoneNumber = trim($_POST['phoneNumber'] ?? '');
+    $ownerAlias = trim($_POST['ownerAlias'] ?? '');
+    $ownerIdentification = trim($_POST['ownerIdentification'] ?? '');
+
+    if ($ownerLastName === '') {
+      $ownerLastName = null;
+    }
+
+    if ($phoneNumber === '') {
+      $phoneNumber = null;
+    }
+
+    if ($ownerAlias === '') {
+      $ownerAlias = null;
+    }
+
+    if ($ownerIdentification === '') {
+      $ownerIdentification = null;
+    }
+
+    try {
+
+      if ($name === '') {
+        throw new BusinessRuleException('El nombre de negocio es obligatorio.');
+      }
+
+      $owner = $this->authService->registerOwner(
+        $name,
+        $email,
+        $password,
+        $ownerFirstName,
+        $ownerLastName,
+        $phoneNumber,
+        $ownerAlias,
+        $ownerIdentification
+      );
+
+      if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+      }
+
+      session_regenerate_id(true);
+
+      $_SESSION['type'] = 'owner';
+      $_SESSION['user'] = UserSessionDTO::fromObject($owner);
+
+      header('Location: ' . base_url('owner', 'dashboard'));
+      exit;
+    } catch (BusinessRuleException $e) {
+
+      $error = $e->getMessage();
+
+      require_once __DIR__ . '/../View/Auth/Register.php';
+    }
+  }
+
+  // =========================================================
+  // CERRAR SESIÓN
+  // =========================================================
+  public function logout(): void
+  {
+    if (session_status() === PHP_SESSION_NONE) {
+      session_start();
+    }
+
+    $_SESSION = [];
+
+    session_destroy();
+
+    header('Location: ' . base_url('auth', 'showLogin'));
+    exit;
+  }
+
+  // =========================================================
+  // LIMPIAR Y RESTAURAR DATOS DE PRUEBA (botón del login)
+  // Vacía TODAS las tablas y re-ejecuta el seed_test_data.sql,
+  // dejando la base en el estado inicial de demostración.
+  // =========================================================
+  public function cleanDemo(): void
+  {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+      header('Location: ' . base_url('auth', 'showLogin'));
+      exit;
+    }
+
+    try {
+      $connection = DataBase::getConnection();
+      $tables = $connection->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
+      $connection->exec('SET FOREIGN_KEY_CHECKS = 0');
+      foreach ($tables as $table) {
+        $connection->exec('TRUNCATE TABLE ' . $table);
+      }
+      $connection->exec('SET FOREIGN_KEY_CHECKS = 1');
+      header('Location: ' . base_url('auth', 'showLogin', ['reset' => 'ok']));
+      exit;
+    } catch (\Throwable $e) {
+      $errorMsg = 'No se pudo limpiar la base de datos.';
+      header('Location: ' . base_url('auth', 'showLogin', ['error' => $errorMsg]));
+      exit;
+    }
+  }
+}
