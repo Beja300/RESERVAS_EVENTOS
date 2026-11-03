@@ -55,45 +55,27 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
 
     <div class="form-group">
       <label for="capacity">Capacidad *</label>
-      <input class="form-control" type="number" id="capacity" name="capacity" min="1" required
+      <input class="form-control no-spinners" type="text" inputmode="numeric" pattern="[0-9]*" id="capacity" name="capacity" required
         data-validate="required positive"
         value="<?= e($isEdit ? (string) $venue->getCapacityVenue() : ($_POST['capacity'] ?? '')) ?>">
     </div>
 
     <div class="form-group">
       <label for="price">Precio de renta por evento *</label>
-      <input class="form-control" type="number" id="price" name="price" min="0.01" step="0.01" required
-        data-validate="required positive"
+      <input class="form-control no-spinners" type="text" inputmode="decimal" id="price" name="price" required
+        data-currency-mask data-validate="required positive"
         value="<?= e($isEdit ? number_format($venue->getPriceVenue(), 2, '.', '') : ($_POST['price'] ?? '')) ?>">
       <p class="form-hint">Este precio se incluye siempre en la factura de cada reserva de este local.</p>
     </div>
 
     <div class="form-group">
-      <label for="image">Fotos del local <?= $isEdit ? '' : '*' ?> <span class="muted">(hasta 6)</span></label>
-      <input class="form-control" type="file" id="image" name="image[]" accept="image/*" multiple
-        <?= $isEdit ? '' : 'required' ?>>
-      <div id="venueImages" class="venue-gallery" data-max="6">
-        <?php if ($isEdit): ?>
-          <?php $coverImg = $venue->getImageVenue(); ?>
-          <?php if ($coverImg !== ''): ?>
-            <div class="venue-thumb is-cover">
-              <img src="<?= e(image_url($coverImg)) ?>" alt="Portada actual">
-              <button type="button" class="thumb-remove" aria-label="Quitar foto">&times;</button>
-              <input type="hidden" name="existingImages[]" value="<?= e($coverImg) ?>">
-              <span class="thumb-label">Portada</span>
-            </div>
-          <?php endif; ?>
-          <?php foreach ($venueImages ?? [] as $vi): ?>
-            <div class="venue-thumb">
-              <img src="<?= e(image_url($vi->getImagePath())) ?>" alt="Foto del local">
-              <button type="button" class="thumb-remove" aria-label="Quitar foto">&times;</button>
-              <input type="hidden" name="existingImages[]" value="<?= e($vi->getImagePath()) ?>">
-            </div>
-          <?php endforeach; ?>
-        <?php endif; ?>
-      </div>
-      <p class="form-hint">Puedes subir hasta 6 fotos (jpg, png, webp o gif; máx. 2 MB cada una). La primera de la lista será la portada.</p>
-      <p id="venueImageCount" class="venue-count muted"></p>
+      <label for="image">Foto del local <?= $isEdit ? '' : '*' ?></label>
+      <input class="form-control" type="file" id="image" name="image" accept="image/*"
+        <?= $isEdit ? '' : 'required' ?> onchange="var f=this.files[0];var p=document.getElementById('imagePreview');if(f){var r=new FileReader();r.onload=function(e){p.src=e.target.result;p.style.display='block';};r.readAsDataURL(f);}">
+      <?php $currentImg = $isEdit ? $venue->getImageVenue() : ($_POST['image'] ?? ''); ?>
+      <img id="imagePreview" src="<?= e(image_url($currentImg !== '' ? $currentImg : null)) ?>"
+        alt="Vista previa del local" style="<?= $currentImg !== '' ? 'display:block;' : 'display:none;' ?>width:160px;height:110px;object-fit:cover;border-radius:8px;margin-top:10px;border:1px solid var(--neutral-200);">
+      <p class="form-hint">Sube una foto desde tu equipo (jpg, png, webp o gif, máx. 2 MB).</p>
     </div>
 
     <?php if ($isEdit): ?>
@@ -108,23 +90,23 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
 
     <div class="grid grid-3">
       <div class="form-group">
-        <label for="province">Provincia *</label>
-        <select class="form-control" id="province" name="province" data-level="province" required
-                data-validate="required" data-value="<?= e($curProvince) ?>">
+        <label for="province">Provincia</label>
+        <select class="form-control" id="province" name="province" data-level="province"
+                data-value="<?= e($curProvince) ?>">
           <option value="">— Selecciona —</option>
         </select>
       </div>
       <div class="form-group">
-        <label for="canton">Cantón *</label>
-        <select class="form-control" id="canton" name="canton" data-level="canton" disabled required
-                data-validate="required" data-value="<?= e($curCanton) ?>">
+        <label for="canton">Cantón</label>
+        <select class="form-control" id="canton" name="canton" data-level="canton" disabled
+                data-value="<?= e($curCanton) ?>">
           <option value="">— Selecciona —</option>
         </select>
       </div>
       <div class="form-group">
-        <label for="district">Distrito *</label>
-        <select class="form-control" id="district" name="district" data-level="district" disabled required
-                data-validate="required" data-value="<?= e($curDistrict) ?>">
+        <label for="district">Distrito</label>
+        <select class="form-control" id="district" name="district" data-level="district" disabled
+                data-value="<?= e($curDistrict) ?>">
           <option value="">— Selecciona —</option>
         </select>
       </div>
@@ -136,13 +118,14 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
         value="<?= e($curTown ?? '') ?>">
     </div>
     <div class="form-group">
-      <label for="description">Descripción</label>
+      <label for="description">Otras señas de la ubicación</label>
       <input class="form-control" type="text" id="description" name="description"
+        placeholder="Ej: frente al parque, portón azul, 200 m norte de..."
         value="<?= e($curDesc ?? '') ?>">
     </div>
 
     <div class="form-group">
-      <label for="venue-map">Ubicación exacta en el mapa *</label>
+      <label for="venue-map">Ubicación exacta en el mapa</label>
       <div class="geo-search-box">
         <input class="form-control" type="search" id="venue-map-search"
           placeholder="Buscar dirección o cantón (ej. San José)...">
@@ -158,7 +141,7 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
       </span>
       <input type="hidden" name="latitude" id="latitude" value="<?= e($curLat ?? '') ?>">
       <input type="hidden" name="longitude" id="longitude" value="<?= e($curLng ?? '') ?>">
-      <p class="form-hint">Haz clic en el mapa o arrastra el marcador para marcar la ubicación del local (obligatorio).</p>
+      <p class="form-hint">Opcional: haz clic en el mapa o arrastra el marcador para marcar la ubicación del local.</p>
     </div>
 
     <button class="btn btn-primary" type="submit"><?= $isEdit ? 'Guardar cambios' : 'Crear local' ?></button>

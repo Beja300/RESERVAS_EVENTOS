@@ -215,18 +215,4 @@
   if (cantonSel) {
     cantonSel.addEventListener('change', recenterToAddress);
   }
-
-  // =========================================================
-  // Validación cliente: no se guarda sin marcar la ubicación.
-  // Se registra en fase de captura para correr antes que el AJAX de form.js.
-  // =========================================================
-  window.addEventListener('submit', function (e) {
-    if (e.target && e.target.matches && e.target.matches('form[data-ajax-venue-form]')) {
-      if (!latInput.value || !lngInput.value) {
-        e.preventDefault();
-        e.stopPropagation();
-        window.App && App.toast('Marca la ubicación en el mapa antes de guardar.', 'error');
-      }
-    }
-  }, true);
 })(window, document, window.L);

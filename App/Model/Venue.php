@@ -11,7 +11,7 @@ class Venue
 {
   private int $idVenue;
   private int $idOwner;
-  private int $idLocation;
+  private ?int $idLocation;
   private string $nameVenue;
   private string $typeVenue;
   private int $capacityVenue;
@@ -22,7 +22,7 @@ class Venue
   public function __construct(
     int $idVenue,
     int $idOwner,
-    int $idLocation,
+    ?int $idLocation,
     string $nameVenue,
     string $typeVenue,
     int $capacityVenue,
@@ -53,7 +53,7 @@ class Venue
     return $this->idOwner;
   }
 
-  public function getIdLocation(): int
+  public function getIdLocation(): ?int
   {
     return $this->idLocation;
   }
@@ -100,7 +100,7 @@ class Venue
     $this->idOwner = $idOwner;
   }
 
-  public function setIdLocation(int $idLocation): void
+  public function setIdLocation(?int $idLocation): void
   {
     $this->idLocation = $idLocation;
   }

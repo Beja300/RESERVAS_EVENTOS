@@ -10,8 +10,6 @@ require_once __DIR__ . '/../View/_helpers.php';
 
 class OwnerVenueController
 {
-  private const MAX_VENUE_IMAGES = 6;
-
   private VenueService $venueService;
   private OwnerService $ownerService;
   private LocationService $locationService;
@@ -47,9 +45,8 @@ class OwnerVenueController
 
     $idVenue = (int) ($_GET['id'] ?? 0);
     $venue = $idVenue > 0 ? $this->venueService->findById($idVenue) : null;
-    $venueImages = $venue !== null ? $this->venueService->galleryByVenue($venue->getIdVenue()) : [];
     $location = null;
-    if ($venue !== null && $venue->getIdLocation() > 0) {
+    if ($venue !== null && $venue->getIdLocation() !== null && $venue->getIdLocation() > 0) {
       $location = $this->locationService->findById($venue->getIdLocation());
     }
 
@@ -80,24 +77,16 @@ class OwnerVenueController
     $name = trim($_POST['name'] ?? '');
     $type = trim($_POST['type'] ?? '') ?: null;
     $capacity = isset($_POST['capacity']) && $_POST['capacity'] !== '' ? (int) $_POST['capacity'] : null;
-    $price = isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : 0.0;
+    $price = $this->sanitizePrice($_POST['price'] ?? '');
 
     try {
-      $this->requireCoordinates($latitude, $longitude);
+      $image = $this->resolveVenueImage($owner->getIdOwner(), '');
 
-      $incoming = $this->incomingFileCount();
-
-      if ($incoming === 0) {
+      if ($image === '') {
         throw new BusinessRuleException("Debes subir al menos una foto del local.");
       }
 
-      if ($incoming > self::MAX_VENUE_IMAGES) {
-        throw new BusinessRuleException("El local puede tener máximo 6 fotos.");
-      }
-
-      $images = $this->resolveVenueImages($owner->getIdOwner());
-
-      $idVenue = $this->venueService->validateAndCreate(
+      $this->venueService->validateAndCreate(
         $owner->getIdOwner(),
         $province,
         $canton,
@@ -108,12 +97,10 @@ class OwnerVenueController
         $type,
         $capacity,
         $price,
-        $images[0],
+        $image,
         $latitude,
         $longitude
       );
-
-      $this->venueService->replaceGallery($idVenue, array_slice($images, 1));
 
       respond_or_redirect(
         ['ok' => true, 'message' => 'Local creado correctamente.'],
@@ -128,7 +115,6 @@ class OwnerVenueController
       }
 
       $venue = null;
-      $venueImages = [];
       require_once __DIR__ . '/../View/Venue/Form.php';
     }
   }
@@ -151,7 +137,7 @@ class OwnerVenueController
     $name = trim($_POST['name'] ?? '');
     $type = trim($_POST['type'] ?? '') ?: null;
     $capacity = isset($_POST['capacity']) && $_POST['capacity'] !== '' ? (int) $_POST['capacity'] : null;
-    $price = isset($_POST['price']) && $_POST['price'] !== '' ? (float) $_POST['price'] : 0.0;
+    $price = $this->sanitizePrice($_POST['price'] ?? '');
     $active = isset($_POST['active']);
 
     $province = trim($_POST['province'] ?? '');
@@ -165,8 +151,6 @@ class OwnerVenueController
     $venue = null;
 
     try {
-      $this->requireCoordinates($latitude, $longitude);
-
       $venue = $this->venueService->findById($idVenue);
 
       if ($venue === null) {
@@ -175,29 +159,7 @@ class OwnerVenueController
 
       $this->ownerService->assertOwnsVenue($owner->getIdOwner(), $idVenue);
 
-      $keptImages = $this->sanitizeKeptImages($_POST['existingImages'] ?? []);
-
-      if ($this->incomingFileCount() + count($keptImages) > self::MAX_VENUE_IMAGES) {
-        throw new BusinessRuleException("El local puede tener máximo 6 fotos.");
-      }
-
-      $newImages = $this->resolveVenueImages($owner->getIdOwner());
-
-      $currentImages = $this->currentImages($venue);
-      $finalSet = array_values(array_unique(array_merge($keptImages, $newImages)));
-
-      if (count($finalSet) === 0) {
-        throw new BusinessRuleException("El local debe conservar al menos una foto.");
-      }
-
-      if (count($finalSet) > self::MAX_VENUE_IMAGES) {
-        throw new BusinessRuleException("El local puede tener máximo 6 fotos.");
-      }
-
-      $removed = array_diff($currentImages, $finalSet);
-      foreach ($removed as $path) {
-        ImageStorageService::deleteLocal($path);
-      }
+      $image = $this->resolveVenueImage($owner->getIdOwner(), $venue->getImageVenue());
 
       $idLocation = $this->locationService->findOrCreateByParts($province, $canton, $district, $town, $description, $latitude, $longitude);
 
@@ -207,12 +169,10 @@ class OwnerVenueController
         $type,
         $capacity,
         $price,
-        $finalSet[0],
+        $image,
         $active,
         $idLocation
       );
-
-      $this->venueService->replaceGallery($idVenue, array_slice($finalSet, 1));
 
       respond_or_redirect(
         ['ok' => true, 'message' => 'Local actualizado correctamente.'],
@@ -227,124 +187,59 @@ class OwnerVenueController
       }
 
       $location = null;
-      if ($venue !== null && $venue->getIdLocation() > 0) {
+      if ($venue !== null && $venue->getIdLocation() !== null && $venue->getIdLocation() > 0) {
         $location = $this->locationService->findById($venue->getIdLocation());
       }
-
-      $venueImages = $venue !== null ? $this->venueService->galleryByVenue($venue->getIdVenue()) : [];
 
       require_once __DIR__ . '/../View/Venue/Form.php';
     }
   }
 
   // =========================================================
-  // FOTOS DEL LOCAL (múltiples): sube todos los archivos de
-  // $_FILES['image'] y devuelve sus rutas, en orden de selección.
-  // Si una foto falla, borra las ya guardadas y relanza (evita huérfanos).
+  // FOTO DEL LOCAL: prioriza el archivo subido, si no conserva la actual.
   // =========================================================
-  private function resolveVenueImages(int $ownerId): array
+  private function resolveVenueImage(int $ownerId, string $current): string
   {
-    if (!isset($_FILES['image'])) {
-      return [];
+    if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+      return ImageStorageService::store(
+        $_FILES['image'],
+        'venues',
+        'venue_' . $ownerId
+      );
     }
 
-    $files = $_FILES['image'];
-    $paths = [];
-    $single = !is_array($files['name']) ? $files : null;
-
-    $queue = $single !== null
-      ? [$single]
-      : array_map(static fn ($i) => [
-          'name'     => $files['name'][$i],
-          'type'     => $files['type'][$i] ?? '',
-          'tmp_name' => $files['tmp_name'][$i],
-          'error'    => $files['error'][$i],
-          'size'     => $files['size'][$i],
-        ], array_keys($files['name']));
-
-    try {
-      foreach ($queue as $one) {
-        if (($one['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-          continue;
-        }
-
-        $paths[] = ImageStorageService::store($one, 'venues', 'venue_' . $ownerId);
-      }
-    } catch (\Throwable $e) {
-      foreach ($paths as $path) {
-        ImageStorageService::deleteLocal($path);
-      }
-      throw $e;
-    }
-
-    return $paths;
+    return $current;
   }
 
   // =========================================================
-  // CUENTA los archivos válidos entrantes de $_FILES['image']
-  // (antes de guardarlos, para validar el máximo sin huérfanos).
+  // PRECIO: sanitiza el valor recibido quitando el símbolo de colón
+  // (₡), espacios, separadores de miles y normalizando el decimal.
   // =========================================================
-  private function incomingFileCount(): int
+  private function sanitizePrice(mixed $raw): float
   {
-    if (!isset($_FILES['image'])) {
-      return 0;
+    $value = trim((string) $raw);
+
+    if ($value === '') {
+      return 0.0;
     }
 
-    $files = $_FILES['image'];
+    // Deja solo dígitos, punto y coma.
+    $value = preg_replace('/[^\d.,]/u', '', $value) ?? '';
 
-    if (!is_array($files['name'])) {
-      return $files['error'] === UPLOAD_ERR_OK ? 1 : 0;
+    if ($value === '') {
+      return 0.0;
     }
 
-    $count = 0;
-    foreach ($files['error'] as $error) {
-      if ($error === UPLOAD_ERR_OK) {
-        $count++;
-      }
+    $lastDot = strrpos($value, '.');
+    $lastComma = strrpos($value, ',');
+    $lastSep = max($lastDot === false ? -1 : $lastDot, $lastComma === false ? -1 : $lastComma);
+
+    if ($lastSep >= 0) {
+      $intPart = str_replace(['.', ','], '', substr($value, 0, $lastSep));
+      $decPart = substr($value, $lastSep + 1);
+      $value = $intPart . '.' . $decPart;
     }
 
-    return $count;
-  }
-
-  // =========================================================
-  // CONSERVA SOLO RUTAS LOCALES DE FOTOS DE LOCALES (evita inyección
-  // de rutas arbitrarias en el POST de edición).
-  // =========================================================
-  private function sanitizeKeptImages(array $paths): array
-  {
-    $clean = [];
-
-    foreach ($paths as $path) {
-      $path = trim((string) $path);
-      if ($path !== '' && str_starts_with($path, 'resource/venues/')) {
-        $clean[] = $path;
-      }
-    }
-
-    return array_values(array_unique($clean));
-  }
-
-  // =========================================================
-  // CONJUNTO ACTUAL DE FOTOS (portada + galería) de un local.
-  // =========================================================
-  private function currentImages(Venue $venue): array
-  {
-    $paths = [$venue->getImageVenue()];
-
-    foreach ($this->venueService->galleryByVenue($venue->getIdVenue()) as $image) {
-      $paths[] = $image->getImagePath();
-    }
-
-    return array_values(array_filter(array_unique($paths), static fn ($p) => $p !== ''));
-  }
-
-  // =========================================================
-  // COORDENADAS OBLIGATORIAS: el local debe marcarse en el mapa.
-  // =========================================================
-  private function requireCoordinates(?float $latitude, ?float $longitude): void
-  {
-    if ($latitude === null || $longitude === null) {
-      throw new BusinessRuleException("Debes marcar la ubicación exacta del local en el mapa.");
-    }
+    return (float) $value;
   }
 }

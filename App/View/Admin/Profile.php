@@ -76,7 +76,7 @@ if ($admin === null) {
     </div>
 
     <div class="form-group">
-      <label for="phoneNumber">Teléfono</label>
+      <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
       <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
              data-validate="phone" inputmode="numeric" pattern="\d{8}"
              maxlength="8" value="<?= e($_POST['phoneNumber'] ?? $admin->getPhoneNumber() ?? '') ?>">

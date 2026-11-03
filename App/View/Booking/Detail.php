@@ -203,6 +203,7 @@ $hasTicket = $ticket !== null;
       </div>
 
       <div data-pm-info class="alert alert-info" style="display:none;text-align:left;margin-top:10px;"></div>
+      <div data-pm-warning class="alert alert-error" style="display:none;text-align:left;margin-top:10px;">Debe seleccionar un método de pago</div>
 
       <form data-upload-ticket enctype="multipart/form-data"
             style="<?= empty($ownerPaymentMethods) ? 'opacity:.5;pointer-events:none;' : '' ?>">

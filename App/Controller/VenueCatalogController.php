@@ -189,16 +189,6 @@ class VenueCatalogController
     // ¿Este usuario ya tiene marcado el local como favorito?
     $isFavorite = $loggedRolePk > 0 && $this->historyService->isFavorite($loggedRolePk, $idVenue);
 
-    // Galería completa: la primera posición es la portada.
-    $galleryPaths = [];
-    foreach ($this->venueService->galleryByVenue($venue->getIdVenue()) as $vi) {
-      $galleryPaths[] = $vi->getImagePath();
-    }
-    $venueImages = array_values(array_filter(
-      array_merge([$venue->getImageVenue()], $galleryPaths),
-      static fn ($path) => $path !== ''
-    ));
-
     require_once __DIR__ . '/../View/Venue/Detail.php';
   }
 

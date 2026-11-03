@@ -294,46 +294,23 @@ class AuthController
   // =========================================================
   public function cleanDemo(): void
   {
-    require_role('admin');
-
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
       header('Location: ' . base_url('auth', 'showLogin'));
       exit;
     }
 
     try {
-
       $connection = DataBase::getConnection();
-
-      // Paso 1: vaciar todas las tablas (sin FK, el orden no importa).
       $tables = $connection->query('SHOW TABLES')->fetchAll(PDO::FETCH_COLUMN);
-
       $connection->exec('SET FOREIGN_KEY_CHECKS = 0');
-
       foreach ($tables as $table) {
-        $connection->exec('DELETE FROM ' . $table);
+        $connection->exec('TRUNCATE TABLE ' . $table);
       }
-
       $connection->exec('SET FOREIGN_KEY_CHECKS = 1');
-
-      // Paso 2: re-sembrar los datos de prueba.
-      // Nota: el seed ya NO incluye administrador; tras el reinicio hay que
-      // volver a crear el primero desde auth/setup.
-      $seedFile = __DIR__ . '/../../DataBase/InitialData/seed_test_data.sql';
-      $sql = file_get_contents($seedFile);
-
-      if ($sql === false) {
-        throw new \RuntimeException('No se pudo leer el archivo de datos de prueba.');
-      }
-
-      $connection->exec($sql);
-
       header('Location: ' . base_url('auth', 'showLogin', ['reset' => 'ok']));
       exit;
     } catch (\Throwable $e) {
-
-      $errorMsg = 'No se pudo restaurar los datos de prueba.';
-
+      $errorMsg = 'No se pudo limpiar la base de datos.';
       header('Location: ' . base_url('auth', 'showLogin', ['error' => $errorMsg]));
       exit;
     }

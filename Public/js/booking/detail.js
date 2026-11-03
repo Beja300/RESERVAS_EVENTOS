@@ -38,6 +38,7 @@
     var hidden = flow.querySelector('[data-pm-hidden]');
     var uploadBtn = flow.querySelector('[data-upload-btn]');
     var ticketInput = flow.querySelector('[data-ticket-input]');
+    var warningBox = flow.querySelector('[data-pm-warning]');
     var payments = [];
     try { payments = JSON.parse(flow.getAttribute('data-owner-payments') || '[]'); } catch (e) {}
 
@@ -55,6 +56,7 @@
         infoBox.innerHTML = '';
         hidden.value = '';
         uploadBtn.disabled = true;
+        if (warningBox) { warningBox.style.display = 'block'; }
         return;
       }
       var parts = [];
@@ -66,6 +68,7 @@
       infoBox.style.display = 'block';
       hidden.value = String(op.idPaymentMethod);
       uploadBtn.disabled = false;
+      if (warningBox) { warningBox.style.display = 'none'; }
     }
 
     if (select) {
@@ -78,7 +81,7 @@
         e.preventDefault();
 
         if (!parseInt(hidden.value, 10)) {
-          App.toast('Selecciona primero un método de pago.', 'error');
+          if (warningBox) { warningBox.style.display = 'block'; } App.toast('Debe seleccionar un método de pago', 'error');
           return;
         }
 
