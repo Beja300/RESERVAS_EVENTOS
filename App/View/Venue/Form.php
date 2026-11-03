@@ -5,15 +5,22 @@ $pageJs = ['venue/form', 'venue/location', 'venue/location-map'];
 <?php require_once __DIR__ . '/../_header.php';
 
 $isEdit = $venue !== null;
+$location = $location ?? null;
 $action = $isEdit ? base_url('venue', 'update') : base_url('venue', 'create');
 
-$curProvince = $isEdit && $location !== null ? $location->getProvinceLocation() : ($_POST['province'] ?? '');
-$curCanton   = $isEdit && $location !== null ? $location->getCantonLocation()   : ($_POST['canton'] ?? '');
-$curDistrict = $isEdit && $location !== null ? $location->getDistrictLocation() : ($_POST['district'] ?? '');
-$curTown     = $isEdit && $location !== null ? $location->getTownLocation()     : ($_POST['town'] ?? '');
-$curDesc     = $isEdit && $location !== null ? $location->getDescriptionLocation() : ($_POST['description'] ?? '');
-$curLat      = $isEdit && $location !== null ? ($location->getLatitudeLocation() !== null ? (string) $location->getLatitudeLocation() : '') : ($_POST['latitude'] ?? '');
-$curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation() !== null ? (string) $location->getLongitudeLocation() : '') : ($_POST['longitude'] ?? '');
+$posted = static function (string $key, ?string $fallback = null): string {
+  return array_key_exists($key, $_POST) ? (string) $_POST[$key] : (string) ($fallback ?? '');
+};
+
+$curType     = $posted('locationType', $location?->getTypeLocation() ?? 'exacta') === 'aproximada' ? 'aproximada' : 'exacta';
+$curProvince = $posted('province', $location?->getProvinceLocation());
+$curCanton   = $posted('canton', $location?->getCantonLocation());
+$curDistrict = $posted('district', $location?->getDistrictLocation());
+$curTown     = $posted('town', $location?->getTownLocation());
+$curApprox   = $posted('approximate', $location?->getApproximateLocation());
+$curDesc     = $posted('description', $location?->getDescriptionLocation());
+$curLat      = $posted('latitude', $location?->getLatitudeLocation() !== null ? (string) $location->getLatitudeLocation() : '');
+$curLng      = $posted('longitude', $location?->getLongitudeLocation() !== null ? (string) $location->getLongitudeLocation() : '');
 ?>
 
 <?php $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'), '/'); ?>
@@ -88,60 +95,91 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
     <hr style="border:none;border-top:1px solid var(--neutral-200);margin:18px 0;">
     <p style="font-weight:700;color:var(--neutral-800);margin-bottom:14px;">Ubicación</p>
 
-    <div class="grid grid-3">
-      <div class="form-group">
-        <label for="province">Provincia</label>
-        <select class="form-control" id="province" name="province" data-level="province"
-                data-value="<?= e($curProvince) ?>">
-          <option value="">— Selecciona —</option>
-        </select>
+    <div class="form-group location-mode">
+      <span class="form-label">Tipo de ubicación *</span>
+      <div class="radio-list">
+        <label class="radio-option">
+          <input type="radio" name="locationType" value="aproximada" data-location-mode
+            <?= $curType === 'aproximada' ? 'checked' : '' ?>>
+          <span>Asignar ubicación aproximada</span>
+        </label>
+        <label class="radio-option">
+          <input type="radio" name="locationType" value="exacta" data-location-mode
+            <?= $curType === 'exacta' ? 'checked' : '' ?>>
+          <span>Asignar ubicación exacta</span>
+        </label>
       </div>
-      <div class="form-group">
-        <label for="canton">Cantón</label>
-        <select class="form-control" id="canton" name="canton" data-level="canton" disabled
-                data-value="<?= e($curCanton) ?>">
-          <option value="">— Selecciona —</option>
-        </select>
+      <p class="form-hint">La ubicación aproximada solo pide barrio y una referencia; la exacta permite elegir provincia, cantón, distrito y marcar el punto en el mapa.</p>
+    </div>
+
+    <div data-location-section="exacta" <?= $curType === 'aproximada' ? 'hidden' : '' ?>>
+      <div class="grid grid-3">
+        <div class="form-group">
+          <label for="province">Provincia *</label>
+          <select class="form-control" id="province" name="province" data-level="province"
+                  data-validate="required" data-value="<?= e($curProvince) ?>">
+            <option value="">— Selecciona —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="canton">Cantón *</label>
+          <select class="form-control" id="canton" name="canton" data-level="canton" data-validate="required" disabled
+                  data-value="<?= e($curCanton) ?>">
+            <option value="">— Selecciona —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="district">Distrito *</label>
+          <select class="form-control" id="district" name="district" data-level="district" data-validate="required" disabled
+                  data-value="<?= e($curDistrict) ?>">
+            <option value="">— Selecciona —</option>
+          </select>
+        </div>
       </div>
+
       <div class="form-group">
-        <label for="district">Distrito</label>
-        <select class="form-control" id="district" name="district" data-level="district" disabled
-                data-value="<?= e($curDistrict) ?>">
-          <option value="">— Selecciona —</option>
-        </select>
+        <label for="venue-map">Ubicación exacta en el mapa</label>
+        <div class="geo-search-box">
+          <input class="form-control" type="search" id="venue-map-search"
+            placeholder="Buscar dirección o cantón (ej. San José)...">
+          <ul class="geo-search-results" id="venue-map-results"></ul>
+        </div>
+        <div id="venue-map"></div>
+        <span id="geo-display" class="geo-coords <?= $curLat !== '' && $curLng !== '' ? '' : 'muted' ?>">
+          <?php if ($curLat !== '' && $curLng !== ''): ?>
+            Lat <?= e($curLat) ?> · Lon <?= e($curLng) ?>
+          <?php else: ?>
+            Marca el punto en el mapa
+          <?php endif; ?>
+        </span>
+        <input type="hidden" name="latitude" id="latitude" value="<?= e($curLat) ?>">
+        <input type="hidden" name="longitude" id="longitude" value="<?= e($curLng) ?>">
+        <p class="form-hint">Opcional: haz clic en el mapa o arrastra el marcador para marcar la ubicación del local.</p>
       </div>
     </div>
 
-    <div class="form-group">
-      <label for="town">Pueblo</label>
-      <input class="form-control" type="text" id="town" name="town"
-        value="<?= e($curTown ?? '') ?>">
+    <div data-location-section="aproximada" <?= $curType === 'exacta' ? 'hidden' : '' ?>>
+      <div class="form-group">
+        <label for="town">Barrio *</label>
+        <input class="form-control" type="text" id="town" name="town"
+          data-validate="required" maxlength="100"
+          <?= $curType === 'aproximada' ? 'required' : '' ?>
+          value="<?= e($curTown) ?>">
+      </div>
+      <div class="form-group">
+        <label for="approximate">Ubicación aproximada *</label>
+        <input class="form-control" type="text" id="approximate" name="approximate"
+          data-validate="required" maxlength="300"
+          <?= $curType === 'aproximada' ? 'required' : '' ?>
+          placeholder="Ej: Barrio El Carmen, 200 m norte del parque central"
+          value="<?= e($curApprox) ?>">
+      </div>
     </div>
+
     <div class="form-group">
       <label for="description">Otras señas de la ubicación</label>
-      <input class="form-control" type="text" id="description" name="description"
-        placeholder="Ej: frente al parque, portón azul, 200 m norte de..."
-        value="<?= e($curDesc ?? '') ?>">
-    </div>
-
-    <div class="form-group">
-      <label for="venue-map">Ubicación exacta en el mapa</label>
-      <div class="geo-search-box">
-        <input class="form-control" type="search" id="venue-map-search"
-          placeholder="Buscar dirección o cantón (ej. San José)...">
-        <ul class="geo-search-results" id="venue-map-results"></ul>
-      </div>
-      <div id="venue-map"></div>
-      <span id="geo-display" class="geo-coords <?= $curLat !== '' && $curLng !== '' ? '' : 'muted' ?>">
-        <?php if ($curLat !== '' && $curLng !== ''): ?>
-          Lat <?= e($curLat) ?> · Lon <?= e($curLng) ?>
-        <?php else: ?>
-          Marca el punto en el mapa
-        <?php endif; ?>
-      </span>
-      <input type="hidden" name="latitude" id="latitude" value="<?= e($curLat ?? '') ?>">
-      <input type="hidden" name="longitude" id="longitude" value="<?= e($curLng ?? '') ?>">
-      <p class="form-hint">Opcional: haz clic en el mapa o arrastra el marcador para marcar la ubicación del local.</p>
+      <textarea class="form-control" id="description" name="description" rows="3" maxlength="300"
+        placeholder="Ej: frente al parque, portón azul, 200 m norte de..."><?= e($curDesc) ?></textarea>
     </div>
 
     <button class="btn btn-primary" type="submit"><?= $isEdit ? 'Guardar cambios' : 'Crear local' ?></button>

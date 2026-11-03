@@ -107,9 +107,10 @@ if ($venue === null) {
   <div class="detail-item"><div class="k">Ubicación</div>
       <div class="v">
         <?php if ($location !== null): ?>
+          <?php $isApproximateLocation = $location->getTypeLocation() === 'aproximada'; ?>
           <div><?= format_venue_location($location) ?></div>
-          <?php if ($location->getTownLocation() !== null && $location->getTownLocation() !== ''): ?>
-            <div class="muted">Pueblo: <?= e($location->getTownLocation()) ?></div>
+          <?php if (!$isApproximateLocation && $location->getTownLocation() !== null && $location->getTownLocation() !== ''): ?>
+            <div class="muted">Barrio: <?= e($location->getTownLocation()) ?></div>
           <?php endif; ?>
           <?php if ($location->getDescriptionLocation() !== null && $location->getDescriptionLocation() !== ''): ?>
             <div class="muted">Señas: <?= e($location->getDescriptionLocation()) ?></div>

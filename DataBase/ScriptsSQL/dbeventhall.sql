@@ -90,7 +90,9 @@ CREATE TABLE tblocation (
     tblocationprovince VARCHAR(60) NOT NULL,
     tblocationcanton VARCHAR(60) NOT NULL,
     tblocationdistrict VARCHAR(60) NOT NULL,
+    tblocationtype VARCHAR(20) NOT NULL DEFAULT 'exacta',
     tblocationtown VARCHAR(100),
+    tblocationapproximate VARCHAR(300) NULL,
     tblocationdescription VARCHAR(300),
     tblocationlatitude DECIMAL(10,7) NULL,
     tblocationlongitude DECIMAL(10,7) NULL

@@ -13,13 +13,37 @@ class LocationService
         $this->locationRepo = $locationRepo;
     }
 
-    public function validateAndCreate(string $province, string $canton, string $district, ?string $town = null, ?string $description = null, ?float $latitude = null, ?float $longitude = null): int
+    public function validateAndCreate(string $province, string $canton, string $district, ?string $town = null, ?string $description = null, ?float $latitude = null, ?float $longitude = null, string $type = 'exacta', ?string $approximate = null): int
     {
+        $type = self::normalizeType($type);
+        $town = $town !== null ? trim($town) : null;
+        $description = $description !== null ? trim($description) : null;
+        $approximate = $approximate !== null ? trim($approximate) : null;
+
+        if ($type === 'aproximada') {
+            if ($town === null || $town === '' || $approximate === null || $approximate === '') {
+                throw new BusinessRuleException('El barrio y la ubicación aproximada son obligatorios.');
+            }
+
+            $newLocation = new Location(
+                idLocation: 0,
+                provinceLocation: '',
+                cantonLocation: '',
+                districtLocation: '',
+                townLocation: $town,
+                descriptionLocation: $description,
+                latitudeLocation: null,
+                longitudeLocation: null,
+                typeLocation: 'aproximada',
+                approximateLocation: $approximate
+            );
+
+            return $this->locationRepo->save($newLocation);
+        }
+
         $province = trim($province);
         $canton = trim($canton);
         $district = trim($district);
-        $town = $town !== null ? trim($town) : null;
-        $description = $description !== null ? trim($description) : null;
 
         if ($province === '' || $canton === '' || $district === '') {
             throw new BusinessRuleException("Provincia, cantón y distrito son obligatorios.");
@@ -39,7 +63,9 @@ class LocationService
             townLocation: $town,
             descriptionLocation: $description,
             latitudeLocation: $latitude,
-            longitudeLocation: $longitude
+            longitudeLocation: $longitude,
+            typeLocation: 'exacta',
+            approximateLocation: null
         );
 
         return $this->locationRepo->save($newLocation);
@@ -50,7 +76,7 @@ class LocationService
         return $this->locationRepo->findById($idLocation);
     }
 
-    public function validateAndUpdate(int $idLocation, string $province, string $canton, string $district, ?string $town = null, ?string $description = null, ?float $latitude = null, ?float $longitude = null): void
+    public function validateAndUpdate(int $idLocation, string $province, string $canton, string $district, ?string $town = null, ?string $description = null, ?float $latitude = null, ?float $longitude = null, ?string $type = null, ?string $approximate = null): void
     {
         $current = $this->locationRepo->findById($idLocation);
 
@@ -58,11 +84,36 @@ class LocationService
             throw new BusinessRuleException('La ubicación no existe.');
         }
 
+        $type = $type !== null ? self::normalizeType($type) : $current->getTypeLocation();
+        $town = $town !== null ? trim($town) : null;
+        $description = $description !== null ? trim($description) : null;
+        $approximate = $approximate !== null ? trim($approximate) : $current->getApproximateLocation();
+
+        if ($type === 'aproximada') {
+            if ($town === null || $town === '' || $approximate === null || $approximate === '') {
+                throw new BusinessRuleException('El barrio y la ubicación aproximada son obligatorios.');
+            }
+
+            $location = new Location(
+                idLocation: $idLocation,
+                provinceLocation: '',
+                cantonLocation: '',
+                districtLocation: '',
+                townLocation: $town,
+                descriptionLocation: $description,
+                latitudeLocation: null,
+                longitudeLocation: null,
+                typeLocation: 'aproximada',
+                approximateLocation: $approximate
+            );
+
+            $this->locationRepo->update($location);
+            return;
+        }
+
         $province = trim($province);
         $canton = trim($canton);
         $district = trim($district);
-        $town = $town !== null ? trim($town) : null;
-        $description = $description !== null ? trim($description) : null;
 
         if ($province === '' || $canton === '' || $district === '') {
             throw new BusinessRuleException('Provincia, cantón y distrito son obligatorios.');
@@ -86,10 +137,59 @@ class LocationService
             townLocation: $town,
             descriptionLocation: $description,
             latitudeLocation: $latitude,
-            longitudeLocation: $longitude
+            longitudeLocation: $longitude,
+            typeLocation: 'exacta',
+            approximateLocation: null
         );
 
         $this->locationRepo->update($location);
+    }
+
+    public function saveApproximate(?int $idLocation, string $town, string $approximate, ?string $description = null): int
+    {
+        $town = trim($town);
+        $approximate = trim($approximate);
+        $description = $description !== null ? trim($description) : null;
+
+        if ($town === '' || $approximate === '') {
+            throw new BusinessRuleException('El barrio y la ubicación aproximada son obligatorios.');
+        }
+
+        if ($idLocation !== null && $idLocation > 0) {
+            $current = $this->locationRepo->findById($idLocation);
+
+            if ($current === null) {
+                throw new BusinessRuleException('La ubicación no existe.');
+            }
+
+            $location = new Location(
+                idLocation: $idLocation,
+                provinceLocation: '',
+                cantonLocation: '',
+                districtLocation: '',
+                townLocation: $town,
+                descriptionLocation: $description,
+                latitudeLocation: null,
+                longitudeLocation: null,
+                typeLocation: 'aproximada',
+                approximateLocation: $approximate
+            );
+
+            $this->locationRepo->update($location);
+            return $idLocation;
+        }
+
+        return $this->validateAndCreate(
+            '',
+            '',
+            '',
+            $town,
+            $description,
+            null,
+            null,
+            'aproximada',
+            $approximate
+        );
     }
 
     /**
@@ -119,33 +219,42 @@ class LocationService
             $existing = $this->locationRepo->findIdByCanton($province, $canton);
         }
 
-            if ($existing !== null) {
-      $current = $this->locationRepo->findById($existing);
+        if ($existing !== null) {
+            $current = $this->locationRepo->findById($existing);
 
-      if ($current !== null) {
-        $latChanged = ($latitude !== null && $longitude !== null)
-          && ($current->getLatitudeLocation() !== $latitude || $current->getLongitudeLocation() !== $longitude);
-        $townChanged = (($current->getTownLocation() ?? null) !== ($town ?? null));
-        $descChanged = (($current->getDescriptionLocation() ?? null) !== ($description ?? null));
+            if ($current !== null) {
+                $latChanged = ($latitude !== null && $longitude !== null)
+                    && ($current->getLatitudeLocation() !== $latitude || $current->getLongitudeLocation() !== $longitude);
+                $townChanged = (($current->getTownLocation() ?? null) !== ($town ?? null));
+                $descChanged = (($current->getDescriptionLocation() ?? null) !== ($description ?? null));
+                $typeChanged = $current->getTypeLocation() !== 'exacta'
+                    || ($current->getApproximateLocation() ?? null) !== null;
 
-        if ($latChanged || $townChanged || $descChanged) {
-          $this->locationRepo->update(new Location(
-            idLocation: $existing,
-            provinceLocation: $current->getProvinceLocation(),
-            cantonLocation: $current->getCantonLocation(),
-            districtLocation: $current->getDistrictLocation(),
-            townLocation: $town,
-            descriptionLocation: $description,
-            latitudeLocation: $latitude,
-            longitudeLocation: $longitude
-          ));
+                if ($latChanged || $townChanged || $descChanged || $typeChanged) {
+                    $this->locationRepo->update(new Location(
+                        idLocation: $existing,
+                        provinceLocation: $current->getProvinceLocation(),
+                        cantonLocation: $current->getCantonLocation(),
+                        districtLocation: $current->getDistrictLocation(),
+                        townLocation: $town,
+                        descriptionLocation: $description,
+                        latitudeLocation: $latitude,
+                        longitudeLocation: $longitude,
+                        typeLocation: 'exacta',
+                        approximateLocation: null
+                    ));
+                }
+            }
+
+            return $existing;
         }
-      }
-
-      return $existing;
-    }
 
         return $this->validateAndCreate($province, $canton, $district, $town, $description, $latitude, $longitude);
+    }
+
+    private static function normalizeType(string $type): string
+    {
+        return strtolower(trim($type)) === 'aproximada' ? 'aproximada' : 'exacta';
     }
 
     /**

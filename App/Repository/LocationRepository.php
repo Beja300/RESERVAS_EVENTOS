@@ -19,7 +19,9 @@ class LocationRepository
                 tblocationprovince,
                 tblocationcanton,
                 tblocationdistrict,
+                tblocationtype,
                 tblocationtown,
+                tblocationapproximate,
                 tblocationdescription,
                 tblocationlatitude,
                 tblocationlongitude
@@ -28,7 +30,9 @@ class LocationRepository
                 :province,
                 :canton,
                 :district,
+                :type,
                 :town,
+                :approximate,
                 :description,
                 :latitude,
                 :longitude
@@ -41,7 +45,9 @@ class LocationRepository
             ':province'     => $location->getProvinceLocation(),
             ':canton'       => $location->getCantonLocation(),
             ':district'     => $location->getDistrictLocation(),
+            ':type'         => $location->getTypeLocation(),
             ':town'         => $location->getTownLocation(),
+            ':approximate'  => $location->getApproximateLocation(),
             ':description'  => $location->getDescriptionLocation(),
             ':latitude'     => $location->getLatitudeLocation(),
             ':longitude'    => $location->getLongitudeLocation(),
@@ -58,7 +64,9 @@ class LocationRepository
                 tblocationprovince,
                 tblocationcanton,
                 tblocationdistrict,
+                tblocationtype,
                 tblocationtown,
+                tblocationapproximate,
                 tblocationdescription,
                 tblocationlatitude,
                 tblocationlongitude
@@ -82,7 +90,9 @@ class LocationRepository
                 tblocationprovince,
                 tblocationcanton,
                 tblocationdistrict,
+                tblocationtype,
                 tblocationtown,
+                tblocationapproximate,
                 tblocationdescription,
                 tblocationlatitude,
                 tblocationlongitude
@@ -126,7 +136,9 @@ class LocationRepository
             SET tblocationprovince = :province,
                 tblocationcanton = :canton,
                 tblocationdistrict = :district,
+                tblocationtype = :type,
                 tblocationtown = :town,
+                tblocationapproximate = :approximate,
                 tblocationdescription = :description,
                 tblocationlatitude = :latitude,
                 tblocationlongitude = :longitude
@@ -139,7 +151,9 @@ class LocationRepository
             ':province'    => $location->getProvinceLocation(),
             ':canton'      => $location->getCantonLocation(),
             ':district'    => $location->getDistrictLocation(),
+            ':type'        => $location->getTypeLocation(),
             ':town'        => $location->getTownLocation(),
+            ':approximate' => $location->getApproximateLocation(),
             ':description' => $location->getDescriptionLocation(),
             ':latitude'    => $location->getLatitudeLocation(),
             ':longitude'   => $location->getLongitudeLocation(),
@@ -207,7 +221,9 @@ class LocationRepository
             townLocation: $row['tblocationtown'],
             descriptionLocation: $row['tblocationdescription'],
             latitudeLocation: isset($row['tblocationlatitude']) && $row['tblocationlatitude'] !== null ? (float) $row['tblocationlatitude'] : null,
-            longitudeLocation: isset($row['tblocationlongitude']) && $row['tblocationlongitude'] !== null ? (float) $row['tblocationlongitude'] : null
+            longitudeLocation: isset($row['tblocationlongitude']) && $row['tblocationlongitude'] !== null ? (float) $row['tblocationlongitude'] : null,
+            typeLocation: $row['tblocationtype'] ?? 'exacta',
+            approximateLocation: $row['tblocationapproximate'] ?? null
         );
     }
 }

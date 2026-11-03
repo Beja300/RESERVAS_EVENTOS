@@ -188,6 +188,11 @@
     return this.disabled;
   };
 
+  Combo.prototype.setRequired = function (required) {
+    this.input.required = !!required;
+    this.input.setAttribute('aria-required', required ? 'true' : 'false');
+  };
+
   Combo.prototype._visibleItems = function () {
     var q = (this.filter || '').toLowerCase().trim();
     if (!q) {
@@ -287,6 +292,8 @@
     this.cantonSel = cantonSel;
     this.districtSel = districtSel;
     this.data = {};
+    this.required = false;
+    this.nativeFallback = false;
 
     this.provinceCombo = new Combo(provinceSel, {
       placeholder: provinceSel.options[0].textContent,
@@ -321,6 +328,32 @@
   Group.prototype.districts = function (province, canton) {
     var map = this.data[province] || {};
     return (map[canton] || []);
+  };
+
+  Group.prototype.setRequired = function (required) {
+    this.required = !!required;
+
+    if (this.nativeFallback) {
+      this.provinceSel.required = this.required;
+      this.cantonSel.required = this.required;
+      this.districtSel.required = this.required;
+      this.provinceCombo.setRequired(false);
+      this.cantonCombo.setRequired(false);
+      this.districtCombo.setRequired(false);
+      return;
+    }
+
+    this.provinceSel.required = false;
+    this.cantonSel.required = false;
+    this.districtSel.required = false;
+    this.provinceCombo.setRequired(this.required);
+    this.cantonCombo.setRequired(this.required);
+    this.districtCombo.setRequired(this.required);
+  };
+
+  Group.prototype.setNativeFallback = function () {
+    this.nativeFallback = true;
+    this.setRequired(this.required);
   };
 
   Group.prototype.syncNative = function () {
@@ -420,6 +453,8 @@
     }
 
     var group = new Group(provinceSel, cantonSel, districtSel);
+    window.VenueLocationGroup = group;
+    document.dispatchEvent(new Event('venue:location-ready'));
 
     fetch(getBasePath() + '/' + API_URL)
       .then(function (res) { return res.json(); })
@@ -437,6 +472,7 @@
         group.provinceSel.style.display = '';
         group.cantonSel.style.display = '';
         group.districtSel.style.display = '';
+        group.setNativeFallback();
       });
   }
 

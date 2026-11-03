@@ -173,6 +173,18 @@ if (!function_exists('format_venue_location')) {
             return '';
         }
 
+        if ($location->getTypeLocation() === 'aproximada') {
+            $parts = array_values(array_filter(
+                [
+                    trim((string) $location->getTownLocation()),
+                    trim((string) $location->getApproximateLocation()),
+                ],
+                static fn(string $part): bool => $part !== ''
+            ));
+
+            return $parts === [] ? '' : e(implode(' · ', $parts));
+        }
+
         $province = trim((string) $location->getProvinceLocation());
         $canton = trim((string) $location->getCantonLocation());
         $district = trim((string) $location->getDistrictLocation());

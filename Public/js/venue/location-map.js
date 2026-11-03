@@ -215,4 +215,10 @@
   if (cantonSel) {
     cantonSel.addEventListener('change', recenterToAddress);
   }
+
+  window.VenueLocationMap = {
+    invalidateSize: function () {
+      map.invalidateSize();
+    }
+  };
 })(window, document, window.L);

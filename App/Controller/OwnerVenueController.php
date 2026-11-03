@@ -71,9 +71,11 @@ class OwnerVenueController
     $canton = trim($_POST['canton'] ?? '');
     $district = trim($_POST['district'] ?? '');
     $town = trim($_POST['town'] ?? '') ?: null;
+    $approximate = trim($_POST['approximate'] ?? '') ?: null;
     $description = trim($_POST['description'] ?? '') ?: null;
     $latitude = isset($_POST['latitude']) && $_POST['latitude'] !== '' ? (float) $_POST['latitude'] : null;
     $longitude = isset($_POST['longitude']) && $_POST['longitude'] !== '' ? (float) $_POST['longitude'] : null;
+    $locationType = strtolower(trim($_POST['locationType'] ?? 'exacta')) === 'aproximada' ? 'aproximada' : 'exacta';
     $name = trim($_POST['name'] ?? '');
     $type = trim($_POST['type'] ?? '') ?: null;
     $capacity = isset($_POST['capacity']) && $_POST['capacity'] !== '' ? (int) $_POST['capacity'] : null;
@@ -99,7 +101,9 @@ class OwnerVenueController
         $price,
         $image,
         $latitude,
-        $longitude
+        $longitude,
+        $locationType,
+        $approximate
       );
 
       respond_or_redirect(
@@ -144,9 +148,11 @@ class OwnerVenueController
     $canton = trim($_POST['canton'] ?? '');
     $district = trim($_POST['district'] ?? '');
     $town = trim($_POST['town'] ?? '') ?: null;
+    $approximate = trim($_POST['approximate'] ?? '') ?: null;
     $description = trim($_POST['description'] ?? '') ?: null;
     $latitude = isset($_POST['latitude']) && $_POST['latitude'] !== '' ? (float) $_POST['latitude'] : null;
     $longitude = isset($_POST['longitude']) && $_POST['longitude'] !== '' ? (float) $_POST['longitude'] : null;
+    $locationType = strtolower(trim($_POST['locationType'] ?? 'exacta')) === 'aproximada' ? 'aproximada' : 'exacta';
 
     $venue = null;
 
@@ -161,7 +167,24 @@ class OwnerVenueController
 
       $image = $this->resolveVenueImage($owner->getIdOwner(), $venue->getImageVenue());
 
-      $idLocation = $this->locationService->findOrCreateByParts($province, $canton, $district, $town, $description, $latitude, $longitude);
+      if ($locationType === 'aproximada') {
+        $idLocation = $this->locationService->saveApproximate(
+          $venue->getIdLocation() !== null && $venue->getIdLocation() > 0 ? $venue->getIdLocation() : null,
+          (string) $town,
+          (string) $approximate,
+          $description
+        );
+      } else {
+        if ($province === '' || $canton === '' || $district === '') {
+          throw new BusinessRuleException('Debes completar provincia, cantón y distrito.');
+        }
+
+        $idLocation = $this->locationService->findOrCreateByParts($province, $canton, $district, $town, $description, $latitude, $longitude);
+
+        if ($idLocation === null) {
+          throw new BusinessRuleException('No se pudo guardar la ubicación exacta.');
+        }
+      }
 
       $this->venueService->validateAndUpdate(
         $venue,
