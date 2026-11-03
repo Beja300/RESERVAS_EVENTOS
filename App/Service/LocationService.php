@@ -27,10 +27,13 @@ class LocationService
 
         self::assertValidCoordinates($latitude, $longitude);
 
-        // La unicidad es del detalle completo: dos locales pueden compartir
-        // provincia/cantón/distrito siempre que tengan pueblo o señas distintas.
-        if ($this->locationRepo->findIdByPartsAndDetail($province, $canton, $district, $town, $description) !== null) {
-            throw new BusinessRuleException('Ya existe una ubicación con esa provincia, cantón, distrito y detalle.');
+        // Provincia/cantón/distrito no son únicos: varios locales pueden
+        // coexistir en la misma zona. Solo se reutiliza la fila si el detalle
+        // (pueblo + señas) coincide exactamente; si no, se crea una nueva.
+        $existingId = $this->locationRepo->findIdByPartsAndDetail($province, $canton, $district, $town, $description);
+        if ($existingId !== null) {
+            $this->syncCoordinates($existingId, $latitude, $longitude);
+            return $existingId;
         }
 
         $newLocation = new Location(
@@ -44,7 +47,21 @@ class LocationService
             longitudeLocation: $longitude
         );
 
-        return $this->locationRepo->save($newLocation);
+        try {
+            return $this->locationRepo->save($newLocation);
+        } catch (PDOException $e) {
+            // Solo un duplicado exacto (mismo detalle) se reutiliza. No se
+            // fusionan locales distintos que compartan provincia/cantón/distrito.
+            $isDuplicate = $e->getCode() === '23000' || str_contains($e->getMessage(), '1062');
+            if ($isDuplicate) {
+                $existingId = $this->locationRepo->findIdByPartsAndDetail($province, $canton, $district, $town, $description);
+                if ($existingId !== null) {
+                    $this->syncCoordinates($existingId, $latitude, $longitude);
+                    return $existingId;
+                }
+            }
+            throw $e;
+        }
     }
 
     public function findById(int $idLocation): ?Location
@@ -96,10 +113,10 @@ class LocationService
     }
 
     /**
-     * Devuelve el id de una ubicación que coincida con las partes dadas,
-     * reutilizando filas existentes (por partes exactas o solo por cantón)
-     * para no duplicar registros; solo crea una nueva si no existe ninguna.
-     * Si la fila ya existe pero recibe coordenadas nuevas, las actualiza.
+     * Devuelve el id de una ubicación con el mismo detalle geográfico
+     * (provincia, cantón, distrito, pueblo y señas). No reutiliza por
+     * cantón/distrito solo, para no mezclar locales distintos de la misma zona.
+     * Si la fila ya existe y llegan coordenadas nuevas, las actualiza.
      */
     public function findOrCreateByParts(string $province, string $canton, string $district, ?string $town = null, ?string $description = null, ?float $latitude = null, ?float $longitude = null): int
     {
@@ -113,39 +130,33 @@ class LocationService
 
         self::assertValidCoordinates($latitude, $longitude);
 
-        $existing = $this->locationRepo->findIdByParts($province, $canton, $district);
+        $town = $town !== null ? trim($town) : null;
+        $description = $description !== null ? trim($description) : null;
 
-        if ($existing === null) {
-            $existing = $this->locationRepo->findIdByCanton($province, $canton);
+        $existing = $this->locationRepo->findIdByPartsAndDetail($province, $canton, $district, $town, $description);
+
+        if ($existing !== null) {
+            $this->syncCoordinates($existing, $latitude, $longitude);
+            return $existing;
         }
-
-            if ($existing !== null) {
-      $current = $this->locationRepo->findById($existing);
-
-      if ($current !== null) {
-        $latChanged = ($latitude !== null && $longitude !== null)
-          && ($current->getLatitudeLocation() !== $latitude || $current->getLongitudeLocation() !== $longitude);
-        $townChanged = (($current->getTownLocation() ?? null) !== ($town ?? null));
-        $descChanged = (($current->getDescriptionLocation() ?? null) !== ($description ?? null));
-
-        if ($latChanged || $townChanged || $descChanged) {
-          $this->locationRepo->update(new Location(
-            idLocation: $existing,
-            provinceLocation: $current->getProvinceLocation(),
-            cantonLocation: $current->getCantonLocation(),
-            districtLocation: $current->getDistrictLocation(),
-            townLocation: $town,
-            descriptionLocation: $description,
-            latitudeLocation: $latitude,
-            longitudeLocation: $longitude
-          ));
-        }
-      }
-
-      return $existing;
-    }
 
         return $this->validateAndCreate($province, $canton, $district, $town, $description, $latitude, $longitude);
+    }
+
+    private function syncCoordinates(int $idLocation, ?float $latitude, ?float $longitude): void
+    {
+        if ($latitude === null || $longitude === null) {
+            return;
+        }
+
+        $current = $this->locationRepo->findById($idLocation);
+        if ($current === null) {
+            return;
+        }
+
+        if ($current->getLatitudeLocation() !== $latitude || $current->getLongitudeLocation() !== $longitude) {
+            $this->locationRepo->updateCoordinates($idLocation, $latitude, $longitude);
+        }
     }
 
     /**

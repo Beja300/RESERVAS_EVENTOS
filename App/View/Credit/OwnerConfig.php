@@ -26,15 +26,17 @@
 
     <div class="form-group">
       <label for="days">Plazo de pago (días) <span class="required-mark">*</span></label>
-      <input class="form-control" type="number" id="days" name="days" min="1" max="365" required
-             data-validate="positiveint"
+      <input class="form-control no-spin" type="text" id="days" name="days" inputmode="numeric"
+             pattern="[0-9]*" autocomplete="off" required
+             data-validate="required positiveint"
              value="<?= (int) $config->getDays() ?>">
       <div class="form-hint">Entre 1 y 365 días contados desde la fecha de la reserva.</div>
     </div>
 
     <div class="form-group">
       <label for="frequentMin">Reservas mínimas para ser cliente frecuente</label>
-      <input class="form-control" type="number" id="frequentMin" name="frequentMin" min="0" max="1000"
+      <input class="form-control no-spin" type="text" id="frequentMin" name="frequentMin"
+             inputmode="numeric" pattern="[0-9]*" autocomplete="off"
              value="<?= (int) $config->getFrequentMin() ?>">
       <div class="form-hint">0 = cualquier cliente puede financiar. Ej: 3 exige al menos 3 reservas previas.</div>
     </div>

@@ -61,7 +61,7 @@ class LocationController
 
     try {
 
-      $this->locationService->validateAndCreate($province, $canton, $district, $town, $description);
+      $this->locationService->findOrCreateByParts($province, $canton, $district, $town, $description);
 
       redirect_to('location', 'list');
     } catch (BusinessRuleException $e) {

@@ -55,9 +55,13 @@ $paymentMethods = $paymentMethods ?? [];
 
     <div class="form-group">
       <label for="account">Cuenta bancaria / teléfono SINPE *</label>
-      <input class="form-control" type="text" id="account" name="account" required
+      <input class="form-control" type="text" id="account" name="account"
              data-validate="required account"
              placeholder="Ej: 88887777 o CR12 1234 5678 9012 3456 7">
+      <p class="form-hint" data-account-hint>
+        Elige el método: SINPE pide un teléfono de 8 dígitos, Transferencia un IBAN
+        y Efectivo no requiere cuenta.
+      </p>
     </div>
 
     <div class="form-group">

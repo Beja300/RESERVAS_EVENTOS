@@ -309,18 +309,40 @@ $hasTicket = $ticket !== null;
         &nbsp;(<?= strtoupper(e($ticket->getType())) ?>)
       </p>
       <?php
-        $pmName = null;
-        foreach ($paymentMethods as $pm) {
-          if ($pm->getIdPaymentMethod() === $ticket->getPaymentMethodId()) {
-            $pmName = $pm->getPaymentMethod();
-            break;
+        $ticketPayment = $ticketPayment ?? null;
+        if ($ticketPayment === null) {
+          foreach ($ownerPaymentMethods as $op) {
+            if ((int) $op['idPaymentMethod'] === $ticket->getPaymentMethodId()) {
+              $ticketPayment = $op;
+              break;
+            }
           }
         }
       ?>
-      <?php if ($pmName !== null): ?>
+      <?php if (!empty($ticketPayment['paymentMethod'])): ?>
         <p class="muted" style="margin:0 0 8px;">
-          Método de pago: <strong><?= e($pmName) ?></strong>
+          Método de pago: <strong><?= e($ticketPayment['paymentMethod']) ?></strong>
         </p>
+        <?php if (!empty($ticketPayment['holder'])): ?>
+          <p class="muted" style="margin:0 0 8px;">Titular: <strong><?= e($ticketPayment['holder']) ?></strong></p>
+        <?php endif; ?>
+        <?php if (!empty($ticketPayment['account'])): ?>
+          <?php
+            $pmLabel = 'Cuenta / Teléfono';
+            $pmLower = mb_strtolower((string) $ticketPayment['paymentMethod']);
+            if (str_contains($pmLower, 'sinpe')) {
+              $pmLabel = 'Teléfono SINPE';
+            } elseif (str_contains($pmLower, 'transfer')) {
+              $pmLabel = 'IBAN / cuenta bancaria';
+            } elseif (str_contains($pmLower, 'efectivo')) {
+              $pmLabel = 'Referencia';
+            }
+          ?>
+          <p class="muted" style="margin:0 0 8px;"><?= e($pmLabel) ?>: <strong><?= e($ticketPayment['account']) ?></strong></p>
+        <?php endif; ?>
+        <?php if (!empty($ticketPayment['instructions'])): ?>
+          <p class="muted" style="margin:0 0 8px;">Instrucciones: <?= e($ticketPayment['instructions']) ?></p>
+        <?php endif; ?>
       <?php endif; ?>
       <a class="btn btn-sm btn-ghost" href="<?= e(image_url($ticket->getFile())) ?>" target="_blank" rel="noopener">
         &#128065; Ver comprobante

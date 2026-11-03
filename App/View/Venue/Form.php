@@ -75,7 +75,7 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
       <input class="form-control" type="file" id="image" name="image" accept="image/*"
         <?= $isEdit ? '' : 'required' ?> onchange="var f=this.files[0];var p=document.getElementById('imagePreview');if(f){var r=new FileReader();r.onload=function(e){p.src=e.target.result;p.style.display='block';};r.readAsDataURL(f);}">
       <?php $currentImg = $isEdit ? $venue->getImageVenue() : ($_POST['image'] ?? ''); ?>
-      <img id="imagePreview" src="<?= e(image_url($currentImg !== '' ? $currentImg : null)) ?>"
+      <img id="imagePreview" <?= $currentImg !== '' ? 'src="' . e(image_url($currentImg)) . '"' : '' ?>
         alt="Vista previa del local" style="<?= $currentImg !== '' ? 'display:block;' : 'display:none;' ?>width:160px;height:110px;object-fit:cover;border-radius:8px;margin-top:10px;border:1px solid var(--neutral-200);">
       <p class="form-hint">Sube una foto desde tu equipo (jpg, png, webp o gif, máx. 2 MB).</p>
     </div>
@@ -134,7 +134,7 @@ $curLng      = $isEdit && $location !== null ? ($location->getLongitudeLocation(
           placeholder="Buscar dirección o cantón (ej. San José)...">
         <ul class="geo-search-results" id="venue-map-results"></ul>
       </div>
-      <div id="venue-map"></div>
+      <div id="venue-map" data-leaflet-images="<?= e($basePath . '/vendor/leaflet/images') ?>"></div>
       <span id="geo-display" class="geo-coords <?= $curLat !== '' && $curLng !== '' ? '' : 'muted' ?>">
         <?php if ($curLat !== '' && $curLng !== ''): ?>
           Lat <?= e($curLat) ?> · Lon <?= e($curLng) ?>

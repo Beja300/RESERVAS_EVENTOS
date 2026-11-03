@@ -2,14 +2,17 @@
 
 require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/OwnerPaymentRepository.php';
+require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
 
 class OwnerPaymentService
 {
   private OwnerPaymentRepository $repo;
+  private PaymentMethodRepository $paymentMethodRepo;
 
   public function __construct(PDO $connection)
   {
     $this->repo = new OwnerPaymentRepository($connection);
+    $this->paymentMethodRepo = new PaymentMethodRepository($connection);
   }
 
   // =========================================================
@@ -25,11 +28,13 @@ class OwnerPaymentService
       throw new BusinessRuleException('El titular es obligatorio para este método de cobro.');
     }
 
-    if (trim($account) === '') {
-      throw new BusinessRuleException('La cuenta bancaria o teléfono SINPE es obligatoria.');
+    $method = $this->paymentMethodRepo->findById($paymentMethodPk);
+    if ($method === null || !$method->getIsActive()) {
+      throw new BusinessRuleException('Este método de pago no está disponible.');
     }
 
-    $this->assertValidAccount($account);
+    $methodName = $method->getPaymentMethod();
+    $this->assertValidAccountForMethod($methodName, $account);
 
     if ($ownerPaymentPk > 0) {
       $op = $this->repo->findById($ownerPaymentPk);
@@ -98,15 +103,57 @@ class OwnerPaymentService
   // =========================================================
   // LA CUENTA DEBE SER UN SINPE MÓVIL (8 DÍGITOS) O UN IBAN.
   // =========================================================
-  private function assertValidAccount(string $account): void
+  private function assertValidAccountForMethod(string $methodName, string $account): void
   {
+    $kind = self::methodKind($methodName);
+
+    if ($kind === 'cash') {
+      return;
+    }
+
+    if (trim($account) === '') {
+      throw new BusinessRuleException(
+        $kind === 'sinpe'
+          ? 'El teléfono SINPE Móvil es obligatorio.'
+          : 'La cuenta bancaria / IBAN es obligatoria.'
+      );
+    }
+
     $normalized = preg_replace('/[\s-]/', '', $account);
+
+    if ($kind === 'sinpe') {
+      if (preg_match('/^\d{8}$/', $normalized) !== 1) {
+        throw new BusinessRuleException('El teléfono SINPE debe tener 8 dígitos.');
+      }
+      return;
+    }
+
+    if ($kind === 'transfer') {
+      if (preg_match('/^[A-Za-z]{2}[\dA-Za-z]{18,22}$/', $normalized) !== 1) {
+        throw new BusinessRuleException('Indica un IBAN válido para la transferencia bancaria.');
+      }
+      return;
+    }
 
     $isSinpe = preg_match('/^\d{8}$/', $normalized) === 1;
     $isIban = preg_match('/^[A-Za-z]{2}[\dA-Za-z]{18,22}$/', $normalized) === 1;
-
     if (!$isSinpe && !$isIban) {
       throw new BusinessRuleException('La cuenta debe ser un teléfono SINPE de 8 dígitos o un IBAN válido.');
     }
+  }
+
+  public static function methodKind(string $methodName): string
+  {
+    $name = mb_strtolower($methodName);
+    if (str_contains($name, 'efectivo') || str_contains($name, 'cash')) {
+      return 'cash';
+    }
+    if (str_contains($name, 'sinpe')) {
+      return 'sinpe';
+    }
+    if (str_contains($name, 'transfer')) {
+      return 'transfer';
+    }
+    return 'other';
   }
 }

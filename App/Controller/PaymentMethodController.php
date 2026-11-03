@@ -37,6 +37,8 @@ class PaymentMethodController
   {
     $this->requireAdmin();
 
+    $catalogTypes = PaymentMethodService::catalogTypes();
+
     require_once __DIR__ . '/../View/PaymentMethod/Form.php';
   }
 
@@ -63,6 +65,7 @@ class PaymentMethodController
     } catch (BusinessRuleException $e) {
 
       $error = $e->getMessage();
+      $catalogTypes = PaymentMethodService::catalogTypes();
 
       require_once __DIR__ . '/../View/PaymentMethod/Form.php';
     }
@@ -83,7 +86,31 @@ class PaymentMethodController
       exit;
     }
 
+    $catalogTypes = $this->catalogOptions($paymentMethod->getPaymentMethod());
+
     require_once __DIR__ . '/../View/PaymentMethod/Edit.php';
+  }
+
+  /**
+   * @return list<string>
+   */
+  private function catalogOptions(string $current = ''): array
+  {
+    $types = PaymentMethodService::catalogTypes();
+    $current = trim($current);
+    if ($current !== '') {
+      $exists = false;
+      foreach ($types as $type) {
+        if (strcasecmp($type, $current) === 0) {
+          $exists = true;
+          break;
+        }
+      }
+      if (!$exists) {
+        $types[] = $current;
+      }
+    }
+    return $types;
   }
 
   // =========================================================
@@ -117,6 +144,8 @@ class PaymentMethodController
         header('Location: ' . base_url('paymentmethod', 'list'));
         exit;
       }
+
+      $catalogTypes = $this->catalogOptions($paymentMethod->getPaymentMethod());
 
       require_once __DIR__ . '/../View/PaymentMethod/Edit.php';
     }

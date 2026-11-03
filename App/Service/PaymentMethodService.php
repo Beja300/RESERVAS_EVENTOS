@@ -37,8 +37,21 @@ class PaymentMethodService
         }
     }
 
+    /**
+     * @return list<string>
+     */
+    public static function catalogTypes(): array
+    {
+        return PaymentMethodRepository::CATALOG;
+    }
+
     public function validateAndCreate(string $type): int
     {
+        $type = trim($type);
+        if ($type === '') {
+            throw new BusinessRuleException('El tipo de método de pago es obligatorio.');
+        }
+
         $this->validateTypeIsUnique($type);
 
         $paymentMethod = new PaymentMethod(

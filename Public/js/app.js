@@ -335,6 +335,8 @@
         message = 'El precio no puede ser negativo.';
       } else if (rules.indexOf('positive') !== -1 && App.parseMoney(value) <= 0) {
         message = 'Debe ser un número mayor que 0.';
+      } else if (rules.indexOf('positiveint') !== -1 && !/^[1-9]\d*$/.test(value)) {
+        message = 'Debe ser un número entero mayor que 0.';
       }
     }
 

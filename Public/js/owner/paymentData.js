@@ -33,6 +33,46 @@
       }
     }
 
+    function applyMethodUi() {
+      if (!form) return;
+      var select = form.querySelector('[name="paymentMethodId"]');
+      var account = form.querySelector('#account');
+      var label = form.querySelector('label[for="account"]');
+      var hint = form.querySelector('[data-account-hint]');
+      if (!select || !account) return;
+
+      var name = (select.options[select.selectedIndex] && select.options[select.selectedIndex].text || '').toLowerCase();
+      var isCash = name.indexOf('efectivo') !== -1;
+      var isSinpe = name.indexOf('sinpe') !== -1;
+      var isTransfer = name.indexOf('transfer') !== -1;
+
+      if (isCash) {
+        account.removeAttribute('required');
+        account.setAttribute('data-validate', '');
+        account.placeholder = 'Opcional (ej. caja del local)';
+        if (label) label.textContent = 'Referencia de cobro';
+        if (hint) hint.textContent = 'En efectivo puedes dejar instrucciones para pagar el día del evento.';
+      } else if (isSinpe) {
+        account.setAttribute('required', 'required');
+        account.setAttribute('data-validate', 'required phone');
+        account.placeholder = 'Ej: 88887777';
+        if (label) label.textContent = 'Teléfono SINPE Móvil *';
+        if (hint) hint.textContent = 'Número de 8 dígitos al que el cliente enviará el SINPE.';
+      } else if (isTransfer) {
+        account.setAttribute('required', 'required');
+        account.setAttribute('data-validate', 'required account');
+        account.placeholder = 'Ej: CR12 1234 5678 9012 3456 7';
+        if (label) label.textContent = 'IBAN / cuenta bancaria *';
+        if (hint) hint.textContent = 'Cuenta IBAN donde el cliente hará la transferencia.';
+      } else {
+        account.setAttribute('required', 'required');
+        account.setAttribute('data-validate', 'required account');
+        account.placeholder = 'Ej: 88887777 o CR12 1234 5678 9012 3456 7';
+        if (label) label.textContent = 'Cuenta bancaria / teléfono SINPE *';
+        if (hint) hint.textContent = 'Teléfono SINPE de 8 dígitos o IBAN de la cuenta.';
+      }
+    }
+
     function resetForm() {
       if (!form) return;
       form.reset();
@@ -40,6 +80,7 @@
       if (idField) idField.value = '0';
       var active = form.querySelector('[name="active"]');
       if (active) active.checked = true;
+      applyMethodUi();
     }
 
     toggle.addEventListener('click', function () {
@@ -70,10 +111,17 @@
         var idField = form.querySelector('[data-payment-id]');
         if (idField) idField.value = btn.getAttribute('data-id');
 
+        applyMethodUi();
         setOpen(true);
         form.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
+
+    var methodSelect = form ? form.querySelector('[name="paymentMethodId"]') : null;
+    if (methodSelect) {
+      methodSelect.addEventListener('change', applyMethodUi);
+      applyMethodUi();
+    }
   }
 
   // Guardar y eliminar métodos de cobro.
@@ -85,6 +133,7 @@
 
         var valid = true;
         save.querySelectorAll('[data-validate]').forEach(function (f) {
+          if (!(f.getAttribute('data-validate') || '').trim()) return;
           if (window.App && App.validateField && !App.validateField(f)) valid = false;
         });
         if (!valid) {

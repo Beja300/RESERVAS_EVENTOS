@@ -216,6 +216,22 @@ class OwnerPaymentRepository
 
   private function toBool(mixed $value): bool
   {
-    return $value === 1 || $value === '1' || $value === true;
+    if (is_bool($value)) {
+      return $value;
+    }
+    if (is_int($value) || is_float($value)) {
+      return $value != 0;
+    }
+    if (is_string($value) && strlen($value) === 1 && ord($value) <= 1) {
+      return ord($value) === 1;
+    }
+    $normalized = strtolower(trim((string) $value));
+    if (in_array($normalized, ['0', 'false', 'f', 'no', 'off', ''], true)) {
+      return false;
+    }
+    if (in_array($normalized, ['1', 'true', 't', 'yes', 'on'], true)) {
+      return true;
+    }
+    return is_numeric($normalized) && (float) $normalized != 0.0;
   }
 }

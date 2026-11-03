@@ -1,5 +1,7 @@
 <?php require_once __DIR__ . '/../_header.php';
 $isActive = !empty($_POST) ? isset($_POST['isActive']) : $paymentMethod->getIsActive();
+$catalogTypes = $catalogTypes ?? ['Efectivo', 'Transferencia Bancaria', 'SINPE Móvil'];
+$selectedType = $_POST['type'] ?? $paymentMethod->getPaymentMethod();
 ?>
 
 <div class="page-head">
@@ -18,9 +20,14 @@ $isActive = !empty($_POST) ? isset($_POST['isActive']) : $paymentMethod->getIsAc
     <input type="hidden" name="id" value="<?= (int) $paymentMethod->getIdPaymentMethod() ?>">
     <div class="form-group">
       <label for="type">Tipo de método de pago <span class="required-mark">*</span></label>
-      <input class="form-control" type="text" id="type" name="type" required
-             placeholder="Ej: Tarjeta de crédito, Transferencia, Efectivo..."
-             value="<?= e($_POST['type'] ?? $paymentMethod->getPaymentMethod()) ?>">
+      <select class="form-control" id="type" name="type" required>
+        <?php foreach ($catalogTypes as $typeOption): ?>
+          <option value="<?= e($typeOption) ?>" <?= $selectedType === $typeOption ? 'selected' : '' ?>>
+            <?= e($typeOption) ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+      <p class="form-hint">Catálogo base: Efectivo, Transferencia Bancaria y SINPE Móvil.</p>
     </div>
 
     <div class="form-group">

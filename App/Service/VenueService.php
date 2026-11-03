@@ -48,7 +48,7 @@ class VenueService
             throw new BusinessRuleException("El tipo de local es obligatorio.");
         }
 
-        $locationPk = $this->locationService->validateAndCreate(
+        $locationPk = $this->locationService->findOrCreateByParts(
             $province,
             $canton,
             $district,

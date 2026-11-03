@@ -29,10 +29,25 @@
   }
 
   var base = getBasePath();
-
-  L.Icon.Default.imagePath = base + '/vendor/leaflet/images/';
-
   var mapEl = document.getElementById('venue-map');
+  var imagesPath = ((mapEl && mapEl.getAttribute('data-leaflet-images')) || (base + '/vendor/leaflet/images'))
+    .replace(/\/?$/, '/');
+
+  // Leaflet adivina mal la ruta del PIN si el CSS/JS no coinciden con el
+  // front controller. Se fijan las URLs absolutas de los PNG locales.
+  L.Icon.Default.imagePath = imagesPath;
+  delete L.Icon.Default.prototype._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconUrl: imagesPath + 'marker-icon.png',
+    iconRetinaUrl: imagesPath + 'marker-icon-2x.png',
+    shadowUrl: imagesPath + 'marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    tooltipAnchor: [16, -28],
+    shadowSize: [41, 41]
+  });
+
   var latInput = document.getElementById('latitude');
   var lngInput = document.getElementById('longitude');
   var displayEl = document.getElementById('geo-display');

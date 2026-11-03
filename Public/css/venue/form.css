@@ -44,6 +44,12 @@
   z-index: 0;
 }
 
+#venue-map img.leaflet-marker-icon,
+#venue-map img.leaflet-marker-shadow {
+  max-width: none !important;
+  max-height: none !important;
+}
+
 .geo-coords {
   display: block;
   margin-top: 8px;

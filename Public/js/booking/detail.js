@@ -50,6 +50,14 @@
       return null;
     }
 
+    function accountLabel(name) {
+      var n = String(name || '').toLowerCase();
+      if (n.indexOf('sinpe') !== -1) return 'Teléfono SINPE';
+      if (n.indexOf('efectivo') !== -1) return 'Referencia';
+      if (n.indexOf('transfer') !== -1) return 'IBAN / cuenta bancaria';
+      return 'Cuenta / Teléfono';
+    }
+
     function showInfo(op) {
       if (!op) {
         infoBox.style.display = 'none';
@@ -60,10 +68,10 @@
         return;
       }
       var parts = [];
-      parts.push('<strong>Datos para pagar a ' + op.paymentMethod + ':</strong>');
+      parts.push('<strong>Pagar con ' + App.escape(op.paymentMethod || '') + '</strong>');
       if (op.holder) parts.push('<div>Titular: <strong>' + App.escape(op.holder) + '</strong></div>');
-      if (op.account) parts.push('<div>Cuenta / Teléfono: <strong>' + App.escape(op.account) + '</strong></div>');
-      if (op.instructions) parts.push('<div>' + App.escape(op.instructions) + '</div>');
+      if (op.account) parts.push('<div>' + accountLabel(op.paymentMethod) + ': <strong>' + App.escape(op.account) + '</strong></div>');
+      if (op.instructions) parts.push('<div>Instrucciones: ' + App.escape(op.instructions) + '</div>');
       infoBox.innerHTML = parts.join('');
       infoBox.style.display = 'block';
       hidden.value = String(op.idPaymentMethod);

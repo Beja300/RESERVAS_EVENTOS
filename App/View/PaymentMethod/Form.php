@@ -1,4 +1,8 @@
-<?php require_once __DIR__ . '/../_header.php'; ?>
+<?php
+$catalogTypes = $catalogTypes ?? ['Efectivo', 'Transferencia Bancaria', 'SINPE Móvil'];
+$selectedType = $_POST['type'] ?? '';
+require_once __DIR__ . '/../_header.php';
+?>
 
 <div class="page-head">
   <div>
@@ -15,9 +19,15 @@
     <?= csrf_field() ?>
     <div class="form-group">
       <label for="type">Tipo de método de pago <span class="required-mark">*</span></label>
-      <input class="form-control" type="text" id="type" name="type" required
-             placeholder="Ej: Tarjeta de crédito, Transferencia, Efectivo..."
-             value="<?= e($_POST['type'] ?? '') ?>">
+      <select class="form-control" id="type" name="type" required>
+        <option value="">— Selecciona —</option>
+        <?php foreach ($catalogTypes as $typeOption): ?>
+          <option value="<?= e($typeOption) ?>" <?= $selectedType === $typeOption ? 'selected' : '' ?>>
+            <?= e($typeOption) ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+      <p class="form-hint">Catálogo base: Efectivo, Transferencia Bancaria y SINPE Móvil.</p>
     </div>
 
     <button class="btn btn-primary" type="submit">Crear método</button>

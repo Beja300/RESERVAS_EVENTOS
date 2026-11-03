@@ -82,18 +82,39 @@ class BookingDetailService
 
     // Métodos de pago configurados por el dueño de ESTE local.
     $ownerPaymentMethods = [];
+    $ownerPaymentsByMethod = [];
     if ($venue !== null) {
       foreach ($this->ownerPaymentService->findByOwner($venue->getIdOwner()) as $op) {
-        if (!$op->getIsActive()) {
-          continue;
-        }
-        $ownerPaymentMethods[] = [
+        $row = [
           'idPaymentMethod' => $op->getIdPaymentMethod(),
           'paymentMethod'   => $op->getPaymentMethod(),
           'holder'          => $op->getHolder(),
           'account'         => $op->getAccount(),
           'instructions'    => $op->getInstructions(),
         ];
+        $ownerPaymentsByMethod[$op->getIdPaymentMethod()] = $row;
+        if ($op->getIsActive()) {
+          $ownerPaymentMethods[] = $row;
+        }
+      }
+    }
+
+    $ticketPayment = null;
+    if ($ticket !== null) {
+      $ticketPayment = $ownerPaymentsByMethod[$ticket->getPaymentMethodId()] ?? null;
+      if ($ticketPayment === null) {
+        foreach ($paymentMethods as $pm) {
+          if ($pm->getIdPaymentMethod() === $ticket->getPaymentMethodId()) {
+            $ticketPayment = [
+              'idPaymentMethod' => $pm->getIdPaymentMethod(),
+              'paymentMethod'   => $pm->getPaymentMethod(),
+              'holder'          => '',
+              'account'         => '',
+              'instructions'    => '',
+            ];
+            break;
+          }
+        }
       }
     }
 
@@ -133,6 +154,7 @@ class BookingDetailService
       'paymentMethods'       => $paymentMethods,
       'serviceMap'           => $serviceMap,
       'ownerPaymentMethods'  => $ownerPaymentMethods,
+      'ticketPayment'        => $ticketPayment,
       'availableServices'    => $availableServices,
       'isModifiable'         => $isModifiable,
       'isClient'             => $isClient,
