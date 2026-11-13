@@ -30,7 +30,9 @@ class VenueService
         float $price,
         ?string $image,
         ?float $latitude = null,
-        ?float $longitude = null
+        ?float $longitude = null,
+        string $locationType = 'exacta',
+        ?string $approximate = null
     ): int {
         if ($capacity === null || $capacity <= 0) {
             throw new BusinessRuleException("La capacidad del local debe ser mayor a 0.");
@@ -48,15 +50,32 @@ class VenueService
             throw new BusinessRuleException("El tipo de local es obligatorio.");
         }
 
-        $locationPk = $this->locationService->validateAndCreate(
-            $province,
-            $canton,
-            $district,
-            $town,
-            $description,
-            $latitude,
-            $longitude
-        );
+        if (strtolower(trim($locationType)) === 'aproximada') {
+            $locationPk = $this->locationService->saveApproximate(
+                null,
+                (string) $town,
+                (string) $approximate,
+                $description
+            );
+        } else {
+            if (trim($province) === '' || trim($canton) === '' || trim($district) === '') {
+                throw new BusinessRuleException('Debes completar provincia, cantón y distrito.');
+            }
+
+            $locationPk = $this->locationService->findOrCreateByParts(
+                $province,
+                $canton,
+                $district,
+                $town,
+                $description,
+                $latitude,
+                $longitude
+            );
+
+            if ($locationPk === null) {
+                throw new BusinessRuleException('No se pudo guardar la ubicación exacta.');
+            }
+        }
 
         $venue = new Venue(
             idVenue: 0,
@@ -81,7 +100,7 @@ class VenueService
         float $price,
         ?string $image,
         bool $active,
-        int $idLocation
+        ?int $idLocation
     ): void {
         if ($capacity === null || $capacity <= 0) {
             throw new BusinessRuleException("La capacidad del local debe ser mayor a 0.");

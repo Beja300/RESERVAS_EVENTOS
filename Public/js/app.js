@@ -171,6 +171,10 @@
   App.validateField = function (field) {
     var value = (field.value || '').trim();
     var rules = (field.getAttribute('data-validate') || '').split(' ');
+    var min = field.getAttribute('data-min');
+    var max = field.getAttribute('data-max');
+    var rangeMessage = field.getAttribute('data-range-message');
+    var numericValue = field.hasAttribute('data-currency-mask') ? App.parseMoney(value) : parseFloat(value);
     var container = field.closest('.form-group') || field.parentNode;
     var err = container.querySelector('.field-error');
     var message = '';
@@ -195,10 +199,18 @@
         && !/^\d{8}$/.test(value.replace(/[\s-]/g, ''))
         && !/^[A-Za-z]{2}[\dA-Za-z]{18,22}$/.test(value.replace(/[\s-]/g, ''))) {
         message = 'Cuenta no válida (8 dígitos SINPE o IBAN).';
-      } else if (rules.indexOf('minprice') !== -1 && (isNaN(value) || parseFloat(value) < 0)) {
+      } else if (rules.indexOf('minprice') !== -1 && (isNaN(numericValue) || numericValue < 0)) {
         message = 'El precio no puede ser negativo.';
-      } else if (rules.indexOf('positive') !== -1 && (isNaN(value) || parseFloat(value) <= 0)) {
+      } else if (rules.indexOf('positive') !== -1 && (isNaN(numericValue) || numericValue <= 0)) {
         message = 'Debe ser un número mayor que 0.';
+      } else if (rules.indexOf('intrange') !== -1) {
+        if (!/^\d+$/.test(value)) {
+          message = 'Debe ser un número entero.';
+        } else if (min !== null && Number(value) < Number(min)) {
+          message = rangeMessage || 'El valor mínimo permitido es ' + min + '.';
+        } else if (max !== null && Number(value) > Number(max)) {
+          message = rangeMessage || 'El valor máximo permitido es ' + max + '.';
+        }
       }
     }
 

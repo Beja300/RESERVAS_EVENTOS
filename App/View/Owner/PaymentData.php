@@ -44,6 +44,7 @@ $paymentMethods = $paymentMethods ?? [];
           <option value="<?= (int) $pm->getIdPaymentMethod() ?>"><?= e($pm->getPaymentMethod()) ?></option>
         <?php endforeach; ?>
       </select>
+      <p class="form-hint">Si no aparece el método de pago esperado, el administrador debe crearlo primero.</p>
     </div>
 
     <div class="form-group">
