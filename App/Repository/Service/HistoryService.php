@@ -222,10 +222,6 @@ class HistoryService
         continue;
       }
 
-      if ($venue->getIdLocation() === null) {
-        continue;
-      }
-
       $venueLocation = $this->locationRepo->findById($venue->getIdLocation());
 
       if ($venueLocation === null || !isset($provinces[$venueLocation->getProvinceLocation()])) {

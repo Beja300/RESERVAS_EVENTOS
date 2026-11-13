@@ -193,9 +193,6 @@ class HistoryService
 
     $near = [];
     foreach ($this->venueService->findActive() as $venue) {
-      if ($venue->getIdLocation() === null) {
-        continue;
-      }
       $venueLocation = $this->locationRepo->findById($venue->getIdLocation());
       if ($venueLocation !== null && $venueLocation->getProvinceLocation() === $province) {
         $near[] = $venue;
