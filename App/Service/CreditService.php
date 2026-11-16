@@ -194,6 +194,15 @@ class CreditService
     }
 
     $booking = $this->bookingRepo->findById($idBooking);
+    if ($booking !== null && $this->bookingRepo->hasActiveRangeConflict(
+      $booking->getIdLocal(),
+      $booking->getBookingDate(),
+      $booking->getBookingEndDate() ?? $booking->getBookingDate(),
+      $idBooking,
+      $booking->getRentalBlockId()
+    )) {
+      throw new BusinessRuleException('Fecha no disponible. Cambia las fechas de la reserva antes de solicitar crédito.');
+    }
     $venue = $this->venueRepo->findById($booking->getIdLocal());
     $config = $check['config'];
 
@@ -270,7 +279,13 @@ class CreditService
   // =========================================================
   // REGISTRAR UN ABONO (pago parcial) DE UN CRÉDITO
   // =========================================================
-  public function registerPayment(int $idCredit, float $amount, int $rolePk, string $note = ''): void
+  public function registerPayment(
+    int $idCredit,
+    float $amount,
+    int $rolePk,
+    string $note,
+    string $proofFile
+  ): void
   {
     $credit = $this->creditRepo->findById($idCredit);
 
@@ -283,20 +298,18 @@ class CreditService
     }
 
     $amount = round($amount, 2);
+    $this->validatePaymentAmount($idCredit, $amount);
 
-    if ($amount <= 0) {
-      throw new BusinessRuleException('El monto del abono debe ser mayor a 0.');
-    }
-
-    if ($amount > $credit->getBalance() + 0.001) {
-      throw new BusinessRuleException('El abono no puede superar el saldo pendiente de ₡ ' . number_format($credit->getBalance(), 2) . '.');
+    if (trim($proofFile) === '') {
+      throw new BusinessRuleException('Debes adjuntar el comprobante del abono.');
     }
 
     $this->paymentRepo->save(new CreditPayment(
       idCredit: $idCredit,
       amount: $amount,
       note: trim($note),
-      idRole: $rolePk
+      idRole: $rolePk,
+      proofFile: $proofFile
     ));
 
     $newBalance = round($credit->getBalance() - $amount, 2);
@@ -314,6 +327,40 @@ class CreditService
 
     if ($newState === 'pagado') {
       $this->settleCredit($credit);
+    }
+  }
+
+  public function minimumPayment(int $idCredit): float
+  {
+    $credit = $this->creditRepo->findById($idCredit);
+    if ($credit === null || $credit->getBalance() <= 0) {
+      return 0.0;
+    }
+
+    foreach ($this->installmentRepo->findByCredit($idCredit) as $installment) {
+      if ($installment->getState() !== 'pagado') {
+        return round(min($credit->getBalance(), $installment->getAmount()), 2);
+      }
+    }
+
+    return round($credit->getBalance(), 2);
+  }
+
+  public function validatePaymentAmount(int $idCredit, float $amount): void
+  {
+    $credit = $this->creditRepo->findById($idCredit);
+    if ($credit === null || !$credit->getIsActive()) {
+      throw new BusinessRuleException('El crédito no existe.');
+    }
+    if ($amount <= 0) {
+      throw new BusinessRuleException('El monto del abono debe ser mayor a 0.');
+    }
+    if ($amount > $credit->getBalance() + 0.001) {
+      throw new BusinessRuleException('El abono no puede superar el saldo pendiente de ₡ ' . number_format($credit->getBalance(), 2) . '.');
+    }
+    $minimum = $this->minimumPayment($idCredit);
+    if ($amount + 0.001 < $minimum) {
+      throw new BusinessRuleException('El abono debe ser de al menos ₡ ' . number_format($minimum, 2) . '.');
     }
   }
 

@@ -184,20 +184,23 @@ INSERT INTO tbpromotionservice (tbpromotionid, tbserviceid, tbpromotionserviceac
 -- 7) MÉTODOS DE PAGO
 -- =========================================================
 INSERT INTO tbpaymentmethod (tbpaymentmethodtype, tbpaymentmethodactive) VALUES
-('Efectivo', TRUE),
+('Pago en el lugar', TRUE),
 ('Tarjeta',  TRUE),
-('Transferencia', TRUE);
+('Transferencia bancaria', TRUE),
+('SINPE Móvil', TRUE);
 SET @pmEfectivo       = 1;
 SET @pmTarjeta       = 2;
 SET @pmTransferencia = 3;
+SET @pmSinpe = 4;
 
 -- =========================================================
 -- 7b) DATOS DE COBRO DEL PROPIETARIO (tbownerpayment)
 -- =========================================================
 INSERT INTO tbownerpayment (tbownerid, tbpaymentmethodid, tbownerpaymentholder, tbownerpaymentaccount, tbownerpaymentinstructions, tbownerpaymentactive) VALUES
-(@ownerId, @pmEfectivo,       'María Fernanda Rodríguez',       NULL,      'Realizar el pago en efectivo el día del evento.', TRUE),
+(@ownerId, @pmEfectivo,       NULL,                             NULL,      'Pago en el lugar.', TRUE),
 (@ownerId, @pmTarjeta,        'María Fernanda Rodríguez',       NULL,      'Aceptamos tarjetas Visa y Mastercard.', TRUE),
-(@ownerId, @pmTransferencia,  'Salón La Quinta S.A.',           'CR12 1234 5678 9012 3456 7', 'Transferencia SINPE a la cuenta indicada.', TRUE);
+(@ownerId, @pmTransferencia,  'Salón La Quinta S.A.',           'CR05015202001026284066', 'Transferencia a la cuenta IBAN indicada.', TRUE),
+(@ownerId, @pmSinpe,          'María Fernanda Rodríguez',       '88887777', 'SINPE Móvil.', TRUE);
 
 -- =========================================================
 -- 8) CONFIGURACIÓN DE COMISIÓN (5% + IVA 13%)

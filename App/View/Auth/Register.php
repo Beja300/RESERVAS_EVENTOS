@@ -63,7 +63,7 @@
         <div class="form-group">
           <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
           <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" required
-                 value="<?= e($_POST['phoneNumber'] ?? '') ?>" maxlength="8" placeholder="8 dígitos">
+                 value="<?= e(format_phone_number($_POST['phoneNumber'] ?? '')) ?>" maxlength="15" placeholder="+506 8888-8888">
           <div class="form-hint">Ej: 8888-7777</div>
         </div>
       </div>
@@ -127,7 +127,7 @@
         <div class="form-group">
           <label for="ownerPhone">Teléfono <span class="required-mark">*</span></label>
           <input class="form-control" type="tel" id="ownerPhone" name="phoneNumber" required data-mask="phone" data-validate="phone" required
-                 value="<?= e($_POST['phoneNumber'] ?? '') ?>" maxlength="8" placeholder="8 dígitos">
+                 value="<?= e(format_phone_number($_POST['phoneNumber'] ?? '')) ?>" maxlength="15" placeholder="+506 8888-8888">
           <div class="form-hint">Ej: 8888-7777</div>
         </div>
       </div>

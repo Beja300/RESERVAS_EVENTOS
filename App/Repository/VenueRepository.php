@@ -11,7 +11,8 @@ class VenueRepository
     tbvenueid, tbownerid, tblocationid, tbvenuename, tbvenuetype,
     tbvenuecapacity, tbvenueprice, tbvenueimage, tbvenueactive,
     tbvenuedescription, tbvenuesize, tbvenuebathrooms, tbvenueparking,
-    tbvenueparkingcapacity, tbvenuemincapacity, tbvenuecleaningfee
+    tbvenueparkingcapacity, tbvenuemincapacity, tbvenuecleaningfee,
+    tbvenuecheckintime, tbvenuecheckouttime
   ";
 
   public function __construct(PDO $connection)
@@ -25,12 +26,13 @@ class VenueRepository
       tbownerid, tblocationid, tbvenuename, tbvenuetype, tbvenuecapacity,
       tbvenueprice, tbvenueimage, tbvenueactive, tbvenuedescription,
       tbvenuesize, tbvenuebathrooms, tbvenueparking, tbvenueparkingcapacity,
-      tbvenuemincapacity, tbvenuecleaningfee
+      tbvenuemincapacity, tbvenuecleaningfee, tbvenuecheckintime,
+      tbvenuecheckouttime
     ) VALUES (
       :idOwner, :idLocation, :nameVenue, :typeVenue, :capacityVenue,
       :priceVenue, :imageVenue, :isActive, :descriptionVenue,
       :sizeVenue, :bathroomsVenue, :hasParking, :parkingCapacity,
-      :minCapacity, :cleaningFee
+      :minCapacity, :cleaningFee, :checkInTime, :checkOutTime
     )';
 
     $stmt = $this->connection->prepare($sql);
@@ -50,6 +52,8 @@ class VenueRepository
       ':parkingCapacity' => $venue->getParkingCapacity(),
       ':minCapacity' => $venue->getMinCapacity(),
       ':cleaningFee' => $venue->getCleaningFee(),
+      ':checkInTime' => $venue->getCheckInTime(),
+      ':checkOutTime' => $venue->getCheckOutTime(),
     ]);
 
     return (int) $this->connection->lastInsertId();
@@ -129,6 +133,7 @@ class VenueRepository
                    v.tbvenueactive, v.tbvenuedescription, v.tbvenuesize,
                    v.tbvenuebathrooms, v.tbvenueparking, v.tbvenueparkingcapacity,
                    v.tbvenuemincapacity, v.tbvenuecleaningfee,
+                   v.tbvenuecheckintime, v.tbvenuecheckouttime,
                    l.tblocationprovince
             FROM tbvenue v
             LEFT JOIN tblocation l ON l.tblocationid = v.tblocationid
@@ -235,7 +240,8 @@ class VenueRepository
       tbvenueactive = :isActive, tbvenuedescription = :descriptionVenue,
       tbvenuesize = :sizeVenue, tbvenuebathrooms = :bathroomsVenue,
       tbvenueparking = :hasParking, tbvenueparkingcapacity = :parkingCapacity,
-      tbvenuemincapacity = :minCapacity, tbvenuecleaningfee = :cleaningFee
+      tbvenuemincapacity = :minCapacity, tbvenuecleaningfee = :cleaningFee,
+      tbvenuecheckintime = :checkInTime, tbvenuecheckouttime = :checkOutTime
       WHERE tbvenueid = :idVenue';
 
     $stmt = $this->connection->prepare($sql);
@@ -255,6 +261,8 @@ class VenueRepository
       ':parkingCapacity' => $venue->getParkingCapacity(),
       ':minCapacity' => $venue->getMinCapacity(),
       ':cleaningFee' => $venue->getCleaningFee(),
+      ':checkInTime' => $venue->getCheckInTime(),
+      ':checkOutTime' => $venue->getCheckOutTime(),
       ':idVenue' => $venue->getIdVenue(),
     ]);
   }
@@ -286,7 +294,9 @@ class VenueRepository
       hasParking: $this->toBool($row['tbvenueparking'] ?? false),
       parkingCapacity: ($row['tbvenueparkingcapacity'] ?? null) !== null ? (int) $row['tbvenueparkingcapacity'] : null,
       minCapacity: ($row['tbvenuemincapacity'] ?? null) !== null ? (int) $row['tbvenuemincapacity'] : null,
-      cleaningFee: (float) ($row['tbvenuecleaningfee'] ?? 0)
+      cleaningFee: (float) ($row['tbvenuecleaningfee'] ?? 0),
+      checkInTime: isset($row['tbvenuecheckintime']) && $row['tbvenuecheckintime'] !== null ? substr((string) $row['tbvenuecheckintime'], 0, 5) : null,
+      checkOutTime: isset($row['tbvenuecheckouttime']) && $row['tbvenuecheckouttime'] !== null ? substr((string) $row['tbvenuecheckouttime'], 0, 5) : null
     );
   }
 

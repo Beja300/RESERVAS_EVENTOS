@@ -9,7 +9,12 @@ $isClient = current_user_type() === 'client';
 $isOwner  = current_user_type() === 'owner';
 $isPending = $booking->getBookingState() === 'pendiente';
 $isModifiable = $isPending && $ticket === null;
+$hasDateConflict = !empty($hasDateConflict);
 $hasTicket = $ticket !== null;
+$isCreditPayment = ($bookingCredit ?? null) !== null
+  || (($invoice ?? null) !== null && $invoice->getStatusInvoice() === 'credito');
+$isCashPayment = !$isCreditPayment
+  && (($invoice ?? null) !== null && $invoice->getStatusInvoice() === 'pagado');
 ?>
 
 <div class="page-head">
@@ -21,6 +26,12 @@ $hasTicket = $ticket !== null;
 
 <?php if (!empty($_GET['creditError'])): ?>
   <div class="alert alert-error"><?= e($_GET['creditError']) ?></div>
+<?php endif; ?>
+<?php if (!empty($_GET['editError'])): ?>
+  <div class="alert alert-error"><?= e($_GET['editError']) ?></div>
+<?php endif; ?>
+<?php if (isset($_GET['updated'])): ?>
+  <div class="alert alert-success">Los cambios de la reserva se guardaron correctamente.</div>
 <?php endif; ?>
 
 <?php if ($isOwner && !empty($clientIsBlocked)): ?>
@@ -43,6 +54,15 @@ $hasTicket = $ticket !== null;
         <?= e($startLabel . $endLabel) ?>
       </div>
     </div>
+    <div class="detail-item"><div class="k">Horario</div><div class="v">
+      <?php if (($booking->getRentalBlockId() ?? null) !== null && $rentalBlock !== null): ?>
+        <?= e($rentalBlock->getName()) ?>: <?= e($rentalBlock->getStartTime()) ?>–<?= e($rentalBlock->getEndTime()) ?>
+      <?php elseif ($venue !== null && $venue->getCheckInTime() !== null && $venue->getCheckOutTime() !== null): ?>
+        Entrada <?= e($venue->getCheckInTime()) ?> · salida <?= e($venue->getCheckOutTime()) ?>
+      <?php else: ?>
+        <span class="muted">Horario general no especificado</span>
+      <?php endif; ?>
+    </div></div>
     <?php if ($booking->getEventType() !== null): ?>
       <div class="detail-item">
         <div class="k">Tipo de evento</div>
@@ -62,7 +82,15 @@ $hasTicket = $ticket !== null;
     <?php if ($booking->getAttendees() !== null): ?>
       <div class="detail-item">
         <div class="k">Asistentes</div>
-        <div class="v"><?= (int) $booking->getAttendees() ?> personas</div>
+        <div class="v">
+          <?= (int) $booking->getAttendees() ?> personas
+          <?php if ($venue !== null): ?>
+            <span class="muted">
+              (mínimo <?= (int) ($venue->getMinCapacity() ?? 1) ?>,
+              máximo <?= (int) $venue->getCapacityVenue() ?>)
+            </span>
+          <?php endif; ?>
+        </div>
       </div>
     <?php endif; ?>
     <?php if ($booking->getEventDescription() !== null && $booking->getEventDescription() !== ''): ?>
@@ -84,34 +112,134 @@ $hasTicket = $ticket !== null;
         <span class="badge <?= $badge ?>"><?= e($booking->getBookingState()) ?></span>
       </div>
     </div>
+    <?php if ($isCreditPayment || $isCashPayment): ?>
+      <div class="detail-item">
+        <div class="k">Modalidad de pago</div>
+        <div class="v">
+          <span class="badge <?= $isCreditPayment ? 'info' : 'success' ?>">
+            <?= $isCreditPayment ? 'A crédito' : 'De contado' ?>
+          </span>
+        </div>
+      </div>
+    <?php endif; ?>
 
   </div>
 
-  <div class="detail-item"><div class="k">Propietario</div>
-      <?php if ($owner === null): ?>
-        <div class="v muted">Propietario no encontrado.</div>
-      <?php else: ?>
-        <div class="v" style="display:flex;flex-direction:column;gap:4px;">
-          <span style="display:inline-flex;align-items:center;gap:8px;">
-            <?php if ($owner->getImageOwner() !== ''): ?>
-              <img src="<?= e(image_url($owner->getImageOwner())) ?>" alt="Foto del propietario"
-                   style="width:32px;height:32px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px #fff,0 0 0 3px var(--neutral-200);">
-            <?php else: ?>
-              <span class="avatar" aria-hidden="true"
-                    style="width:32px;height:32px;font-size:1.1rem;">&#128100;</span>
-            <?php endif; ?>
-            <a href="<?= e(base_url('venue', 'showOwner', ['ownerId' => $owner->getIdOwner(), 'venueId' => $booking->getIdLocal()])) ?>"
-               style="font-weight:700;color:var(--neutral-900);text-decoration:none;">
-              <?= e($owner->getFirstNameOwner()) ?><?= $owner->getLastNameOwner() !== '' ? ' ' . e($owner->getLastNameOwner()) : '' ?>
-            </a>
-          </span>
-          <span class="muted"><?= e($owner->getEmail()) ?></span>
-          <?php if ($owner->getPhoneNumber() !== null && $owner->getPhoneNumber() !== ''): ?>
-            <span class="muted"><?= e($owner->getPhoneNumber()) ?></span>
-          <?php endif; ?>
-        </div>
+<div class="detail-item" style="grid-column:1 / -1;">
+  <div class="k">Propietario</div>
+
+  <?php if ($owner === null): ?>
+    <div class="v muted">Propietario no encontrado.</div>
+  <?php else: ?>
+    <div class="v" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px;">
+      <span>
+        <strong>Propietario:</strong>
+        <a href="<?= e(base_url('venue', 'showOwner', [
+          'ownerId' => $owner->getIdOwner(),
+          'venueId' => $booking->getIdLocal()
+        ])) ?>">
+          <?= e($owner->getFirstNameOwner()) ?><?= $owner->getLastNameOwner() !== ''
+            ? ' ' . e($owner->getLastNameOwner())
+            : '' ?>
+        </a>
+      </span>
+
+      <span><strong>Correo:</strong> <?= e($owner->getEmail()) ?></span>
+
+      <?php if ($owner->getPhoneNumber() !== null && $owner->getPhoneNumber() !== ''): ?>
+        <span><strong>Teléfono:</strong> <?= e(format_phone_number($owner->getPhoneNumber())) ?></span>
+      <?php endif; ?>
+
+      <a href="<?= e(base_url('venue', 'showOwner', [
+        'ownerId' => $owner->getIdOwner(),
+        'venueId' => $booking->getIdLocal()
+      ])) ?>">
+        Ver información del propietario &rarr;
+      </a>
+    </div>
+  <?php endif; ?>
+</div>
+<div class="detail-item" style="grid-column:1 / -1;">
+  <div class="k">Cliente</div>
+
+  <?php if ($client === null): ?>
+    <div class="v muted">Cliente no encontrado.</div>
+  <?php else: ?>
+    <div class="v" style="display:flex;align-items:center;flex-wrap:wrap;gap:6px 14px;">
+      <span>
+        <strong>Cliente:</strong>
+        <?= e($client->getName()) ?>
+      </span>
+
+      <span>
+        <strong>Correo:</strong>
+        <?= e($client->getEmail()) ?>
+      </span>
+
+      <?php if ($client->getPhoneNumber() !== null && $client->getPhoneNumber() !== ''): ?>
+        <span>
+          <strong>Teléfono:</strong>
+          <?= e(format_phone_number($client->getPhoneNumber())) ?>
+        </span>
       <?php endif; ?>
     </div>
+  <?php endif; ?>
+</div>
+  <?php if ($isClient && $isModifiable): ?>
+    <hr style="margin:22px 0;border:none;border-top:1px solid var(--neutral-200);">
+    <h3 style="margin:0 0 12px;">Editar datos de la reserva</h3>
+    <?php if ($hasDateConflict): ?>
+      <p role="alert" style="color:#b42318;font-weight:700;margin:0 0 14px;">Fecha no disponible. Cambia las fechas por un rango disponible antes de editar servicios o pagar.</p>
+    <?php endif; ?>
+    <form method="post" action="<?= e(base_url('booking', 'updateDetails')) ?>"
+          style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;align-items:end;">
+      <?= csrf_field() ?>
+      <input type="hidden" name="bookingId" value="<?= (int) $booking->getIdBooking() ?>">
+
+      <div class="form-group" style="margin:0;">
+        <label for="editStartDate">Fecha de inicio</label>
+        <input class="form-control" type="date" id="editStartDate" name="startDate"
+               value="<?= e(date('Y-m-d', strtotime($booking->getBookingDate()))) ?>" required>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label for="editEndDate">Fecha final</label>
+        <input class="form-control" type="date" id="editEndDate" name="endDate"
+               value="<?= e(date('Y-m-d', strtotime($booking->getBookingEndDate() ?? $booking->getBookingDate()))) ?>" required>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label for="editEventType">Tipo de evento</label>
+        <select class="form-control" id="editEventType" name="eventType">
+          <option value="">— Selecciona —</option>
+          <option value="boda" <?= $booking->getEventType() === 'boda' ? 'selected' : '' ?>>Boda</option>
+          <option value="cumpleanos" <?= $booking->getEventType() === 'cumpleanos' ? 'selected' : '' ?>>Cumpleaños</option>
+          <option value="empresarial" <?= $booking->getEventType() === 'empresarial' ? 'selected' : '' ?>>Empresarial</option>
+          <option value="otro" <?= $booking->getEventType() === 'otro' ? 'selected' : '' ?>>Otro</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label for="editAttendees">Asistentes</label>
+        <input class="form-control" type="number" id="editAttendees" name="attendees"
+               min="<?= (int) ($venue !== null ? ($venue->getMinCapacity() ?? 1) : 1) ?>"
+               max="<?= (int) ($venue !== null ? $venue->getCapacityVenue() : 999999) ?>"
+               value="<?= e((string) ($booking->getAttendees() ?? '')) ?>" required>
+
+      </div>
+      <?php if ($venue !== null): ?>
+          <div class="form-hint">
+            Permitido: <?= (int) ($venue->getMinCapacity() ?? 1) ?> a
+            <?= (int) $venue->getCapacityVenue() ?> asistentes.
+          </div>
+        <?php endif; ?>
+      <div class="form-group" style="margin:0;grid-column:1/-1;">
+        <label for="editEventDetail">Detalle del evento (necesario si eliges «Otro»)</label>
+        <textarea class="form-control" id="editEventDetail" name="eventDetail"
+                  rows="2" maxlength="255"><?= e($booking->getEventDescription() ?? '') ?></textarea>
+      </div>
+      <div style="grid-column:1/-1;">
+        <button class="btn btn-primary" type="submit">Guardar datos de la reserva</button>
+      </div>
+    </form>
+  <?php endif; ?>
 
   <h3 style="margin:18px 0 12px;">Detalle de la reserva</h3>
   <?php if (empty($details)): ?>
@@ -179,37 +307,128 @@ $hasTicket = $ticket !== null;
     </div>
   <?php endif; ?>
 
-  <?php if ($isClient && $isModifiable): ?>
-    <!-- AGREGAR SERVICIOS (AJAX): solo mientras la reserva está pendiente
-         y aún no se ha subido el comprobante. -->
-    <?php if (!empty($availableServices)): ?>
-      <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
-      <h3 style="margin:0 0 10px;">Agregar servicios</h3>
-      <form class="form-inline" data-add-service
-            data-venue-booking="<?= (int) $booking->getIdBooking() ?>"
-            style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-        <?= csrf_field() ?>
-        <div class="form-group" style="min-width:220px;">
-          <label for="serviceId">Servicio <span class="required-mark">*</span></label>
-          <select class="form-control" id="serviceId" name="serviceId" required>
-            <?php foreach ($availableServices as $s): ?>
-              <option value="<?= (int) $s->getIdService() ?>">
-                <?= e($s->getNameService()) ?> (&#8353; <?= number_format($s->getPriceService(), 2) ?>,
-                mín. <?= (int) $s->getMinQuantity() ?><?= $s->getMaxQuantity() !== null ? ', máx. ' . (int) $s->getMaxQuantity() : '' ?>)
-              </option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="qty">Cantidad</label>
-          <input class="form-control" type="number" id="qty" name="quantity" min="1" value="1" style="width:90px;">
-        </div>
-        <button class="btn btn-primary" type="submit">Agregar</button>
-      </form>
-    <?php else: ?>
-      <p class="muted" style="margin-top:16px;">No hay servicios disponibles adicionales para agregar.</p>
-    <?php endif; ?>
+  <?php if ($isClient && $isModifiable && !$hasDateConflict): ?>
+    <!-- Las cantidades se editan desde esta lista. -->
+    <?php
+      $serviceChoices = [];
+      foreach ($availableServices as $availableService) {
+        $serviceChoices[$availableService->getIdService()] = $availableService;
+      }
+      foreach ($serviceMap as $existingService) {
+        if (!isset($serviceChoices[$existingService->getIdService()])) {
+          $serviceChoices[$existingService->getIdService()] = $existingService;
+        }
+      }
+      $selectedServiceQuantities = [];
+      foreach ($details as $serviceLine) {
+        if ($serviceLine->getIdLocalService() > 0) {
+          $id = $serviceLine->getIdLocalService();
+          $selectedServiceQuantities[$id] = ($selectedServiceQuantities[$id] ?? 0)
+            + $serviceLine->getQuantityDetail();
+        }
+      }
+    ?>
+    <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
+    <h3 style="margin:0 0 10px;">Servicios disponibles</h3>
+    <p class="muted" style="margin-bottom:14px;">
+      Marca los servicios incluidos en tu reserva. Desmarca una casilla para quitarlo;
+      usa «Guardar cantidad» para aplicar un cambio de cantidad.
+    </p>
 
+    <?php if ($serviceChoices !== []): ?>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:14px;">
+        <?php foreach ($serviceChoices as $s): ?>
+          <?php
+            $serviceId = (int) $s->getIdService();
+            $isServiceSelected = isset($selectedServiceQuantities[$serviceId]);
+            $quantity = $selectedServiceQuantities[$serviceId] ?? max(1, (int) $s->getMinQuantity());
+            $includedQuantity = max(0, (int) $s->getIncludedQuantity());
+            $images = $serviceImages[$serviceId] ?? [];
+            $serviceImage = $images[0] ?? null;
+          ?>
+          <form class="card" data-service-selection
+                action="<?= e(base_url('booking', 'setServiceSelection')) ?>"
+                style="margin:0;padding:14px;">
+            <?= csrf_field() ?>
+            <input type="hidden" name="bookingId" value="<?= (int) $booking->getIdBooking() ?>">
+            <input type="hidden" name="serviceId" value="<?= $serviceId ?>">
+
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <?php if ($serviceImage !== null): ?>
+                <img src="<?= e(image_url($serviceImage->getPath())) ?>"
+                     alt="Foto de <?= e($s->getNameService()) ?>"
+                     style="width:88px;height:76px;object-fit:cover;border-radius:8px;flex:none;">
+              <?php else: ?>
+                <div aria-label="Servicio sin foto"
+                     style="width:88px;height:76px;display:grid;place-items:center;background:var(--neutral-100);border-radius:8px;flex:none;">
+                  &#128247;
+                </div>
+              <?php endif; ?>
+
+              <div style="min-width:0;flex:1;">
+                <strong><?= e($s->getNameService()) ?></strong>
+                <?php if (trim((string) $s->getDescriptionService()) !== ''): ?>
+                  <p class="muted" style="margin:4px 0;">
+                    <?= nl2br(e($s->getDescriptionService())) ?>
+                  </p>
+                <?php endif; ?>
+                <div class="muted">
+                  &#8353; <?= number_format($s->getPriceService(), 2) ?>
+                  <?php if ($s->getUnitService() !== ''): ?>
+                    por <?= e($s->getUnitService()) ?>
+                  <?php endif; ?>
+                </div>
+                <label style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+                  <input type="checkbox" name="selected" value="1"
+                         data-service-toggle <?= $isServiceSelected ? 'checked' : '' ?>>
+                  <span data-service-label><?= $isServiceSelected ? 'Servicio agregado' : 'Agregar servicio' ?></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-hint" style="margin-top:10px;">
+              <?php if ($includedQuantity > 0): ?>
+                Incluye <?= $includedQuantity ?> unidad<?= $includedQuantity === 1 ? '' : 'es' ?>
+                en el precio base.
+                <span data-included-preview data-included="<?= $includedQuantity ?>"
+                      data-quantity="<?= $quantity ?>">
+                  <?php if ($isServiceSelected): ?>
+                    <?= min($includedQuantity, $quantity) ?> de las <?= $quantity ?> solicitadas
+                    están cubiertas por el precio base.
+                  <?php endif; ?>
+                </span>
+              <?php else: ?>
+                Este servicio no incluye unidades en el precio base.
+              <?php endif; ?>
+            </div>
+
+            <div style="display:flex;align-items:flex-end;gap:10px;margin-top:12px;">
+              <div class="form-group" style="margin:0;">
+                <label for="service-quantity-<?= $serviceId ?>">Cantidad</label>
+                <input class="form-control" type="number"
+                       id="service-quantity-<?= $serviceId ?>"
+                       name="quantity"
+                       min="<?= max(1, (int) $s->getMinQuantity()) ?>"
+                       <?= $s->getMaxQuantity() !== null
+                         ? 'max="' . (int) $s->getMaxQuantity() . '"'
+                         : '' ?>
+                       value="<?= $quantity ?>"
+                       data-service-quantity
+                       <?= $isServiceSelected ? '' : 'disabled' ?> required
+                       style="width:100px;">
+              </div>
+              <button class="btn btn-primary" type="submit"
+                      data-save-service-quantity
+                      style="<?= $isServiceSelected ? '' : 'display:none;' ?>">
+                Guardar cantidad
+              </button>
+            </div>
+          </form>
+        <?php endforeach; ?>
+      </div>
+    <?php else: ?>
+      <p class="muted" style="margin-top:16px;">No hay servicios disponibles para agregar.</p>
+    <?php endif; ?>
     <!-- PAGO: seleccionar método -> ver datos de cobro -> subir comprobante (AJAX). -->
     <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
     <h3 style="margin:0 0 10px;">Pagar esta reserva</h3>
@@ -248,7 +467,7 @@ $hasTicket = $ticket !== null;
     </div>
   <?php endif; ?>
 
-  <?php if ($isClient && isset($creditInfo) && $creditInfo !== null): ?>
+  <?php if ($isClient && !$hasDateConflict && isset($creditInfo) && $creditInfo !== null): ?>
     <hr style="margin:24px 0;border:none;border-top:1px solid var(--neutral-200);">
     <h3 style="margin:0 0 10px;">Financiar con crédito</h3>
     <?php if (isset($bookingCredit) && $bookingCredit !== null): ?>
@@ -371,31 +590,6 @@ $hasTicket = $ticket !== null;
       <button class="btn btn-danger btn-sm" type="submit">Rechazar comprobante</button>
     </form>
   <?php endif; ?>
-</div>
-
-<div class="grid grid-2" style="margin-top:20px;">
-  <div class="card">
-    <h3 class="card-title">Cliente</h3>
-    <?php if ($client === null): ?>
-      <p class="muted">Datos del cliente no encontrados.</p>
-    <?php else: ?>
-      <div class="detail-item"><div class="k">Nombre</div><div class="v"><strong><?= e($client->getName()) ?></strong></div></div>
-      <div class="detail-item"><div class="k">Correo</div><div class="v"><?= e($client->getEmail()) ?></div></div>
-      <div class="detail-item"><div class="k">Teléfono</div><div class="v"><?= $client->getPhoneNumber() !== null && $client->getPhoneNumber() !== '' ? e($client->getPhoneNumber()) : '—' ?></div></div>
-    <?php endif; ?>
-  </div>
-
-  <div class="card">
-    <h3 class="card-title">Local</h3>
-    <?php if ($venue === null): ?>
-      <p class="muted">Datos del local no encontrados.</p>
-    <?php else: ?>
-      <div class="detail-item"><div class="k">Nombre</div><div class="v"><strong><?= e($venue->getNameVenue()) ?></strong></div></div>
-      <div class="detail-item"><div class="k">Tipo</div><div class="v"><?= $venue->getTypeVenue() !== '' ? e($venue->getTypeVenue()) : '—' ?></div></div>
-      <div class="detail-item"><div class="k">Capacidad</div><div class="v"><?= (int) $venue->getCapacityVenue() ?> personas</div></div>
-      <div class="detail-item"><div class="k">Precio de renta</div><div class="v">&#8353; <?= number_format($venue->getPriceVenue(), 2) ?></div></div>
-    <?php endif; ?>
-  </div>
 </div>
 
 <?php require_once __DIR__ . '/../_footer.php'; ?>

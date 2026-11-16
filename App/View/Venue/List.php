@@ -12,9 +12,6 @@ $renderRow = static function ($v, bool $isActive): void { ?>
     <td>
       <div class="actions">
         <a class="btn btn-sm btn-outline" href="<?= e(base_url('venue', 'showForm', ['id' => $v->getIdVenue()])) ?>">Editar</a>
-        <?php if ($isActive): ?>
-          <a class="btn btn-sm btn-accent" href="<?= e(base_url('service', 'showForm', ['venueId' => $v->getIdVenue()])) ?>">Agregar servicio</a>
-        <?php endif; ?>
         <a class="btn btn-sm btn-ghost" href="<?= e(base_url('service', 'list', ['venueId' => $v->getIdVenue()])) ?>">Servicios</a>
         <a class="btn btn-sm btn-primary" href="<?= e(base_url('booking', 'venueBookings', ['venueId' => $v->getIdVenue()])) ?>">Reservas</a>
       </div>
@@ -29,7 +26,9 @@ $renderRow = static function ($v, bool $isActive): void { ?>
     <p class="muted">Administra los locales de tu negocio</p>
   </div>
   <div class="actions">
-    <a class="btn btn-ghost" href="<?= e(base_url('service', 'groups')) ?>">Editar servicios existentes</a>
+    <a class="btn btn-ghost" href="<?= e(base_url('service', 'groups')) ?>">
+      Agregar servicios a mis locales
+    </a>
     <a class="btn btn-accent" href="<?= e(base_url('service', 'showForm')) ?>">+ Agregar servicio</a>
     <a class="btn btn-primary" href="<?= e(base_url('venue', 'showForm')) ?>">+ Nuevo local</a>
   </div>

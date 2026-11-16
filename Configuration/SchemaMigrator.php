@@ -10,7 +10,7 @@
  */
 class SchemaMigrator
 {
-  private const VERSION = '2026-11-services-groups-venues-credit';
+  private const VERSION = '2026-11-owner-payment-method-defaults-v1';
 
   private PDO $connection;
 
@@ -53,6 +53,7 @@ class SchemaMigrator
     $this->backfillLegacyServiceApproval();
     $this->backfillCreditInstallments();
     $this->backfillVenueGallery();
+    $this->ensureDefaultPaymentMethods();
 
     $stmt = $this->connection->prepare(
       'INSERT INTO tbschemaversion (tbschemaversionname) VALUES (:name)'
@@ -130,6 +131,8 @@ class SchemaMigrator
         'tbvenueparkingcapacity' => 'INT NULL',
         'tbvenuemincapacity' => 'INT NULL',
         'tbvenuecleaningfee' => 'DECIMAL(10,2) NOT NULL DEFAULT 0.00',
+        'tbvenuecheckintime' => 'TIME NULL',
+        'tbvenuecheckouttime' => 'TIME NULL',
       ],
       'tbservice' => [
         'tbservicedescription' => 'VARCHAR(500) NULL',
@@ -155,6 +158,9 @@ class SchemaMigrator
         'tbcreditconfigfrequency' => "VARCHAR(20) NOT NULL DEFAULT 'mensual'",
         'tbcreditconfiggracedays' => 'INT NOT NULL DEFAULT 0',
         'tbcreditconfigreminderdays' => 'INT NOT NULL DEFAULT 3',
+      ],
+      'tbcreditpayment' => [
+        'tbcreditpaymentproof' => 'VARCHAR(255) NULL',
       ],
     ];
 
@@ -266,6 +272,29 @@ class SchemaMigrator
         ':venueId' => (int) $row['tbvenueid'],
         ':path' => (string) $row['tbvenueimage'],
       ]);
+    }
+  }
+
+  private function ensureDefaultPaymentMethods(): void
+  {
+    $rows = $this->connection->query('SELECT tbpaymentmethodid, tbpaymentmethodtype FROM tbpaymentmethod')->fetchAll(PDO::FETCH_ASSOC);
+    $found = ['sinpe' => false, 'iban' => false, 'place' => false];
+    $rename = $this->connection->prepare('UPDATE tbpaymentmethod SET tbpaymentmethodtype = :name WHERE tbpaymentmethodid = :id');
+    foreach ($rows as $row) {
+      $name = strtolower((string) $row['tbpaymentmethodtype']);
+      if (str_contains($name, 'sinpe')) $found['sinpe'] = true;
+      if (str_contains($name, 'transfer') || str_contains($name, 'iban')) {
+        $found['iban'] = true;
+        if ($name === 'transferencia') $rename->execute([':name' => 'Transferencia bancaria', ':id' => (int) $row['tbpaymentmethodid']]);
+      }
+      if (str_contains($name, 'efectivo') || str_contains($name, 'lugar') || str_contains($name, 'local') || str_contains($name, 'cash')) {
+        $found['place'] = true;
+        if ($name === 'efectivo') $rename->execute([':name' => 'Pago en el lugar', ':id' => (int) $row['tbpaymentmethodid']]);
+      }
+    }
+    $insert = $this->connection->prepare('INSERT INTO tbpaymentmethod (tbpaymentmethodtype, tbpaymentmethodactive) VALUES (:name, 1)');
+    foreach (['sinpe' => 'SINPE Móvil', 'iban' => 'Transferencia bancaria', 'place' => 'Pago en el lugar'] as $key => $name) {
+      if (!$found[$key]) $insert->execute([':name' => $name]);
     }
   }
 }

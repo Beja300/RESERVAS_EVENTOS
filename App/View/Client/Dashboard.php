@@ -28,6 +28,7 @@ $client = $_SESSION['user'] ?? null;
     </p>
   </div>
 </div>
+<div class="rented-bookings-panel">
 
 <div class="page-head">
   <div>
@@ -72,7 +73,7 @@ $client = $_SESSION['user'] ?? null;
     <?php endforeach; ?>
   </div>
 <?php endif; ?>
-
+</div>
 <h2 style="font-size:1.15rem;color:var(--neutral-700);margin-top:28px;">Locales más frecuentes</h2>
 <p class="muted" style="margin-bottom:14px;">Los que más has revisado.</p>
 <?php if (empty($frequentVenues)): ?>

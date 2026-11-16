@@ -42,10 +42,18 @@
         </div>
         <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura1</div>
       </div>
+      <div class="form-group">
+  <label for="passwordConfirm">
+    Confirmar contraseña <span class="required-mark">*</span>
+  </label>
+  <input class="form-control" type="password" id="passwordConfirm"
+         name="passwordConfirm" minlength="8"
+         autocomplete="new-password" required>
+</div>
 
       <div class="form-group">
         <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
-        <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" required value="<?= e($_POST['phoneNumber'] ?? '') ?>" data-mask="phone" maxlength="8" placeholder="8 dígitos">
+        <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" required value="<?= e(format_phone_number($_POST['phoneNumber'] ?? '')) ?>" maxlength="15" placeholder="+506 8888-8888">
         <div class="form-hint">Ej: 8888-7777</div>
       </div>
 
@@ -57,6 +65,8 @@
     </div>
   </div>
 
+  <script src="<?= e(js_url()) ?>"></script>
   <script src="<?= e(js_url('admin/password-toggle')) ?>"></script>
+  <script>document.addEventListener('DOMContentLoaded', App.init);</script>
 </body>
 </html>

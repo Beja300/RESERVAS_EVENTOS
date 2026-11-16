@@ -44,7 +44,7 @@
   --warning: #d97706;
   --warning-light: #fef3c7;
 
-  --neutral-50: #ebf2fa;       /* fondo general — crema/blanco azulado */
+--neutral-50: #d2dfd5;
   --neutral-100: #eef3f1;
   --neutral-200: #dbe4e0;
   --neutral-300: #c2d0cb;
@@ -84,11 +84,10 @@ a:hover {
 /* ============ Contenedor ============ */
 .container {
   width: 100%;
-  max-width: 1100px;
+  max-width: none;
   margin: 0 auto;
-  padding: 24px 20px;
+  padding: 24px clamp(18px, 3vw, 48px);
 }
-
 .container-narrow {
   max-width: 480px;
 }
@@ -116,10 +115,12 @@ a:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding-top: 0;
-  padding-bottom: 0;
+  flex-wrap: nowrap;
+  gap: 20px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 28px;
 }
 
 .brand {
@@ -136,11 +137,28 @@ a:hover {
 }
 
 /* ============ Navegación ============ */
+/* Para apantallas estrechas */
+
+@media (max-width: 760px) {
+  .topbar .container {
+    flex-wrap: wrap;
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .nav {
+    justify-content: flex-start;
+    width: 100%;
+  }
+}
+
 .nav {
   display: flex;
-  gap: 6px;
+  justify-content: flex-end;
   align-items: center;
+  gap: 6px;
   flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .nav a {
@@ -797,4 +815,39 @@ table.table {
 .muted {
   color: var(--neutral-500);
   font-size: 0.95rem;
+}
+
+.rented-bookings-panel {
+  margin: 24px 0;
+  padding: 20px;
+  border-radius: 10px;
+  background: linear-gradient(
+    135deg,
+    #081c15 0%,
+    #1b4332 40%,
+    #036666 70%,
+    #fbb02d 100%
+  );
+}
+
+.rented-bookings-panel .page-head h2 {
+  color: #fff !important;
+}
+
+.rented-bookings-panel .page-head .muted {
+  color: #f1f5f9;
+}
+
+.rented-bookings-panel .page-head > a {
+  color: #fff;
+  font-weight: 600;
+}
+
+.rented-bookings-panel .page-head > a:hover {
+  color: #fff3dc;
+}
+
+div.card,
+div.stat {
+  background: #edf3ee;
 }

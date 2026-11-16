@@ -135,6 +135,8 @@ class ClientBookingController
   public function addLine(): void
   {
     require_role('client');
+    require_post();
+    csrf_validate();
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
       redirect_to('booking', 'detail', ['id' => (int) ($_GET['id'] ?? 0)]);
@@ -158,6 +160,105 @@ class ClientBookingController
       $error = $e->getMessage();
 
       respond_or_redirect(['ok' => false, 'message' => $error], 'booking', 'detail', ['id' => $idBooking], 422);
+    }
+  }
+
+  public function updateDetails(): void
+  {
+    require_role('client');
+    require_post();
+    csrf_validate();
+
+    $client = $_SESSION['user'];
+    $idBooking = (int) ($_POST['bookingId'] ?? 0);
+    try {
+      $this->bookingActionService->updateEditableDetails(
+        $client->getIdClient(),
+        $idBooking,
+        trim($_POST['startDate'] ?? ''),
+        trim($_POST['endDate'] ?? ''),
+        trim($_POST['eventType'] ?? '') ?: null,
+        trim($_POST['eventDetail'] ?? '') ?: null,
+        (int) ($_POST['attendees'] ?? 0)
+      );
+      redirect_to('booking', 'detail', ['id' => $idBooking, 'updated' => '1']);
+    } catch (BusinessRuleException $e) {
+      redirect_to('booking', 'detail', ['id' => $idBooking, 'editError' => $e->getMessage()]);
+    }
+  }
+
+  public function updateLine(): void
+  {
+    require_role('client');
+    require_post();
+    csrf_validate();
+
+    $client = $_SESSION['user'];
+    $idBooking = (int) ($_POST['bookingId'] ?? 0);
+    try {
+      $this->bookingActionService->updateServiceLine(
+        $client->getIdClient(),
+        $idBooking,
+        (int) ($_POST['detailId'] ?? 0),
+        (int) ($_POST['quantity'] ?? 0)
+      );
+      redirect_to('booking', 'detail', ['id' => $idBooking, 'updated' => '1']);
+    } catch (BusinessRuleException $e) {
+      redirect_to('booking', 'detail', ['id' => $idBooking, 'editError' => $e->getMessage()]);
+    }
+  }
+
+  public function removeLine(): void
+  {
+    require_role('client');
+    require_post();
+    csrf_validate();
+
+    $client = $_SESSION['user'];
+    $idBooking = (int) ($_POST['bookingId'] ?? 0);
+    try {
+      $this->bookingActionService->removeServiceLine(
+        $client->getIdClient(),
+        $idBooking,
+        (int) ($_POST['detailId'] ?? 0)
+      );
+      redirect_to('booking', 'detail', ['id' => $idBooking, 'updated' => '1']);
+    } catch (BusinessRuleException $e) {
+      redirect_to('booking', 'detail', ['id' => $idBooking, 'editError' => $e->getMessage()]);
+    }
+  }
+
+  public function setServiceSelection(): void
+  {
+    require_role('client');
+    require_post();
+    csrf_validate();
+
+    $client = $_SESSION['user'];
+    $idBooking = (int) ($_POST['bookingId'] ?? 0);
+    $selected = ($_POST['selected'] ?? '0') === '1';
+    try {
+      $this->bookingActionService->setServiceSelection(
+        $client->getIdClient(),
+        $idBooking,
+        (int) ($_POST['serviceId'] ?? 0),
+        $selected,
+        (int) ($_POST['quantity'] ?? 0)
+      );
+      respond_or_redirect(
+        ['ok' => true, 'message' => $selected ? 'Servicio actualizado.' : 'Servicio eliminado de la reserva.'],
+        'booking',
+        'detail',
+        ['id' => $idBooking]
+      );
+    } catch (BusinessRuleException $e) {
+      respond_or_redirect(
+        ['ok' => false, 'message' => $e->getMessage()],
+        'booking',
+        'detail',
+        ['id' => $idBooking],
+        422
+      );
     }
   }
 
@@ -258,10 +359,8 @@ class ClientBookingController
   public function uploadTicket(): void
   {
     require_role('client');
-
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-      redirect_to('booking', 'detail', ['id' => (int) ($_GET['id'] ?? 0)]);
-    }
+    require_post();
+    csrf_validate();
 
     $client = $_SESSION['user'];
     $idBooking = (int) ($_POST['bookingId'] ?? 0);

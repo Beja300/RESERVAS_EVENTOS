@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/../Service/CreditService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
+require_once __DIR__ . '/../Service/ImageStorageService.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../View/_helpers.php';
 
@@ -139,7 +140,7 @@ class CreditController
 
     $client = $_SESSION['user'];
     $idCredit = (int) ($_POST['creditId'] ?? 0);
-    $amount = (float) ($_POST['amount'] ?? 0);
+    $amountRaw = trim((string) ($_POST['amount'] ?? ''));
     $note = trim($_POST['note'] ?? '');
 
     $credit = $this->creditService->findById($idCredit);
@@ -148,10 +149,44 @@ class CreditController
       redirect_to('credit', 'clientList');
     }
 
+    $storedProof = null;
     try {
-      $this->creditService->registerPayment($idCredit, $amount, (int) $client->getIdRol(), $note);
+      $amountText = preg_replace('/[^0-9.,]/', '', $amountRaw) ?? '';
+      if (substr_count($amountText, '.') > 1 || !preg_match('/^\d[\d,]*(?:\.\d{1,2})?$/', $amountText)) {
+        throw new BusinessRuleException('Indica un monto de abono válido.');
+      }
+      $amount = (float) str_replace(',', '', $amountText);
+      $this->creditService->validatePaymentAmount($idCredit, $amount);
+
+      $proof = $_FILES['paymentProof'] ?? null;
+      if ($proof === null || ($proof['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        throw new BusinessRuleException('Adjunta el comprobante del abono.');
+      }
+      if (($proof['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+        throw new BusinessRuleException('No se pudo recibir el comprobante. Intenta nuevamente.');
+      }
+
+      $storedProof = ImageStorageService::store(
+        $proof,
+        'credit-payments',
+        'credit_payment_' . $idCredit,
+        ['jpg', 'jpeg', 'png', 'pdf'],
+        5 * 1024 * 1024,
+        'El comprobante debe ser JPG, PNG o PDF.'
+      );
+
+      $this->creditService->registerPayment(
+        $idCredit,
+        $amount,
+        (int) $client->getIdRol(),
+        $note,
+        $storedProof
+      );
       redirect_to('credit', 'detail', ['id' => $idCredit, 'paid' => '1']);
     } catch (BusinessRuleException $e) {
+      if ($storedProof !== null) {
+        ImageStorageService::deleteLocal($storedProof);
+      }
       redirect_to('credit', 'detail', ['id' => $idCredit, 'error' => $e->getMessage()]);
     }
   }
@@ -188,6 +223,7 @@ class CreditController
 
     $payments = $this->creditService->paymentsForCredit($idCredit);
     $installments = $this->creditService->installmentsForCredit($idCredit);
+    $minimumPayment = $this->creditService->minimumPayment($idCredit);
     $effectiveState = $this->creditService->effectiveState($credit->getState(), $credit->getDueDate());
     $error = $_GET['error'] ?? null;
 

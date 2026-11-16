@@ -117,6 +117,49 @@ class BookingActionService
     $this->detailService->addLine($idBooking, $idService, $quantity);
   }
 
+  public function updateEditableDetails(
+    int $clientId,
+    int $idBooking,
+    string $startDate,
+    string $endDate,
+    ?string $eventType,
+    ?string $eventDetail,
+    int $attendees
+  ): void {
+    $this->clientService->assertOwnsBooking($clientId, $idBooking);
+    $this->detailService->updateBookingDetails(
+      $idBooking,
+      $startDate,
+      $endDate,
+      $eventType,
+      $eventDetail,
+      $attendees
+    );
+  }
+
+  public function updateServiceLine(int $clientId, int $idBooking, int $detailId, int $quantity): void
+  {
+    $this->clientService->assertOwnsBooking($clientId, $idBooking);
+    $this->detailService->updateServiceQuantity($idBooking, $detailId, $quantity);
+  }
+
+  public function removeServiceLine(int $clientId, int $idBooking, int $detailId): void
+  {
+    $this->clientService->assertOwnsBooking($clientId, $idBooking);
+    $this->detailService->removeServiceLine($idBooking, $detailId);
+  }
+
+  public function setServiceSelection(
+    int $clientId,
+    int $idBooking,
+    int $serviceId,
+    bool $selected,
+    int $quantity
+  ): void {
+    $this->clientService->assertOwnsBooking($clientId, $idBooking);
+    $this->detailService->setServiceSelection($idBooking, $serviceId, $selected, $quantity);
+  }
+
   // =========================================================
   // CANCELAR RESERVA (cliente)
   // =========================================================
@@ -169,6 +212,7 @@ class BookingActionService
   public function uploadTicket(int $clientId, int $roleId, int $idBooking, int $idPaymentMethod): void
   {
     $this->clientService->assertOwnsBooking($clientId, $idBooking);
+    $this->assertBookingDatesAvailable($idBooking);
 
     $file = $_FILES['ticket'] ?? null;
 
@@ -215,6 +259,7 @@ class BookingActionService
     }
 
     $this->ownerService->assertOwnsVenue($ownerId, $booking->getIdLocal());
+    $this->assertBookingDatesAvailable($idBooking);
 
     $ticket = $this->ticketRepo->findByBooking($idBooking);
 
@@ -225,6 +270,20 @@ class BookingActionService
     $this->bookingTicketService->approve($ticket->getIdTicket(), $ownerRoleId);
 
     $this->notificationService->notifyClientPaymentApproved((int) $booking->getIdClient(), (int) $idBooking);
+  }
+
+  private function assertBookingDatesAvailable(int $idBooking): void
+  {
+    $booking = $this->bookingRepo->findById($idBooking);
+    if ($booking !== null && $this->bookingRepo->hasActiveRangeConflict(
+      $booking->getIdLocal(),
+      $booking->getBookingDate(),
+      $booking->getBookingEndDate() ?? $booking->getBookingDate(),
+      $idBooking,
+      $booking->getRentalBlockId()
+    )) {
+      throw new BusinessRuleException('Fecha no disponible. Cambia las fechas de la reserva antes de continuar con el pago.');
+    }
   }
 
   // =========================================================

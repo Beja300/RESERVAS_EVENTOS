@@ -295,6 +295,8 @@ class OwnerVenueController
       'parkingCapacity' => $_POST['parkingCapacity'] ?? null,
       'minCapacity' => $_POST['minCapacity'] ?? null,
       'cleaningFee' => (float) ($_POST['cleaningFee'] ?? 0),
+      'checkInTime' => $_POST['checkInTime'] ?? null,
+      'checkOutTime' => $_POST['checkOutTime'] ?? null,
     ];
   }
 

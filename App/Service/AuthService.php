@@ -61,7 +61,11 @@ class AuthService
 
     public function validatePhoneFormat(?string $phoneNumber): void
     {
-        if ($phoneNumber !== null && $phoneNumber !== '' && !preg_match('/^[0-9]{8}$/', $phoneNumber)) {
+        $digits = preg_replace('/\\D+/', '', (string) $phoneNumber) ?? '';
+        if (strlen($digits) === 11 && str_starts_with($digits, '506')) {
+            $digits = substr($digits, 3);
+        }
+        if ($phoneNumber !== null && $phoneNumber !== '' && !preg_match('/^[0-9]{8}$/', $digits)) {
             throw new BusinessRuleException("El teléfono debe tener 8 dígitos.");
         }
     }

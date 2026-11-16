@@ -442,6 +442,36 @@ class BookingRepository
     ]);
   }
 
+  /** Actualiza datos editables de una reserva desde el cliente. */
+  public function updateClientEditableDetails(
+    int $idBooking,
+    string $startDate,
+    string $endDate,
+    ?string $eventType,
+    ?string $eventDetail,
+    int $attendees
+  ): bool {
+    $sql = "
+      UPDATE tbbooking
+      SET tbbookingdate = :startDate,
+          tbbookingenddate = :endDate,
+          tbbookingeventtype = :eventType,
+          tbbookingeventdetail = :eventDetail,
+          tbbookingattendees = :attendees
+      WHERE tbbookingid = :idBooking
+    ";
+
+    $stmt = $this->connection->prepare($sql);
+    return $stmt->execute([
+      ':startDate' => $startDate,
+      ':endDate' => $endDate,
+      ':eventType' => $eventType,
+      ':eventDetail' => $eventDetail,
+      ':attendees' => $attendees,
+      ':idBooking' => $idBooking,
+    ]);
+  }
+
   // =========================================================
   // CAMBIAR LOCAL (asignar la reserva a otro venue)
   // =========================================================
@@ -473,7 +503,7 @@ class BookingRepository
             SELECT tbbookingdate, tbbookingenddate
             FROM tbbooking
             WHERE tbvenueid = :idLocal
-              AND tbbookingstate IN ('pendiente', 'confirmado')
+              AND tbbookingstate = 'confirmado'
               AND tbbookingactive = true
             ORDER BY tbbookingdate
         ";
@@ -576,7 +606,7 @@ class BookingRepository
             SELECT COUNT(*)
             FROM tbbooking
             WHERE tbvenueid = :idLocal
-              AND tbbookingstate IN ('pendiente', 'confirmado')
+              AND tbbookingstate = 'confirmado'
               AND tbbookingactive = true
               AND tbbookingdate <= :endDate
               AND COALESCE(tbbookingenddate, tbbookingdate) >= :startDate

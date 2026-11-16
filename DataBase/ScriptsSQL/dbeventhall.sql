@@ -117,6 +117,8 @@ CREATE TABLE tbvenue (
     tbvenueparkingcapacity INT NULL,
     tbvenuemincapacity INT NULL,
     tbvenuecleaningfee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    tbvenuecheckintime TIME NULL,
+    tbvenuecheckouttime TIME NULL,
     tbvenueactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
@@ -481,6 +483,7 @@ CREATE TABLE tbcreditpayment (
     tbcreditid INT NOT NULL,
     tbcreditpaymentamount DECIMAL(12,2) NOT NULL,
     tbcreditpaymentnote VARCHAR(255),
+    tbcreditpaymentproof VARCHAR(255) NULL,
     tbroleid INT,
     tbcreditpaymentdate DATETIME DEFAULT CURRENT_TIMESTAMP,
     tbcreditpaymentactive BOOLEAN NOT NULL DEFAULT TRUE

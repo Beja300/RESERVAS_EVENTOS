@@ -231,6 +231,70 @@ class DetailRepository
     ]);
   }
 
+  /** Ajusta los días de la línea base de renta sin cambiar su precio diario. */
+  public function updateVenueLineQuantity(int $bookingId, int $quantity): bool
+  {
+    $sql = "
+      UPDATE tbdetail d
+      INNER JOIN tbbookingdetail bd ON bd.tbdetailid = d.tbdetailid
+      SET d.tbdetailquantity = :quantity
+      WHERE bd.tbbookingid = :bookingId
+        AND bd.tbbookingdetailactive = true
+        AND d.tbdetailactive = true
+        AND d.tbvenueid IS NOT NULL
+        AND d.tbvenueid > 0
+        AND d.tbserviceid IS NULL
+        AND (d.tbdetailconcept IS NULL OR d.tbdetailconcept LIKE 'Renta del local%')
+    ";
+    $stmt = $this->connection->prepare($sql);
+    return $stmt->execute([':quantity' => $quantity, ':bookingId' => $bookingId]);
+  }
+
+  /** Actualiza cantidad y descuento de una línea de servicio de esa reserva. */
+  public function updateServiceLine(int $bookingId, int $detailId, int $quantity, float $discount): bool
+  {
+    $sql = "
+      UPDATE tbdetail d
+      INNER JOIN tbbookingdetail bd ON bd.tbdetailid = d.tbdetailid
+      SET d.tbdetailquantity = :quantity,
+          d.tbdetaildiscount = :discount
+      WHERE bd.tbbookingid = :bookingId
+        AND bd.tbdetailid = :detailId
+        AND bd.tbbookingdetailactive = true
+        AND d.tbdetailactive = true
+        AND d.tbserviceid IS NOT NULL
+    ";
+    $stmt = $this->connection->prepare($sql);
+    return $stmt->execute([
+      ':quantity' => $quantity,
+      ':discount' => $discount,
+      ':bookingId' => $bookingId,
+      ':detailId' => $detailId,
+    ]);
+  }
+
+  /** Desactiva una línea de servicio sin afectar la renta u otras reservas. */
+  public function deactivateServiceLine(int $bookingId, int $detailId): bool
+  {
+    $junction = $this->connection->prepare(
+      'UPDATE tbbookingdetail
+       SET tbbookingdetailactive = false
+       WHERE tbbookingid = :bookingId AND tbdetailid = :detailId
+         AND tbbookingdetailactive = true'
+    );
+    $junction->execute([':bookingId' => $bookingId, ':detailId' => $detailId]);
+
+    if ($junction->rowCount() < 1) {
+      return false;
+    }
+
+    $detail = $this->connection->prepare(
+      'UPDATE tbdetail SET tbdetailactive = false
+       WHERE tbdetailid = :detailId AND tbserviceid IS NOT NULL'
+    );
+    return $detail->execute([':detailId' => $detailId]);
+  }
+
 
   // =========================================================
   // LÍNEA LIBRE (limpieza, bloque de alquiler, etc.)

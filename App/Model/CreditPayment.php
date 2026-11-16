@@ -12,6 +12,7 @@ class CreditPayment
   private ?int $idRole;
   private string $paymentDate;
   private bool $isActive;
+  private ?string $proofFile;
 
   public function __construct(
     int $idCreditPayment = 0,
@@ -20,7 +21,8 @@ class CreditPayment
     string $note = '',
     ?int $idRole = null,
     string $paymentDate = '',
-    bool $isActive = true
+    bool $isActive = true,
+    ?string $proofFile = null
   ) {
     $this->idCreditPayment = $idCreditPayment;
     $this->idCredit = $idCredit;
@@ -29,6 +31,7 @@ class CreditPayment
     $this->idRole = $idRole;
     $this->paymentDate = $paymentDate;
     $this->isActive = $isActive;
+    $this->proofFile = $proofFile;
   }
 
   public function getIdCreditPayment(): int { return $this->idCreditPayment; }
@@ -38,6 +41,7 @@ class CreditPayment
   public function getIdRole(): ?int { return $this->idRole; }
   public function getPaymentDate(): string { return $this->paymentDate; }
   public function getIsActive(): bool { return $this->isActive; }
+  public function getProofFile(): ?string { return $this->proofFile; }
 
   public function setIdCreditPayment(int $idCreditPayment): void { $this->idCreditPayment = $idCreditPayment; }
   public function setIdCredit(int $idCredit): void { $this->idCredit = $idCredit; }
@@ -46,4 +50,5 @@ class CreditPayment
   public function setIdRole(?int $idRole): void { $this->idRole = $idRole; }
   public function setPaymentDate(string $paymentDate): void { $this->paymentDate = $paymentDate; }
   public function setIsActive(bool $isActive): void { $this->isActive = $isActive; }
+  public function setProofFile(?string $proofFile): void { $this->proofFile = $proofFile; }
 }

@@ -22,6 +22,7 @@ class CreditPaymentRepository
         tbcreditid,
         tbcreditpaymentamount,
         tbcreditpaymentnote,
+        tbcreditpaymentproof,
         tbroleid,
         tbcreditpaymentactive
       )
@@ -29,6 +30,7 @@ class CreditPaymentRepository
         :idCredit,
         :amount,
         :note,
+        :proof,
         :idRole,
         :isActive
       )
@@ -39,6 +41,7 @@ class CreditPaymentRepository
       ':idCredit' => $payment->getIdCredit(),
       ':amount'   => $payment->getAmount(),
       ':note'     => $payment->getNote(),
+      ':proof'    => $payment->getProofFile(),
       ':idRole'   => $payment->getIdRole(),
       ':isActive' => $this->toDb($payment->getIsActive()),
     ]);
@@ -57,6 +60,7 @@ class CreditPaymentRepository
         p.tbcreditid,
         p.tbcreditpaymentamount,
         p.tbcreditpaymentnote,
+        p.tbcreditpaymentproof,
         p.tbroleid,
         p.tbcreditpaymentdate,
         r.tbrolename

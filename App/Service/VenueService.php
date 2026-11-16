@@ -92,7 +92,9 @@ class VenueService
       hasParking: !empty($extra['parking']),
       parkingCapacity: $this->nullableInt($extra['parkingCapacity'] ?? null),
       minCapacity: $this->nullableInt($extra['minCapacity'] ?? null),
-      cleaningFee: (float) ($extra['cleaningFee'] ?? 0)
+      cleaningFee: (float) ($extra['cleaningFee'] ?? 0),
+      checkInTime: $this->nullableTime($extra['checkInTime'] ?? null),
+      checkOutTime: $this->nullableTime($extra['checkOutTime'] ?? null)
     );
 
     return $this->venueRepo->save($venue);
@@ -129,6 +131,16 @@ class VenueService
     $venue->setParkingCapacity($this->nullableInt($extra['parkingCapacity'] ?? null));
     $venue->setMinCapacity($this->nullableInt($extra['minCapacity'] ?? null));
     $venue->setCleaningFee((float) ($extra['cleaningFee'] ?? 0));
+    $checkIn = $this->nullableTime($extra['checkInTime'] ?? null);
+    $checkOut = $this->nullableTime($extra['checkOutTime'] ?? null);
+    if (($checkIn === null) !== ($checkOut === null)) {
+      throw new BusinessRuleException('Completa tanto la hora de entrada como la hora de salida.');
+    }
+    if ($checkIn !== null && $checkOut <= $checkIn) {
+      throw new BusinessRuleException('La hora de salida debe ser posterior a la hora de entrada.');
+    }
+    $venue->setCheckInTime($checkIn);
+    $venue->setCheckOutTime($checkOut);
 
     $this->venueRepo->update($venue);
   }
@@ -255,6 +267,15 @@ class VenueService
 
   private function validateCommon(string $name, ?string $type, ?int $capacity, float $price, array $extra): void
   {
+    $checkIn = $this->nullableTime($extra['checkInTime'] ?? null);
+    $checkOut = $this->nullableTime($extra['checkOutTime'] ?? null);
+    if (($checkIn === null) !== ($checkOut === null)) {
+      throw new BusinessRuleException('Completa tanto la hora de entrada como la hora de salida.');
+    }
+    if ($checkIn !== null && $checkOut <= $checkIn) {
+      throw new BusinessRuleException('La hora de salida debe ser posterior a la hora de entrada.');
+    }
+
     if ($capacity === null || $capacity <= 0) {
       throw new BusinessRuleException('La capacidad máxima del local debe ser mayor a 0.');
     }
@@ -300,5 +321,15 @@ class VenueService
   private function nullableInt(mixed $value): ?int
   {
     return ($value === null || $value === '') ? null : (int) $value;
+  }
+
+  private function nullableTime(mixed $value): ?string
+  {
+    $value = trim((string) $value);
+    if ($value === '') return null;
+    if (!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $value)) {
+      throw new BusinessRuleException('Indica una hora válida para el horario general.');
+    }
+    return $value;
   }
 }

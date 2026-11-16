@@ -56,9 +56,9 @@ $u = $user;
     </div>
     <div class="form-group">
       <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
-      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
-             value="<?= e($_POST['phoneNumber'] ?? $u->getPhoneNumber() ?? '') ?>"
-             data-validate="phone" inputmode="numeric" pattern="\d{8}" maxlength="8" placeholder="8 dígitos">
+      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone"
+             value="<?= e(format_phone_number($_POST['phoneNumber'] ?? $u->getPhoneNumber())) ?>"
+             data-validate="phone" maxlength="15" placeholder="+506 8888-8888">
       <div class="form-hint">Ej: 8888-7777</div>
     </div>
     <div class="form-group">

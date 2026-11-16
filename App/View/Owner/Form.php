@@ -103,9 +103,9 @@ if ($owner === null) {
 
     <div class="form-group">
       <label for="phoneNumber">Teléfono <span class="required-mark">*</span> *</label>
-      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" required
+      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" required
              data-validate="required phone"
-             maxlength="8" value="<?= e($_POST['phoneNumber'] ?? $owner->getPhoneNumber() ?? '') ?>">
+             maxlength="15" value="<?= e(format_phone_number($_POST['phoneNumber'] ?? $owner->getPhoneNumber())) ?>" placeholder="+506 8888-8888">
       <div class="form-hint">Ej: 8888-7777</div>
     </div>
 

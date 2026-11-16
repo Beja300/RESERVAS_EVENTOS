@@ -24,11 +24,110 @@
     return parseFloat(String(value).replace(/[^\d.-]/g, '')) || 0;
   };
 
+  App.formatPhoneInput = function (field) {
+    var raw = field.value || '';
+    var before = raw.slice(0, field.selectionStart || 0);
+    var beforeDigits = before.replace(/\D/g, '').length;
+    var digits = raw.replace(/\D/g, '');
+    if ((/^\s*\+?506(?:\D|$)/.test(raw) || digits.length > 8) && digits.slice(0, 3) === '506') {
+      digits = digits.slice(3);
+    }
+    digits = digits.slice(0, 8);
+
+    if (digits === '') {
+      field.value = '';
+      return;
+    }
+
+    var formatted = '+506';
+    formatted += ' ' + digits.slice(0, 4);
+    if (digits.length > 4) formatted += '-' + digits.slice(4);
+    field.value = formatted;
+
+    var targetDigitCount = beforeDigits;
+    if (/^\s*\+?506/.test(before)) targetDigitCount = Math.max(0, targetDigitCount - 3);
+    var caret = 4;
+    if (targetDigitCount > 0) {
+      caret = 5 + Math.min(targetDigitCount, 4);
+      if (targetDigitCount > 4) caret += 1 + targetDigitCount - 4;
+    }
+    try { field.setSelectionRange(caret, caret); } catch (ignore) {}
+  };
+
+  App.initPhoneMasks = function () {
+    var fields = document.querySelectorAll('[data-mask="phone"], input[type="tel"][name="phoneNumber"]');
+    for (var i = 0; i < fields.length; i++) {
+      (function (field) {
+        field.setAttribute('maxlength', '15');
+        field.setAttribute('inputmode', 'tel');
+        field.setAttribute('placeholder', '+506 8888-8888');
+        if ((field.value || '').trim() !== '') App.formatPhoneInput(field);
+        field.addEventListener('input', function () { App.formatPhoneInput(field); });
+        field.addEventListener('paste', function () {
+          setTimeout(function () { App.formatPhoneInput(field); }, 0);
+        });
+      })(fields[i]);
+    }
+  };
+
   App.formatMoney = function (amount) {
     return '\u20A1 ' + Number(amount).toLocaleString('es-CR', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
+  };
+
+  App.formatCurrencyInput = function (field) {
+    var raw = field.value || '';
+    var before = raw.slice(0, field.selectionStart || 0);
+    var tokensBefore = before.replace(/[^\d.]/g, '').length;
+    var beforeNumber = before.replace(/[^\d,.]/g, '');
+    if (beforeNumber.indexOf('.') === -1 && /,\d{0,2}$/.test(beforeNumber)) tokensBefore++;
+    var numericRaw = raw.replace(/[^\d.,]/g, '');
+    if (numericRaw.indexOf('.') === -1 && /,$/.test(numericRaw)) {
+      numericRaw = numericRaw.slice(0, -1) + '.';
+    } else if (numericRaw.indexOf('.') === -1 && /,\d{1,2}$/.test(numericRaw)) {
+      numericRaw = numericRaw.replace(/,(\d{1,2})$/, '.$1');
+    }
+    var cleaned = numericRaw.replace(/,/g, '');
+    var decimalAt = cleaned.indexOf('.');
+    if (decimalAt !== -1) {
+      cleaned = cleaned.slice(0, decimalAt + 1) + cleaned.slice(decimalAt + 1).replace(/\./g, '');
+    }
+    var parts = cleaned.split('.');
+    var integer = parts[0].replace(/^0+(?=\d)/, '');
+    if (integer === '' && decimalAt === 0) integer = '0';
+    var decimals = (parts[1] || '').slice(0, 2);
+    var formatted = integer ? Number(integer).toLocaleString('en-US') : '';
+    if (decimalAt !== -1) formatted += '.' + decimals;
+    field.value = formatted ? '\u20A1 ' + formatted : '';
+
+    var seen = 0;
+    var caret = field.value.length;
+    for (var i = 2; i < field.value.length; i++) {
+      if (/[\d.]/.test(field.value.charAt(i))) seen++;
+      if (seen >= tokensBefore) {
+        caret = i + 1;
+        break;
+      }
+    }
+    if (tokensBefore === 0 && field.value !== '') caret = 2;
+    try { field.setSelectionRange(caret, caret); } catch (ignore) {}
+  };
+
+  App.initCurrencyMasks = function () {
+    var fields = document.querySelectorAll('[data-currency-mask="credit"]');
+    for (var i = 0; i < fields.length; i++) {
+      (function (field) {
+        field.setAttribute('inputmode', 'decimal');
+        field.setAttribute('placeholder', '\u20A1 0.00');
+        if ((field.value || '').trim() !== '') App.formatCurrencyInput(field);
+        field.addEventListener('input', function () { App.formatCurrencyInput(field); });
+        field.addEventListener('paste', function () {
+          setTimeout(function () { App.formatCurrencyInput(field); }, 0);
+        });
+      })(fields[i]);
+    }
   };
 
   // ---------- Toast (notificación no intrusiva) ----------
@@ -182,7 +281,7 @@
     if (rules.indexOf('required') !== -1 && value === '') {
       message = 'Este campo es obligatorio.';
     } else if (value !== '') {
-      if (rules.indexOf('phone') !== -1 && !/^\d{8}$/.test(value)) {
+      if (rules.indexOf('phone') !== -1 && !/^\d{8}$/.test(value.replace(/^\+?506\s*/, '').replace(/\D/g, ''))) {
         message = 'El teléfono debe tener 8 dígitos.';
       } else if (rules.indexOf('email') !== -1 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
         message = 'Correo electrónico no válido.';
@@ -209,6 +308,8 @@
         message = 'El precio no puede ser negativo.';
       } else if (rules.indexOf('positive') !== -1 && (isNaN(numericValue) || numericValue <= 0)) {
         message = 'Debe ser un número mayor que 0.';
+      } else if (rules.indexOf('minamount') !== -1 && min !== null && numericValue + 0.001 < Number(min)) {
+        message = 'El abono mínimo es ' + App.formatMoney(Number(min)) + '.';
       } else if (rules.indexOf('intrange') !== -1) {
         if (!/^\d+$/.test(value)) {
           message = 'Debe ser un número entero.';
@@ -263,6 +364,8 @@
 
   // ---------- Inicialización global (común a cualquier vista) ----------
   App.init = function () {
+    App.initPhoneMasks();
+    App.initCurrencyMasks();
     App.initConfirm();
     App.initTableFilter();
     App.initCardFilter();

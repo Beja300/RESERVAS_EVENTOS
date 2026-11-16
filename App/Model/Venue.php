@@ -25,6 +25,8 @@ class Venue
   private ?int $parkingCapacity;
   private ?int $minCapacity;
   private float $cleaningFee;
+  private ?string $checkInTime;
+  private ?string $checkOutTime;
 
   public function __construct(
     int $idVenue,
@@ -42,7 +44,9 @@ class Venue
     bool $hasParking = false,
     ?int $parkingCapacity = null,
     ?int $minCapacity = null,
-    float $cleaningFee = 0.0
+    float $cleaningFee = 0.0,
+    ?string $checkInTime = null,
+    ?string $checkOutTime = null
   ) {
     $this->idVenue = $idVenue;
     $this->idOwner = $idOwner;
@@ -60,6 +64,8 @@ class Venue
     $this->parkingCapacity = $parkingCapacity;
     $this->minCapacity = $minCapacity;
     $this->cleaningFee = $cleaningFee;
+    $this->checkInTime = $checkInTime;
+    $this->checkOutTime = $checkOutTime;
   }
 
   // Getters
@@ -144,6 +150,9 @@ class Venue
     return $this->cleaningFee;
   }
 
+  public function getCheckInTime(): ?string { return $this->checkInTime; }
+  public function getCheckOutTime(): ?string { return $this->checkOutTime; }
+
   // Setters
 
   public function setIdVenue(int $idVenue): void
@@ -225,4 +234,7 @@ class Venue
   {
     $this->cleaningFee = $cleaningFee;
   }
+
+  public function setCheckInTime(?string $time): void { $this->checkInTime = $time; }
+  public function setCheckOutTime(?string $time): void { $this->checkOutTime = $time; }
 }

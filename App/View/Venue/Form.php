@@ -28,6 +28,8 @@ $curParking  = array_key_exists('parking', $_POST) ? isset($_POST['parking']) : 
 $curParkingCapacity = $posted('parkingCapacity', $venue?->getParkingCapacity() !== null ? (string) $venue->getParkingCapacity() : '');
 $curMinCapacity = $posted('minCapacity', $venue?->getMinCapacity() !== null ? (string) $venue->getMinCapacity() : '');
 $curCleaningFee = $posted('cleaningFee', $venue?->getCleaningFee() !== null ? number_format($venue->getCleaningFee(), 2, '.', '') : '');
+$curCheckInTime = $posted('checkInTime', $venue?->getCheckInTime());
+$curCheckOutTime = $posted('checkOutTime', $venue?->getCheckOutTime());
 $images = $images ?? [];
 $blocks = $blocks ?? [];
 ?>
@@ -107,6 +109,21 @@ $blocks = $blocks ?? [];
         <input class="form-control no-spinners" type="text" inputmode="decimal" id="cleaningFee" name="cleaningFee"
           data-currency-mask value="<?= e($curCleaningFee) ?>">
       </div>
+    </div>
+
+    <div class="form-group">
+      <label>Horario general de uso</label>
+      <div class="grid grid-2">
+        <div>
+          <label for="checkInTime">Hora de entrada</label>
+          <input class="form-control" type="time" id="checkInTime" name="checkInTime" value="<?= e($curCheckInTime) ?>">
+        </div>
+        <div>
+          <label for="checkOutTime">Hora de salida</label>
+          <input class="form-control" type="time" id="checkOutTime" name="checkOutTime" value="<?= e($curCheckOutTime) ?>">
+        </div>
+      </div>
+      <p class="form-hint">Se mostrará cuando la reserva sea de día completo y no use un bloque horario.</p>
     </div>
 
     <div class="checkbox-row" style="margin-bottom:12px;">

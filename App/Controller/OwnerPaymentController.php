@@ -54,7 +54,7 @@ class OwnerPaymentController
     $holder = trim($_POST['holder'] ?? '');
     $account = trim($_POST['account'] ?? '');
     $instructions = trim($_POST['instructions'] ?? '');
-    $active = isset($_POST['active']);
+    $active = (string) ($_POST['active'] ?? '1') === '1';
 
     try {
       $this->ownerPaymentService->save(
