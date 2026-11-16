@@ -39,6 +39,37 @@ $canPay = $isClientOwner && $effectiveState !== 'pagado';
   </div>
 </div>
 
+<div class="card" style="margin-top:18px;">
+  <h3 style="margin-top:0;">Calendario de cuotas</h3>
+  <?php if (empty($installments)): ?>
+    <p class="muted">Este crédito no tiene cuotas registradas.</p>
+  <?php else: ?>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>Cuota</th><th>Monto</th><th>Vence</th><th>Estado</th><th>Pagada el</th></tr>
+        </thead>
+        <tbody>
+          <?php foreach ($installments as $installment): ?>
+            <tr>
+              <td>#<?= (int) $installment->getNumber() ?></td>
+              <td>&#8353; <?= number_format($installment->getAmount(), 2) ?></td>
+              <td><?= e($installment->getDueDate()) ?></td>
+              <td>
+                <?php $isLate = $installment->getState() !== 'pagado' && $installment->getDueDate() < date('Y-m-d'); ?>
+                <span class="badge <?= $installment->getState() === 'pagado' ? 'success' : ($isLate ? 'danger' : 'warning') ?>">
+                  <?= e($installment->getState() === 'pagado' ? 'Pagada' : ($isLate ? 'Vencida' : 'Pendiente')) ?>
+                </span>
+              </td>
+              <td><?= e($installment->getPaidDate() ?? '—') ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+  <?php endif; ?>
+</div>
+
 <?php if ($canPay): ?>
 <div class="card form-card" style="max-width:560px;margin-top:18px;">
   <h3 style="margin-top:0;">Registrar abono</h3>

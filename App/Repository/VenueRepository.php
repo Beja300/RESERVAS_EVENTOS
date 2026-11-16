@@ -7,132 +7,81 @@ class VenueRepository
 {
   private PDO $connection;
 
+  private const COLUMNS = "
+    tbvenueid, tbownerid, tblocationid, tbvenuename, tbvenuetype,
+    tbvenuecapacity, tbvenueprice, tbvenueimage, tbvenueactive,
+    tbvenuedescription, tbvenuesize, tbvenuebathrooms, tbvenueparking,
+    tbvenueparkingcapacity, tbvenuemincapacity, tbvenuecleaningfee
+  ";
+
   public function __construct(PDO $connection)
   {
     $this->connection = $connection;
   }
 
-  // =========================================================
-  // GUARDAR
-  // =========================================================
   public function save(Venue $venue): int
   {
-    $sql = "
-            INSERT INTO tbvenue (
-                tbownerid,
-                tblocationid,
-                tbvenuename,
-                tbvenuetype,
-                tbvenuecapacity,
-                tbvenueprice,
-                tbvenueimage,
-                tbvenueactive
-            )
-            VALUES (
-                :idOwner,
-                :idLocation,
-                :nameVenue,
-                :typeVenue,
-                :capacityVenue,
-                :priceVenue,
-                :imageVenue,
-                :isActive
-            )
-        ";
+    $sql = 'INSERT INTO tbvenue (
+      tbownerid, tblocationid, tbvenuename, tbvenuetype, tbvenuecapacity,
+      tbvenueprice, tbvenueimage, tbvenueactive, tbvenuedescription,
+      tbvenuesize, tbvenuebathrooms, tbvenueparking, tbvenueparkingcapacity,
+      tbvenuemincapacity, tbvenuecleaningfee
+    ) VALUES (
+      :idOwner, :idLocation, :nameVenue, :typeVenue, :capacityVenue,
+      :priceVenue, :imageVenue, :isActive, :descriptionVenue,
+      :sizeVenue, :bathroomsVenue, :hasParking, :parkingCapacity,
+      :minCapacity, :cleaningFee
+    )';
 
     $stmt = $this->connection->prepare($sql);
-
     $stmt->execute([
-      ':idOwner'       => $venue->getIdOwner(),
-      ':idLocation'   => $venue->getIdLocation(),
-      ':nameVenue'     => $venue->getNameVenue(),
-      ':typeVenue'     => $venue->getTypeVenue(),
+      ':idOwner' => $venue->getIdOwner(),
+      ':idLocation' => $venue->getIdLocation(),
+      ':nameVenue' => $venue->getNameVenue(),
+      ':typeVenue' => $venue->getTypeVenue(),
       ':capacityVenue' => $venue->getCapacityVenue(),
-      ':priceVenue'    => $venue->getPriceVenue(),
-      ':imageVenue'    => $venue->getImageVenue(),
-      ':isActive'      => $this->toDb($venue->getIsActive())
+      ':priceVenue' => $venue->getPriceVenue(),
+      ':imageVenue' => $venue->getImageVenue(),
+      ':isActive' => $this->toDb($venue->getIsActive()),
+      ':descriptionVenue' => $venue->getDescriptionVenue(),
+      ':sizeVenue' => $venue->getSizeVenue(),
+      ':bathroomsVenue' => $venue->getBathroomsVenue(),
+      ':hasParking' => $venue->getHasParking() ? 1 : 0,
+      ':parkingCapacity' => $venue->getParkingCapacity(),
+      ':minCapacity' => $venue->getMinCapacity(),
+      ':cleaningFee' => $venue->getCleaningFee(),
     ]);
 
     return (int) $this->connection->lastInsertId();
   }
 
-
-  // =========================================================
-  // BUSCAR POR ID
-  // =========================================================
   public function findById(int $idVenue): ?Venue
   {
-    $sql = "
-            SELECT
-                tbvenueid,
-                tbownerid,
-                tblocationid,
-                tbvenuename,
-                tbvenuetype,
-                tbvenuecapacity,
-                tbvenueprice,
-                tbvenueimage,
-                tbvenueactive
-
-            FROM tbvenue
-
-            WHERE tbvenueid = :idVenue
-        ";
-
-    $stmt = $this->connection->prepare($sql);
-
-    $stmt->execute([
-      ':idVenue' => $idVenue
-    ]);
-
+    $stmt = $this->connection->prepare(
+      'SELECT ' . self::COLUMNS . ' FROM tbvenue WHERE tbvenueid = :idVenue'
+    );
+    $stmt->execute([':idVenue' => $idVenue]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
     return $row ? $this->mapRow($row) : null;
   }
 
-
-  // =========================================================
-  // CATÁLOGO PÚBLICO DEL CLIENTE (solo locales activos)
-  // =========================================================
   public function findActive(): array
   {
-    $sql = "
-            SELECT
-                tbvenueid,
-                tbownerid,
-                tblocationid,
-                tbvenuename,
-                tbvenuetype,
-                tbvenuecapacity,
-                tbvenueprice,
-                tbvenueimage,
-                tbvenueactive
-
-            FROM tbvenue
-
-            WHERE tbvenueactive = true
-
-            ORDER BY tbvenuename ASC
-        ";
-
-    $stmt = $this->connection->prepare($sql);
+    $stmt = $this->connection->prepare(
+      'SELECT ' . self::COLUMNS . ' FROM tbvenue
+       WHERE tbvenueactive = true ORDER BY tbvenuename ASC'
+    );
     $stmt->execute();
 
     return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
-
-  // =========================================================
-  // BUSCAR LOCALES ACTIVOS POR FILTROS (ubicación, tipo, texto)
-  // =========================================================
   public function findActiveByIds(array $ids): array
   {
     return $this->findByIds($ids, true);
   }
 
-  // =========================================================
-  // BUSCAR LOCALES POR IDS (opcionalmente solo activos)
-  // =========================================================
   public function findByIds(array $ids, bool $onlyActive = false): array
   {
     $ids = array_values(array_unique(array_filter(array_map('intval', $ids), fn($i) => $i > 0)));
@@ -144,26 +93,13 @@ class VenueRepository
     $placeholders = [];
     $params = [];
     foreach ($ids as $i => $id) {
-      $key = ":id{$i}";
+      $key = ':id' . $i;
       $placeholders[] = $key;
       $params[$key] = $id;
     }
 
-    $sql = "
-            SELECT
-                tbvenueid,
-                tbownerid,
-                tblocationid,
-                tbvenuename,
-                tbvenuetype,
-                tbvenuecapacity,
-                tbvenueprice,
-                tbvenueimage,
-                tbvenueactive
-            FROM tbvenue
-            WHERE tbvenueid IN (" . implode(', ', $placeholders) . ")
-        ";
-
+    $sql = 'SELECT ' . self::COLUMNS . ' FROM tbvenue
+            WHERE tbvenueid IN (' . implode(', ', $placeholders) . ')';
     if ($onlyActive) {
       $sql .= ' AND tbvenueactive = true';
     }
@@ -176,7 +112,6 @@ class VenueRepository
       $byId[(int) $row['tbvenueid']] = $this->mapRow($row);
     }
 
-    // Conserva el orden pedido por el llamador (ej. el de la lista de favoritos).
     $ordered = [];
     foreach ($ids as $id) {
       if (isset($byId[$id])) {
@@ -187,27 +122,17 @@ class VenueRepository
     return $ordered;
   }
 
-  // =========================================================
-  // BUSCAR LOCALES ACTIVOS POR FILTROS (ubicación, tipo, texto)
-  // =========================================================
   public function findByFilters(array $filters = []): array
   {
-    $sql = "
-            SELECT
-                v.tbvenueid,
-                v.tbownerid,
-                v.tblocationid,
-                v.tbvenuename,
-                v.tbvenuetype,
-                v.tbvenuecapacity,
-                v.tbvenueprice,
-                v.tbvenueimage,
-                v.tbvenueactive,
-                l.tblocationprovince
+    $sql = 'SELECT v.tbvenueid, v.tbownerid, v.tblocationid, v.tbvenuename,
+                   v.tbvenuetype, v.tbvenuecapacity, v.tbvenueprice, v.tbvenueimage,
+                   v.tbvenueactive, v.tbvenuedescription, v.tbvenuesize,
+                   v.tbvenuebathrooms, v.tbvenueparking, v.tbvenueparkingcapacity,
+                   v.tbvenuemincapacity, v.tbvenuecleaningfee,
+                   l.tblocationprovince
             FROM tbvenue v
             LEFT JOIN tblocation l ON l.tblocationid = v.tblocationid
-            WHERE v.tbvenueactive = true
-        ";
+            WHERE v.tbvenueactive = true';
 
     $conditions = [];
     $params = [];
@@ -232,14 +157,11 @@ class VenueRepository
       $params[':type'] = $filters['type'];
     }
 
-    // Categorización por TIPO DE SERVICIO: locales que ofrecen al menos un
-    // servicio aprobado de esa categoría (reutiliza tbservicetype).
     if (!empty($filters['serviceType'])) {
       $conditions[] = "EXISTS (
         SELECT 1 FROM tbservice s
         WHERE s.tbvenueid = v.tbvenueid
           AND s.tbserviceactive = true
-          AND s.tbservicestate = 'aprobado'
           AND s.tbservicetype = :serviceType
       )";
       $params[':serviceType'] = $filters['serviceType'];
@@ -262,56 +184,39 @@ class VenueRepository
     return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
-
-  // =========================================================
-  // PANEL DEL OWNER (todos sus locales, activos o no)
-  // =========================================================
   public function findByOwner(int $idOwner): array
   {
-    $sql = "
-            SELECT
-                tbvenueid,
-                tbownerid,
-                tblocationid,
-                tbvenuename,
-                tbvenuetype,
-                tbvenuecapacity,
-                tbvenueprice,
-                tbvenueimage,
-                tbvenueactive
-
-            FROM tbvenue
-
-            WHERE tbownerid = :idOwner
-            ORDER BY tbvenuename ASC
-        ";
-
-    $stmt = $this->connection->prepare($sql);
-
-    $stmt->execute([
-      ':idOwner' => $idOwner
-    ]);
+    $stmt = $this->connection->prepare(
+      'SELECT ' . self::COLUMNS . ' FROM tbvenue
+       WHERE tbownerid = :idOwner
+       ORDER BY tbvenueactive DESC, tbvenuename ASC'
+    );
+    $stmt->execute([':idOwner' => $idOwner]);
 
     return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
   }
 
+  public function findActiveByOwner(int $idOwner): array
+  {
+    $stmt = $this->connection->prepare(
+      'SELECT ' . self::COLUMNS . ' FROM tbvenue
+       WHERE tbownerid = :idOwner AND tbvenueactive = true
+       ORDER BY tbvenuename ASC'
+    );
+    $stmt->execute([':idOwner' => $idOwner]);
 
-  // =========================================================
-  // ¿YA EXISTE UN LOCAL CON ESE NOMBRE PARA EL MISMO DUEÑO?
-  // (control de duplicados desde PHP, case-insensitive)
-  // =========================================================
+    return array_map([$this, 'mapRow'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+  }
+
   public function existsByNameForOwner(int $idOwner, string $name, ?int $excludeId = null): bool
   {
-    $sql = "
-      SELECT COUNT(*) FROM tbvenue
-      WHERE tbownerid = :idOwner
-        AND LOWER(TRIM(tbvenuename)) = LOWER(:name)
-    ";
-
+    $sql = 'SELECT COUNT(*) FROM tbvenue
+            WHERE tbownerid = :idOwner
+              AND LOWER(TRIM(tbvenuename)) = LOWER(:name)';
     $params = [':idOwner' => $idOwner, ':name' => trim($name)];
 
     if ($excludeId !== null) {
-      $sql .= " AND tbvenueid <> :excludeId";
+      $sql .= ' AND tbvenueid <> :excludeId';
       $params[':excludeId'] = $excludeId;
     }
 
@@ -321,55 +226,67 @@ class VenueRepository
     return (int) $stmt->fetchColumn() > 0;
   }
 
-
-  // =========================================================
-  // EDITAR
-  // =========================================================
   public function update(Venue $venue): bool
   {
-    $sql = "
-            UPDATE tbvenue
-            SET
-                tbvenuename = :nameVenue,
-                tbvenuetype = :typeVenue,
-                tbvenuecapacity = :capacityVenue,
-                tbvenueprice = :priceVenue,
-                tbvenueimage = :imageVenue,
-                tblocationid = :idLocation,
-                tbvenueactive = :isActive
-            WHERE tbvenueid = :idVenue
-        ";
+    $sql = 'UPDATE tbvenue SET
+      tbvenuename = :nameVenue, tbvenuetype = :typeVenue,
+      tbvenuecapacity = :capacityVenue, tbvenueprice = :priceVenue,
+      tbvenueimage = :imageVenue, tblocationid = :idLocation,
+      tbvenueactive = :isActive, tbvenuedescription = :descriptionVenue,
+      tbvenuesize = :sizeVenue, tbvenuebathrooms = :bathroomsVenue,
+      tbvenueparking = :hasParking, tbvenueparkingcapacity = :parkingCapacity,
+      tbvenuemincapacity = :minCapacity, tbvenuecleaningfee = :cleaningFee
+      WHERE tbvenueid = :idVenue';
 
     $stmt = $this->connection->prepare($sql);
 
     return $stmt->execute([
-      ':nameVenue'     => $venue->getNameVenue(),
-      ':typeVenue'     => $venue->getTypeVenue(),
+      ':nameVenue' => $venue->getNameVenue(),
+      ':typeVenue' => $venue->getTypeVenue(),
       ':capacityVenue' => $venue->getCapacityVenue(),
-      ':priceVenue'    => $venue->getPriceVenue(),
-      ':imageVenue'    => $venue->getImageVenue(),
-      ':idLocation'    => $venue->getIdLocation(),
-      ':isActive'      => $this->toDb($venue->getIsActive()),
-      ':idVenue'       => $venue->getIdVenue()
+      ':priceVenue' => $venue->getPriceVenue(),
+      ':imageVenue' => $venue->getImageVenue(),
+      ':idLocation' => $venue->getIdLocation(),
+      ':isActive' => $this->toDb($venue->getIsActive()),
+      ':descriptionVenue' => $venue->getDescriptionVenue(),
+      ':sizeVenue' => $venue->getSizeVenue(),
+      ':bathroomsVenue' => $venue->getBathroomsVenue(),
+      ':hasParking' => $venue->getHasParking() ? 1 : 0,
+      ':parkingCapacity' => $venue->getParkingCapacity(),
+      ':minCapacity' => $venue->getMinCapacity(),
+      ':cleaningFee' => $venue->getCleaningFee(),
+      ':idVenue' => $venue->getIdVenue(),
     ]);
   }
 
+  public function setActive(int $idVenue, bool $active): bool
+  {
+    $stmt = $this->connection->prepare(
+      'UPDATE tbvenue SET tbvenueactive = :active WHERE tbvenueid = :id'
+    );
 
-  // =========================================================
-  // MAPEO FILA -> OBJETO
-  // =========================================================
+    return $stmt->execute([':active' => $this->toDb($active), ':id' => $idVenue]);
+  }
+
   private function mapRow(array $row): Venue
   {
     return new Venue(
       idVenue: (int) $row['tbvenueid'],
       idOwner: (int) $row['tbownerid'],
-      idLocation: (int) $row['tblocationid'],
+      idLocation: (int) ($row['tblocationid'] ?? 0),
       nameVenue: $row['tbvenuename'],
       typeVenue: $row['tbvenuetype'] ?? '',
       capacityVenue: (int) $row['tbvenuecapacity'],
       priceVenue: (float) $row['tbvenueprice'],
       imageVenue: $row['tbvenueimage'] ?? '',
-      isActive: $this->toBool($row['tbvenueactive'])
+      isActive: $this->toBool($row['tbvenueactive']),
+      descriptionVenue: $row['tbvenuedescription'] ?? null,
+      sizeVenue: $row['tbvenuesize'] ?? null,
+      bathroomsVenue: ($row['tbvenuebathrooms'] ?? null) !== null ? (int) $row['tbvenuebathrooms'] : null,
+      hasParking: $this->toBool($row['tbvenueparking'] ?? false),
+      parkingCapacity: ($row['tbvenueparkingcapacity'] ?? null) !== null ? (int) $row['tbvenueparkingcapacity'] : null,
+      minCapacity: ($row['tbvenuemincapacity'] ?? null) !== null ? (int) $row['tbvenuemincapacity'] : null,
+      cleaningFee: (float) ($row['tbvenuecleaningfee'] ?? 0)
     );
   }
 

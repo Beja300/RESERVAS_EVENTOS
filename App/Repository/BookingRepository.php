@@ -25,6 +25,8 @@ class BookingRepository
                 tbbookingenddate,
                 tbbookingeventtype,
                 tbbookingeventdetail,
+                tbbookingattendees,
+                tbbookingrentalblockid,
                 tbbookingstate,
                 tbbookingactive
             )
@@ -35,6 +37,8 @@ class BookingRepository
                 :bookingEndDate,
                 :eventType,
                 :eventDetail,
+                :attendees,
+                :rentalBlockId,
                 :bookingState,
                 :isBookingActive
             )
@@ -49,6 +53,8 @@ class BookingRepository
       ':bookingEndDate'   => $booking->getBookingEndDate() ?: null,
       ':eventType'        => $booking->getEventType(),
       ':eventDetail'      => $booking->getEventDescription(),
+      ':attendees'        => $booking->getAttendees(),
+      ':rentalBlockId'    => $booking->getRentalBlockId(),
       ':bookingState'     => $booking->getBookingState(),
       ':isBookingActive'  => $this->toDb($booking->getIsBookingActive())
     ]);
@@ -71,6 +77,8 @@ class BookingRepository
                 tbbookingenddate,
                 tbbookingeventtype,
                 tbbookingeventdetail,
+                tbbookingattendees,
+                tbbookingrentalblockid,
                 tbbookingstate,
                 tbbookingactive
 
@@ -105,6 +113,8 @@ class BookingRepository
                 tbbookingenddate,
                 tbbookingeventtype,
                 tbbookingeventdetail,
+                tbbookingattendees,
+                tbbookingrentalblockid,
                 tbbookingstate,
                 tbbookingactive
 
@@ -126,6 +136,34 @@ class BookingRepository
 
 
   // =========================================================
+  // RESERVAS CONFIRMADAS DE UN CLIENTE EN LOS LOCALES DE UN OWNER
+  // (para el umbral de "cliente frecuente" del crédito)
+  // =========================================================
+  public function countConfirmedByClientAndOwner(int $idClient, int $idOwner): int
+  {
+    $sql = "
+            SELECT COUNT(*)
+            FROM tbbooking b
+            INNER JOIN tbvenue v
+                ON v.tbvenueid = b.tbvenueid
+            WHERE b.tbclientid = :idClient
+              AND v.tbownerid = :idOwner
+              AND b.tbbookingstate = 'confirmado'
+              AND b.tbbookingactive = true
+        ";
+
+    $stmt = $this->connection->prepare($sql);
+
+    $stmt->execute([
+      ':idClient' => $idClient,
+      ':idOwner'  => $idOwner
+    ]);
+
+    return (int) $stmt->fetchColumn();
+  }
+
+
+  // =========================================================
   // BUSCAR POR LOCAL (VENUE)
   // =========================================================
   public function findByVenue(int $idLocal): array
@@ -139,6 +177,8 @@ class BookingRepository
                 tbbookingenddate,
                 tbbookingeventtype,
                 tbbookingeventdetail,
+                tbbookingattendees,
+                tbbookingrentalblockid,
                 tbbookingstate,
                 tbbookingactive
 
@@ -173,6 +213,8 @@ class BookingRepository
                 tbbookingenddate,
                 tbbookingeventtype,
                 tbbookingeventdetail,
+                tbbookingattendees,
+                tbbookingrentalblockid,
                 tbbookingstate,
                 tbbookingactive
 
@@ -231,6 +273,8 @@ class BookingRepository
                 b.tbbookingenddate,
                 b.tbbookingeventtype,
                 b.tbbookingeventdetail,
+                b.tbbookingattendees,
+                b.tbbookingrentalblockid,
                 b.tbbookingstate,
                 b.tbbookingactive
 
@@ -405,7 +449,8 @@ class BookingRepository
   {
     $sql = "
             UPDATE tbbooking
-            SET tbvenueid = :newVenueId
+            SET tbvenueid = :newVenueId,
+                tbbookingrentalblockid = NULL
             WHERE tbbookingid = :idBooking
         ";
 
@@ -520,12 +565,17 @@ class BookingRepository
   // VERIFICAR SOLAPAMIENTO DE RANGO [inicio, fin]
   // Dos reservas chocan si: inicio <= finExistente AND fin >= inicioExistente
   // =========================================================
-  public function hasActiveRangeConflict(int $idLocal, string $startDate, string $endDate, int $excludeBookingId = 0): bool
-  {
+  public function hasActiveRangeConflict(
+    int $idLocal,
+    string $startDate,
+    string $endDate,
+    int $excludeBookingId = 0,
+    ?int $rentalBlockId = null
+  ): bool {
     $sql = "
             SELECT COUNT(*)
             FROM tbbooking
-WHERE tbvenueid = :idLocal
+            WHERE tbvenueid = :idLocal
               AND tbbookingstate IN ('pendiente', 'confirmado')
               AND tbbookingactive = true
               AND tbbookingdate <= :endDate
@@ -537,6 +587,11 @@ WHERE tbvenueid = :idLocal
       ':startDate' => $startDate,
       ':endDate'   => $endDate
     ];
+
+    if ($rentalBlockId !== null && $rentalBlockId > 0) {
+      $sql .= ' AND (tbbookingrentalblockid IS NULL OR tbbookingrentalblockid = :rentalBlockId)';
+      $params[':rentalBlockId'] = $rentalBlockId;
+    }
 
     if ($excludeBookingId > 0) {
       $sql .= " AND tbbookingid <> :excludeId";
@@ -654,6 +709,12 @@ WHERE tbvenueid = :idLocal
         : null,
       eventDescription: ($row['tbbookingeventdetail'] ?? null) !== null && $row['tbbookingeventdetail'] !== ''
         ? $row['tbbookingeventdetail']
+        : null,
+      attendees: ($row['tbbookingattendees'] ?? null) !== null && $row['tbbookingattendees'] !== ''
+        ? (int) $row['tbbookingattendees']
+        : null,
+      rentalBlockId: ($row['tbbookingrentalblockid'] ?? null) !== null && $row['tbbookingrentalblockid'] !== ''
+        ? (int) $row['tbbookingrentalblockid']
         : null
     );
   }

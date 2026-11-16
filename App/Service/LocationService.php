@@ -51,10 +51,6 @@ class LocationService
 
         self::assertValidCoordinates($latitude, $longitude);
 
-        if ($this->locationRepo->findIdByParts($province, $canton, $district) !== null) {
-            throw new BusinessRuleException('Ya existe una ubicación con esa provincia, cantón y distrito.');
-        }
-
         $newLocation = new Location(
             idLocation: 0,
             provinceLocation: $province,
@@ -120,14 +116,6 @@ class LocationService
         }
 
         self::assertValidCoordinates($latitude, $longitude);
-
-        // Integridad lógica: no permitir una ubicación duplicada exacta
-        // (misma provincia + cantón + distrito) controlada desde PHP.
-        $duplicateId = $this->locationRepo->findIdByParts($province, $canton, $district);
-
-        if ($duplicateId !== null && $duplicateId !== $idLocation) {
-            throw new BusinessRuleException('Ya existe una ubicación con esa provincia, cantón y distrito.');
-        }
 
         $location = new Location(
             idLocation: $idLocation,

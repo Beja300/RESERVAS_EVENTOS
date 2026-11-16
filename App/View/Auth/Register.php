@@ -22,7 +22,7 @@
       <button type="button" data-tab="owner" onclick="showTab('owner')">Soy propietario</button>
     </div>
 
-    <form id="registerForm" method="post"
+    <form id="registerForm" method="post" data-validate-form
           data-action-client="<?= e(base_url('auth', 'registerClient')) ?>"
           data-action-owner="<?= e(base_url('auth', 'registerOwner')) ?>"
           action="<?= e(base_url('auth', 'registerClient')) ?>">
@@ -50,6 +50,15 @@
             <button class="password-toggle" type="button" id="passwordToggle" aria-label="Mostrar contraseña">Mostrar</button>
           </div>
           <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
+        </div>
+        <div class="form-group">
+          <label for="passwordConfirm">Confirmar contraseña <span class="required-mark">*</span></label>
+          <div class="password-wrapper">
+            <input class="form-control" type="password" id="passwordConfirm" name="passwordConfirm"
+                   data-validate="match" data-match="password" data-match-message="Las contraseñas no coinciden."
+                   minlength="8" required>
+            <button class="password-toggle" type="button" id="passwordConfirmToggle" aria-label="Mostrar contraseña">Mostrar</button>
+          </div>
         </div>
         <div class="form-group">
           <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
@@ -105,6 +114,15 @@
             <button class="password-toggle" type="button" id="ownerPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
           </div>
           <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
+        </div>
+        <div class="form-group">
+          <label for="ownerPasswordConfirm">Confirmar contraseña <span class="required-mark">*</span></label>
+          <div class="password-wrapper">
+            <input class="form-control" type="password" id="ownerPasswordConfirm" name="passwordConfirm"
+                   data-validate="match" data-match="ownerPassword" data-match-message="Las contraseñas no coinciden."
+                   minlength="8" required>
+            <button class="password-toggle" type="button" id="ownerPasswordConfirmToggle" aria-label="Mostrar contraseña">Mostrar</button>
+          </div>
         </div>
         <div class="form-group">
           <label for="ownerPhone">Teléfono <span class="required-mark">*</span></label>

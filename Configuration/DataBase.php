@@ -16,21 +16,45 @@ class DataBase
     private static ?PDO $instance = null;
 
     // -----------------------------------------------------------
-    // Datos de conexión. Ajusta estos valores a tu entorno local.
-    //
-    // IMPORTANTE en Linux: usa '127.0.0.1' y NO 'localhost'. Y NO uses
-    // el usuario 'root' del sistema -- en Ubuntu/Debian normalmente usa
-    // auth_socket (solo permite entrar con "sudo mysql", nunca por
-    // contraseña/TCP -> error SQLSTATE[HY000] [1698]). Por eso se usa
-    // un usuario dedicado para la app, creado con:
-    //   CREATE USER 'paradigmas_app'@'127.0.0.1' IDENTIFIED BY '...';
-    //   GRANT ALL PRIVILEGES ON proyectoparadigmas_db.* TO 'paradigmas_app'@'127.0.0.1';
+    // Datos de conexión por defecto. Los valores reales pueden venir de
+    // Configuration/DataBase.local.php (ignorado por git) o de variables
+    // de entorno. NO uses el usuario root del sistema: en Ubuntu/Debian
+    // normalmente usa auth_socket y solo permite "sudo mysql", no PDO/TCP
+    // (error SQLSTATE[HY000] [1698]).
     // -----------------------------------------------------------
     private const HOST     = '127.0.0.1';
     private const PORT     = '3306';
-    private const DB_NAME  = 'dbeventhall'; // nombre real de la BD en Workbench
-    private const USER     = 'root';
-    private const PASS     = ''; // <-- debe coincidir EXACTO con la de MySQL
+    private const DB_NAME  = 'dbeventhall';
+    private const USER     = 'eventhall_app';
+    private const PASS     = '';
+
+    /**
+     * Devuelve la configuración efectiva de la conexión.
+     * Prioridad: DataBase.local.php > variables de entorno > valores por defecto.
+     *
+     * @return array{host:string,port:string,database:string,user:string,password:string}
+     */
+    private static function config(): array
+    {
+        $localFile = __DIR__ . '/DataBase.local.php';
+        $local = is_file($localFile) ? require $localFile : [];
+        if (!is_array($local)) {
+            $local = [];
+        }
+
+        $pick = static function (string $key, string $env, string $default) use ($local): string {
+            $value = $local[$key] ?? ($_ENV[$env] ?? getenv($env));
+            return $value === false || $value === null || $value === '' ? $default : (string) $value;
+        };
+
+        return [
+            'host'     => $pick('host', 'DB_HOST', self::HOST),
+            'port'     => $pick('port', 'DB_PORT', self::PORT),
+            'database' => $pick('database', 'DB_NAME', self::DB_NAME),
+            'user'     => $pick('user', 'DB_USER', self::USER),
+            'password' => $pick('password', 'DB_PASS', self::PASS),
+        ];
+    }
 
     /**
      * Constructor privado: NADIE puede hacer "new DataBase()" desde
@@ -54,14 +78,16 @@ class DataBase
     {
         if (self::$instance === null) {
             try {
+                $config = self::config();
+
                 // DSN (Data Source Name): le dice a PDO qué motor,
                 // en qué servidor/puerto, y a qué base de datos conectarse.
-                $dsn = 'mysql:host=' . self::HOST
-                     . ';port=' . self::PORT
-                     . ';dbname=' . self::DB_NAME
+                $dsn = 'mysql:host=' . $config['host']
+                     . ';port=' . $config['port']
+                     . ';dbname=' . $config['database']
                      . ';charset=utf8mb4'; // utf8mb4 para que tildes y "ñ" se guarden bien
 
-                self::$instance = new PDO($dsn, self::USER, self::PASS, [
+                self::$instance = new PDO($dsn, $config['user'], $config['password'], [
                     // Si algo falla (credenciales, BD inexistente), PDO lanza
                     // una excepción que SÍ podemos capturar, en vez de fallar
                     // en silencio.

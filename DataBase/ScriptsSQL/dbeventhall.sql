@@ -110,11 +110,29 @@ CREATE TABLE tbvenue (
     tbvenuecapacity INT,
     tbvenueprice DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     tbvenueimage VARCHAR(255),
+    tbvenuedescription VARCHAR(500) NULL,
+    tbvenuesize VARCHAR(100) NULL,
+    tbvenuebathrooms INT NULL,
+    tbvenueparking TINYINT(1) NOT NULL DEFAULT 0,
+    tbvenueparkingcapacity INT NULL,
+    tbvenuemincapacity INT NULL,
+    tbvenuecleaningfee DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     tbvenueactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
 -- =========================================================
--- 10) tbservice: servicios por local
+-- 10) tbservicegroup: agrupa las copias de un servicio en varios locales
+-- =========================================================
+CREATE TABLE tbservicegroup (
+    tbservicegroupid INT AUTO_INCREMENT PRIMARY KEY,
+    tbownerid INT NOT NULL,
+    tbservicegroupname VARCHAR(200) NOT NULL,
+    tbservicegroupcreatedat DATETIME DEFAULT CURRENT_TIMESTAMP,
+    tbservicegroupactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 10b) tbservice: servicios por local
 -- =========================================================
 CREATE TABLE tbservice (
     tbserviceid INT AUTO_INCREMENT PRIMARY KEY,
@@ -122,10 +140,27 @@ CREATE TABLE tbservice (
     tbservicename VARCHAR(200) NOT NULL,
     tbservicetype VARCHAR(100),
     tbserviceprice DECIMAL(10,2) NOT NULL,
-    tbservicestate VARCHAR(30) DEFAULT 'solicitado',
+    tbservicedescription VARCHAR(500) NULL,
+    tbserviceunit VARCHAR(20) NOT NULL DEFAULT 'unidad',
+    tbserviceminquantity INT NOT NULL DEFAULT 1,
+    tbservicemaxquantity INT NULL,
+    tbserviceincludedquantity INT NOT NULL DEFAULT 0,
+    tbservicestate VARCHAR(30) DEFAULT 'aprobado',
     tbroleid INT NULL,
     tbserviceapprovedon DATETIME NULL,
+    tbservicegroupid INT NULL,
     tbserviceactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 10c) tbserviceimage: galería de imágenes de un servicio
+-- =========================================================
+CREATE TABLE tbserviceimage (
+    tbserviceimageid INT AUTO_INCREMENT PRIMARY KEY,
+    tbserviceid INT NOT NULL,
+    tbserviceimagepath VARCHAR(255) NOT NULL,
+    tbserviceimagesort INT NOT NULL DEFAULT 0,
+    tbserviceimageactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
 -- =========================================================
@@ -174,6 +209,8 @@ CREATE TABLE tbbooking (
     tbbookingenddate DATE,
     tbbookingeventtype VARCHAR(50),
     tbbookingeventdetail VARCHAR(255),
+    tbbookingattendees INT NULL,
+    tbbookingrentalblockid INT NULL,
     tbbookingstate VARCHAR(30) DEFAULT 'pendiente',
     tbbookingactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
@@ -190,6 +227,7 @@ CREATE TABLE tbdetail (
     tbdetailquantity INT NOT NULL DEFAULT 1,
     tbdetailunitprice DECIMAL(10,2) NOT NULL,
     tbdetaildiscount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    tbdetailconcept VARCHAR(255) NULL,
     tbdetailactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
@@ -410,6 +448,10 @@ CREATE TABLE tbcreditconfig (
     tbcreditconfigenabled BOOLEAN NOT NULL DEFAULT FALSE,
     tbcreditconfigdays INT NOT NULL DEFAULT 30,
     tbcreditconfigfrequentmin INT NOT NULL DEFAULT 3,
+    tbcreditconfiginstallments INT NOT NULL DEFAULT 1,
+    tbcreditconfigfrequency VARCHAR(20) NOT NULL DEFAULT 'mensual',
+    tbcreditconfiggracedays INT NOT NULL DEFAULT 0,
+    tbcreditconfigreminderdays INT NOT NULL DEFAULT 3,
     tbcreditconfigactive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
@@ -445,42 +487,59 @@ CREATE TABLE tbcreditpayment (
 ) ENGINE=InnoDB;
 
 
-CREATE TABLE IF NOT EXISTS tbcreditconfig (
-    tbcreditconfigid INT AUTO_INCREMENT PRIMARY KEY,
-    tbownerid INT NOT NULL,
-    tbcreditconfigenabled BOOLEAN NOT NULL DEFAULT FALSE,
-    tbcreditconfigdays INT NOT NULL DEFAULT 30,
-    tbcreditconfigfrequentmin INT NOT NULL DEFAULT 3,
-    tbcreditconfigactive BOOLEAN NOT NULL DEFAULT TRUE
-) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS tbcredit (
-    tbcreditid INT AUTO_INCREMENT PRIMARY KEY,
-    tbbookingid INT NOT NULL,
-    tbclientid INT NOT NULL,
-    tbownerid INT NOT NULL,
-    tbcredittotal DECIMAL(12,2) NOT NULL,
-    tbcreditbalance DECIMAL(12,2) NOT NULL,
-    tbcreditduedate DATE NOT NULL,
-    tbcreditstate VARCHAR(30) DEFAULT 'pendiente',
-    tbcreditdate DATETIME DEFAULT CURRENT_TIMESTAMP,
-    tbcreditactive BOOLEAN NOT NULL DEFAULT TRUE
-) ENGINE=InnoDB;
-
-CREATE TABLE IF NOT EXISTS tbcreditpayment (
-    tbcreditpaymentid INT AUTO_INCREMENT PRIMARY KEY,
-    tbcreditid INT NOT NULL,
-    tbcreditpaymentamount DECIMAL(12,2) NOT NULL,
-    tbcreditpaymentnote VARCHAR(255),
-    tbroleid INT,
-    tbcreditpaymentdate DATETIME DEFAULT CURRENT_TIMESTAMP,
-    tbcreditpaymentactive BOOLEAN NOT NULL DEFAULT TRUE
-) ENGINE=InnoDB;
-
 CREATE TABLE IF NOT EXISTS tbvenueimage (
     tbvenueimageid INT AUTO_INCREMENT PRIMARY KEY,
     tbvenueid INT NOT NULL,
     tbvenueimagepath VARCHAR(255) NOT NULL,
     tbvenueimagesort INT NOT NULL DEFAULT 0,
     tbvenueimageactive TINYINT(1) NOT NULL DEFAULT 1
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 32) tbvenuerentalblock: bloques horarios de alquiler del local
+-- =========================================================
+CREATE TABLE IF NOT EXISTS tbvenuerentalblock (
+    tbvenuerentalblockid INT AUTO_INCREMENT PRIMARY KEY,
+    tbvenueid INT NOT NULL,
+    tbvenuerentalblockname VARCHAR(100) NOT NULL,
+    tbvenuerentalblockstart TIME NOT NULL,
+    tbvenuerentalblockend TIME NOT NULL,
+    tbvenuerentalblockprice DECIMAL(10,2) NOT NULL DEFAULT 0,
+    tbvenuerentalblocksort INT NOT NULL DEFAULT 0,
+    tbvenuerentalblockactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 33) tbownerblockedclient: clientes bloqueados por un propietario
+-- =========================================================
+CREATE TABLE IF NOT EXISTS tbownerblockedclient (
+    tbownerblockedclientid INT AUTO_INCREMENT PRIMARY KEY,
+    tbownerid INT NOT NULL,
+    tbclientid INT NOT NULL,
+    tbownerblockedclientreason VARCHAR(500),
+    tbownerblockedclientdate DATETIME DEFAULT CURRENT_TIMESTAMP,
+    tbownerblockedclientactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 34) tbcreditinstallment: calendario de cuotas de un crédito
+-- =========================================================
+CREATE TABLE IF NOT EXISTS tbcreditinstallment (
+    tbcreditinstallmentid INT AUTO_INCREMENT PRIMARY KEY,
+    tbcreditid INT NOT NULL,
+    tbcreditinstallmentnumber INT NOT NULL,
+    tbcreditinstallmentamount DECIMAL(12,2) NOT NULL,
+    tbcreditinstallmentduedate DATE NOT NULL,
+    tbcreditinstallmentpaiddate DATE NULL,
+    tbcreditinstallmentstate VARCHAR(30) NOT NULL DEFAULT 'pendiente',
+    tbcreditinstallmentactive BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+-- =========================================================
+-- 35) tbschemaversion: control de migraciones aplicadas
+-- =========================================================
+CREATE TABLE IF NOT EXISTS tbschemaversion (
+    tbschemaversionid INT AUTO_INCREMENT PRIMARY KEY,
+    tbschemaversionname VARCHAR(100) NOT NULL,
+    tbschemaversionappliedat DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;

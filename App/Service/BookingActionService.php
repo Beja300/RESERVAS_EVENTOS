@@ -60,7 +60,10 @@ class BookingActionService
     string $date,
     ?string $endDate,
     ?string $eventType,
-    ?string $eventDetail
+    ?string $eventDetail,
+    ?int $attendees = null,
+    ?int $rentalBlockId = null,
+    array $serviceQuantities = []
   ): int
   {
     if ($eventType === 'otro' && ($eventDetail === null || $eventDetail === '')) {
@@ -83,7 +86,10 @@ class BookingActionService
       $date,
       $endDate,
       $eventType,
-      $eventDetail
+      $eventDetail,
+      $attendees,
+      $rentalBlockId,
+      $serviceQuantities
     );
 
     $this->historyService->logVenueBooking($roleId, $idVenue);

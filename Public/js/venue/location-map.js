@@ -30,7 +30,17 @@
 
   var base = getBasePath();
 
-  L.Icon.Default.imagePath = base + '/vendor/leaflet/images';
+  var iconBase = base + '/vendor/leaflet/images/';
+
+  var venueIcon = L.icon({
+    iconUrl: iconBase + 'marker-icon.png',
+    iconRetinaUrl: iconBase + 'marker-icon-2x.png',
+    shadowUrl: iconBase + 'marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+  });
 
   var mapEl = document.getElementById('venue-map');
   var latInput = document.getElementById('latitude');
@@ -75,7 +85,7 @@
 
   function placeMarker(latLng) {
     if (marker === null) {
-      marker = L.marker([latLng.lat, latLng.lng], { draggable: true }).addTo(map);
+      marker = L.marker([latLng.lat, latLng.lng], { draggable: true, icon: venueIcon }).addTo(map);
       marker.on('dragend', function () {
         setCoords(marker.getLatLng().lat, marker.getLatLng().lng);
       });

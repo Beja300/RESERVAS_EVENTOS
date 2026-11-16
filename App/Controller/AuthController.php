@@ -114,9 +114,12 @@ class AuthController
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
+    $passwordConfirm = $_POST['passwordConfirm'] ?? '';
     $phoneNumber = trim($_POST['phoneNumber'] ?? '') ?: null;
 
     try {
+      $this->authService->validatePasswordConfirmation($password, $passwordConfirm);
+
       $admin = $this->authService->registerAdmin($name, $email, $password, $phoneNumber);
 
       if (session_status() === PHP_SESSION_NONE) {
@@ -164,6 +167,7 @@ class AuthController
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
+    $passwordConfirm = $_POST['passwordConfirm'] ?? '';
     $phoneNumber = trim($_POST['phoneNumber'] ?? '');
 
     if ($phoneNumber === '') {
@@ -171,6 +175,8 @@ class AuthController
     }
 
     try {
+
+      $this->authService->validatePasswordConfirmation($password, $passwordConfirm);
 
       $client = $this->authService->registerClient(
         $name,
@@ -211,6 +217,7 @@ class AuthController
     $name = trim($_POST['ownerBusinessName'] ?? $_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
+    $passwordConfirm = $_POST['passwordConfirm'] ?? '';
 
     $ownerFirstName = trim($_POST['ownerFirstName'] ?? '');
     $ownerLastName = trim($_POST['ownerLastName'] ?? '');
@@ -239,6 +246,8 @@ class AuthController
       if ($name === '') {
         throw new BusinessRuleException('El nombre de negocio es obligatorio.');
       }
+
+      $this->authService->validatePasswordConfirmation($password, $passwordConfirm);
 
       $owner = $this->authService->registerOwner(
         $name,

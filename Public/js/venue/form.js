@@ -40,8 +40,9 @@
     input.setSelectionRange(v.length, v.length);
   }
 
-  var currencyInputs = Array.prototype.slice.call(document.querySelectorAll('[data-currency-mask]'));
-  currencyInputs.forEach(function (input) {
+  function bindCurrencyInput(input) {
+    if (!input || input.dataset.currencyBound === '1') return;
+    input.dataset.currencyBound = '1';
     if (input.value.trim() !== '') formatCurrency(input);
     input.addEventListener('input', function () {
       var digitsBefore = countDigits(input.value, input.selectionStart);
@@ -49,7 +50,10 @@
       caretByDigits(input, digitsBefore);
     });
     input.addEventListener('blur', function () { formatCurrency(input); });
-  });
+  }
+
+  Array.prototype.slice.call(document.querySelectorAll('[data-currency-mask]')).forEach(bindCurrencyInput);
+  window.VenueFormCurrency = { bind: bindCurrencyInput };
 
   // ---------- Modo de ubicación: exacta o aproximada ----------
   var locationRadios = Array.prototype.slice.call(document.querySelectorAll('[data-location-mode]'));
@@ -113,7 +117,7 @@
       e.preventDefault();
 
       // Normaliza el precio (quita ₡, comas y espacios) para validar y enviar.
-      var maskedValues = currencyInputs.map(function (input) {
+      var maskedValues = Array.prototype.slice.call(form.querySelectorAll('[data-currency-mask]')).map(function (input) {
         var masked = input.value;
         input.value = stripCurrency(input.value);
         return { input: input, masked: masked };

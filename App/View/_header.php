@@ -65,12 +65,12 @@ if ($userType !== null && isset($_SESSION['user']) && is_object($_SESSION['user'
         <a href="<?= e(base_url('booking', 'pendingBookings')) ?>">Reservas pendientes</a>
         <a href="<?= e(base_url('owner', 'paymentData')) ?>">Métodos de pago</a>
         <a href="<?= e(base_url('credit', 'ownerConfig')) ?>">Crédito</a>
+        <a href="<?= e(base_url('blocklist', 'list')) ?>">Clientes bloqueados</a>
         <?= $notificationNav ?>
         <a href="<?= e(base_url('owner', 'profile')) ?>">Perfil</a>
       <?php elseif ($userType === 'admin'): ?>
         <a href="<?= e(base_url('admin', 'dashboard')) ?>">Inicio</a>
         <a href="<?= e(base_url('admin', 'users')) ?>">Usuarios</a>
-        <a href="<?= e(base_url('service', 'pending')) ?>">Servicios por aprobar</a>
         <a href="<?= e(base_url('admin', 'userHistory')) ?>">Historial de usuarios</a>
         <a href="<?= e(base_url('admin', 'bookings')) ?>">Reservas</a>
         <a href="<?= e(base_url('paymentMethod', 'list')) ?>">Métodos de pago</a>

@@ -18,6 +18,13 @@ class Venue
   private float $priceVenue;
   private string $imageVenue;
   private bool $isActive;
+  private ?string $descriptionVenue;
+  private ?string $sizeVenue;
+  private ?int $bathroomsVenue;
+  private bool $hasParking;
+  private ?int $parkingCapacity;
+  private ?int $minCapacity;
+  private float $cleaningFee;
 
   public function __construct(
     int $idVenue,
@@ -28,7 +35,14 @@ class Venue
     int $capacityVenue,
     float $priceVenue,
     string $imageVenue,
-    bool $isActive
+    bool $isActive,
+    ?string $descriptionVenue = null,
+    ?string $sizeVenue = null,
+    ?int $bathroomsVenue = null,
+    bool $hasParking = false,
+    ?int $parkingCapacity = null,
+    ?int $minCapacity = null,
+    float $cleaningFee = 0.0
   ) {
     $this->idVenue = $idVenue;
     $this->idOwner = $idOwner;
@@ -39,6 +53,13 @@ class Venue
     $this->priceVenue = $priceVenue;
     $this->imageVenue = $imageVenue;
     $this->isActive = $isActive;
+    $this->descriptionVenue = $descriptionVenue;
+    $this->sizeVenue = $sizeVenue;
+    $this->bathroomsVenue = $bathroomsVenue;
+    $this->hasParking = $hasParking;
+    $this->parkingCapacity = $parkingCapacity;
+    $this->minCapacity = $minCapacity;
+    $this->cleaningFee = $cleaningFee;
   }
 
   // Getters
@@ -88,6 +109,41 @@ class Venue
     return $this->isActive;
   }
 
+  public function getDescriptionVenue(): ?string
+  {
+    return $this->descriptionVenue;
+  }
+
+  public function getSizeVenue(): ?string
+  {
+    return $this->sizeVenue;
+  }
+
+  public function getBathroomsVenue(): ?int
+  {
+    return $this->bathroomsVenue;
+  }
+
+  public function getHasParking(): bool
+  {
+    return $this->hasParking;
+  }
+
+  public function getParkingCapacity(): ?int
+  {
+    return $this->parkingCapacity;
+  }
+
+  public function getMinCapacity(): ?int
+  {
+    return $this->minCapacity;
+  }
+
+  public function getCleaningFee(): float
+  {
+    return $this->cleaningFee;
+  }
+
   // Setters
 
   public function setIdVenue(int $idVenue): void
@@ -133,5 +189,40 @@ class Venue
   public function setIsActive(bool $isActive): void
   {
     $this->isActive = $isActive;
+  }
+
+  public function setDescriptionVenue(?string $descriptionVenue): void
+  {
+    $this->descriptionVenue = $descriptionVenue;
+  }
+
+  public function setSizeVenue(?string $sizeVenue): void
+  {
+    $this->sizeVenue = $sizeVenue;
+  }
+
+  public function setBathroomsVenue(?int $bathroomsVenue): void
+  {
+    $this->bathroomsVenue = $bathroomsVenue;
+  }
+
+  public function setHasParking(bool $hasParking): void
+  {
+    $this->hasParking = $hasParking;
+  }
+
+  public function setParkingCapacity(?int $parkingCapacity): void
+  {
+    $this->parkingCapacity = $parkingCapacity;
+  }
+
+  public function setMinCapacity(?int $minCapacity): void
+  {
+    $this->minCapacity = $minCapacity;
+  }
+
+  public function setCleaningFee(float $cleaningFee): void
+  {
+    $this->cleaningFee = $cleaningFee;
   }
 }

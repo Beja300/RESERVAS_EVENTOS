@@ -55,9 +55,22 @@ class DetailService {
 
         $service = $this->serviceRepo->findById($servicePk);
         $booking = $this->bookingRepo->findById($bookingPk);
+        if ($service === null || $booking === null) {
+            throw new BusinessRuleException("El servicio o la reserva no existen.");
+        }
         if ($service->getIdLocal() !== $booking->getIdLocal()) {
             throw new BusinessRuleException("Este servicio no pertenece al local de la reserva.");
         }
+
+        $existingQuantity = 0;
+        foreach ($this->detailRepo->findByBooking($bookingPk) as $line) {
+            if ($line->getIdLocalService() === $servicePk) {
+                $existingQuantity += $line->getQuantityDetail();
+            }
+        }
+
+        $this->serviceService->assertQuantityAllowed($service, $quantity, $existingQuantity);
+        $discount = $this->serviceService->lineDiscount($service, $quantity, $existingQuantity);
 
         $detail = new Detail(
             idDetail: 0,
@@ -65,7 +78,7 @@ class DetailService {
             idLocalService: $servicePk,
             quantityDetail: $quantity,
             unitPrice: $service->getPriceService(),
-            discount: 0.0,
+            discount: $discount,
             isActiveDetail: true
         );
 

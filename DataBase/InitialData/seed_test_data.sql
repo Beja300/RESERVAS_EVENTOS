@@ -515,8 +515,9 @@ INSERT INTO tbownerpayment (tbownerid, tbpaymentmethodid, tbownerpaymentholder, 
 
 -- =========================================================
 -- 18) SERVICIOS DEL SEGUNDO LOCAL
--- (incluye 1 en 'solicitado' para probar aprobación del admin
---  y 1 'rechazado' para ver el historial de revisión)
+-- (incluye 1 en 'solicitado' y 1 'rechazado' para conservar el
+--  historial; el migrador los deja inactivos porque la aprobación
+--  administrativa de servicios ya no forma parte del flujo)
 -- =========================================================
 INSERT INTO tbservice (tbvenueid, tbservicename, tbservicetype, tbserviceprice, tbservicestate, tbroleid, tbserviceapprovedon, tbserviceactive) VALUES
 (@venue4Id, 'Iluminación ambiental',        'Producción',  70000.00,  'aprobado',  NULL, NOW(), TRUE),
@@ -718,3 +719,150 @@ INSERT INTO tbownerhistory (tbownerid, tbownerhistoryaction, tbownerhistorydetai
 (@ownerId,  'CREAR_LOCAL',  'Creado "Centro de Eventos La Y".', NOW(), TRUE),
 (@ownerId,  'APROBAR_SERVICIO', 'Aprobado "Sonido y luces".', NOW(), TRUE),
 (@owner2Id, 'CREAR_LOCAL',  'Creado "Terraza Bambú".', NOW(), TRUE);
+
+-- =========================================================
+-- 27) DATOS DEMO DE LAS FUNCIONES NUEVAS
+-- =========================================================
+-- Galería, descripción y características de los locales.
+-- Las rutas apuntan a imágenes reales incluidas en Public/resource.
+UPDATE tbvenue SET
+  tbvenuedescription = 'Salón amplio y céntrico, ideal para bodas y eventos corporativos. Incluye área para catering y parqueo privado.',
+  tbvenuesize = '320 m²',
+  tbvenuebathrooms = 4,
+  tbvenueparking = TRUE,
+  tbvenueparkingcapacity = 45,
+  tbvenuemincapacity = 30,
+  tbvenuecleaningfee = 15000.00,
+  tbvenueimage = 'resource/venues/venue_1_92d465b7.jpg'
+WHERE tbvenueid = @venueId;
+
+UPDATE tbvenue SET
+  tbvenuedescription = 'Jardín rodeado de árboles con zonas verdes, iluminación exterior y espacio para ceremonia al aire libre.',
+  tbvenuesize = '500 m²',
+  tbvenuebathrooms = 3,
+  tbvenueparking = TRUE,
+  tbvenueparkingcapacity = 30,
+  tbvenuemincapacity = 20,
+  tbvenuecleaningfee = 12000.00,
+  tbvenueimage = 'resource/venues/venue_2_30f2a429.jpg'
+WHERE tbvenueid = @venue2Id;
+
+UPDATE tbvenue SET
+  tbvenuedescription = 'Centro de eventos techado con escenario, camerinos y área de montaje para producciones grandes.',
+  tbvenuesize = '650 m²',
+  tbvenuebathrooms = 6,
+  tbvenueparking = TRUE,
+  tbvenueparkingcapacity = 80,
+  tbvenuemincapacity = 50,
+  tbvenuecleaningfee = 20000.00,
+  tbvenueimage = 'resource/venues/venue_3_d67d31db.png'
+WHERE tbvenueid = @venue3Id;
+
+UPDATE tbvenue SET
+  tbvenuedescription = 'Terraza al aire libre con vista panorámica, ideal para cenas, aniversarios y eventos nocturnos.',
+  tbvenuesize = '400 m²',
+  tbvenuebathrooms = 3,
+  tbvenueparking = TRUE,
+  tbvenueparkingcapacity = 35,
+  tbvenuemincapacity = 25,
+  tbvenuecleaningfee = 18000.00,
+  tbvenueimage = 'resource/venues/venue_4_89754f38.png'
+WHERE tbvenueid = @venue4Id;
+
+INSERT INTO tbvenueimage (tbvenueid, tbvenueimagepath, tbvenueimagesort, tbvenueimageactive) VALUES
+(@venueId,  'resource/venues/venue_1_92d465b7.jpg',  0, TRUE),
+(@venueId,  'resource/venues/venue_1_4c2ca18f.webp', 1, TRUE),
+(@venueId,  'resource/venues/venue_1_aaa3e085.jpg',  2, TRUE),
+(@venue2Id, 'resource/venues/venue_2_30f2a429.jpg',  0, TRUE),
+(@venue2Id, 'resource/venues/venue_2_ef77931b.jpg',  1, TRUE),
+(@venue3Id, 'resource/venues/venue_3_d67d31db.png',  0, TRUE),
+(@venue4Id, 'resource/venues/venue_4_89754f38.png',  0, TRUE),
+(@venue4Id, 'resource/venues/venue_4_450c82a9.webp', 1, TRUE),
+(@venue4Id, 'resource/venues/venue_4_f96c7a87.webp', 2, TRUE);
+
+-- Bloques horarios de alquiler con precio propio.
+INSERT INTO tbvenuerentalblock (tbvenueid, tbvenuerentalblockname, tbvenuerentalblockstart, tbvenuerentalblockend, tbvenuerentalblockprice, tbvenuerentalblocksort, tbvenuerentalblockactive) VALUES
+(@venueId,  'Mañana',          '08:00:00', '12:00:00',  80000.00, 0, TRUE),
+(@venueId,  'Tarde',           '13:00:00', '18:00:00', 120000.00, 1, TRUE),
+(@venueId,  'Noche',           '19:00:00', '23:00:00', 150000.00, 2, TRUE),
+(@venue2Id, 'Día completo',    '08:00:00', '18:00:00',  95000.00, 0, TRUE),
+(@venue2Id, 'Noche',           '19:00:00', '23:30:00', 110000.00, 1, TRUE),
+(@venue3Id, 'Jornada diurna',  '07:00:00', '17:00:00', 180000.00, 0, TRUE),
+(@venue3Id, 'Jornada completa','07:00:00', '23:00:00', 220000.00, 1, TRUE),
+(@venue4Id, 'Atardecer',       '16:00:00', '20:00:00', 100000.00, 0, TRUE),
+(@venue4Id, 'Nocturno',        '20:00:00', '23:59:00', 140000.00, 1, TRUE);
+
+-- Servicio compartido entre dos locales (misma agrupación).
+INSERT INTO tbservicegroup (tbownerid, tbservicegroupname, tbservicegroupactive) VALUES
+(@ownerId, 'Decoración con jardín', TRUE);
+SET @gardenGroupId = LAST_INSERT_ID();
+
+UPDATE tbservice SET tbservicegroupid = @gardenGroupId WHERE tbserviceid = @service4;
+
+INSERT INTO tbservice (
+  tbvenueid, tbservicename, tbservicetype, tbserviceprice, tbservicedescription,
+  tbserviceunit, tbserviceminquantity, tbservicemaxquantity, tbserviceincludedquantity,
+  tbservicestate, tbroleid, tbserviceapprovedon, tbservicegroupid, tbserviceactive
+) VALUES (
+  @venueId, 'Decoración con jardín', 'Decoración', 95000.00,
+  'Arreglo floral y vegetación natural adaptada al espacio del salón.',
+  'unidad', 1, 5, 1, 'aprobado', NULL, NOW(), @gardenGroupId, TRUE
+);
+SET @service12 = LAST_INSERT_ID();
+
+INSERT INTO tbservicehistory (tbserviceid, tbservicehistoryprice, tbservicehistoryvalidfrom, tbservicehistoryactive) VALUES
+(@service12, 95000.00, '2026-01-01', TRUE);
+
+-- Servicio por persona con cantidad incluida y máximo configurable.
+UPDATE tbservice SET
+  tbserviceunit = 'persona',
+  tbserviceminquantity = 20,
+  tbservicemaxquantity = 200,
+  tbserviceincludedquantity = 50
+WHERE tbserviceid = @service2;
+
+-- Cliente bloqueado por el primer propietario (conserva su historial).
+INSERT INTO tbownerblockedclient (tbownerid, tbclientid, tbownerblockedclientreason, tbownerblockedclientdate, tbownerblockedclientactive) VALUES
+(@ownerId, @client3Id, 'El cliente canceló dos reservas con poca anticipación; revisar antes de aceptar nuevas solicitudes.', '2026-10-20 10:30:00', TRUE);
+
+-- Políticas de crédito de ambos propietarios.
+INSERT INTO tbcreditconfig (tbownerid, tbcreditconfigenabled, tbcreditconfigdays, tbcreditconfigfrequentmin, tbcreditconfiginstallments, tbcreditconfigfrequency, tbcreditconfiggracedays, tbcreditconfigreminderdays, tbcreditconfigactive) VALUES
+(@ownerId,  TRUE, 90, 2, 3, 'mensual',  5, 3, TRUE),
+(@owner2Id, TRUE, 60, 2, 2, 'quincenal', 0, 2, TRUE);
+
+-- Reserva confirmada con crédito parcial y calendario de cuotas.
+INSERT INTO tbbooking (tbclientid, tbvenueid, tbbookingdate, tbbookingenddate, tbbookingeventtype, tbbookingeventdetail, tbbookingstate, tbbookingactive) VALUES
+(@client2Id, @venue2Id, '2027-03-10', '2027-03-11', 'Boda', 'Reserva financiada en tres cuotas.', 'confirmado', TRUE);
+SET @booking8 = LAST_INSERT_ID();
+
+INSERT INTO tbdetail (tbserviceid, tbvenueid, tbdetailquantity, tbdetailunitprice, tbdetaildiscount, tbdetailactive) VALUES
+(NULL, @venue2Id, 2, 95000.00, 0.00, TRUE);
+SET @detail8a = LAST_INSERT_ID();
+
+INSERT INTO tbbookingdetail (tbbookingid, tbdetailid, tbbookingdetailactive) VALUES
+(@booking8, @detail8a, TRUE);
+
+INSERT INTO tbdetail (tbserviceid, tbvenueid, tbdetailquantity, tbdetailunitprice, tbdetaildiscount, tbdetailactive) VALUES
+(@service5, NULL, 1, 60000.00, 0.00, TRUE);
+SET @detail8b = LAST_INSERT_ID();
+
+INSERT INTO tbbookingdetail (tbbookingid, tbdetailid, tbbookingdetailactive) VALUES
+(@booking8, @detail8b, TRUE);
+
+INSERT INTO tbinvoice (tbbookingid, tbpaymentmethodid, tbinvoicestatus, tbinvoiceactive) VALUES
+(@booking8, @pmTarjeta, 'credito', TRUE);
+
+INSERT INTO tbcredit (tbbookingid, tbclientid, tbownerid, tbcredittotal, tbcreditbalance, tbcreditduedate, tbcreditstate, tbcreditdate, tbcreditactive) VALUES
+(@booking8, @client2Id, @ownerId, 282500.00, 188333.33, '2027-02-01', 'parcial', '2026-08-20 15:30:00', TRUE);
+SET @credit1Id = LAST_INSERT_ID();
+
+INSERT INTO tbcreditinstallment (tbcreditid, tbcreditinstallmentnumber, tbcreditinstallmentamount, tbcreditinstallmentduedate, tbcreditinstallmentpaiddate, tbcreditinstallmentstate, tbcreditinstallmentactive) VALUES
+(@credit1Id, 1,  94166.67, '2026-12-01', '2026-11-01', 'pagado',    TRUE),
+(@credit1Id, 2,  94166.67, '2027-01-01', NULL,         'pendiente', TRUE),
+(@credit1Id, 3,  94166.66, '2027-02-01', NULL,         'pendiente', TRUE);
+
+INSERT INTO tbcreditpayment (tbcreditid, tbcreditpaymentamount, tbcreditpaymentnote, tbroleid, tbcreditpaymentdate, tbcreditpaymentactive) VALUES
+(@credit1Id, 94166.67, 'Primer abono del cliente.', @client2RoleId, '2026-11-01 10:00:00', TRUE);
+
+INSERT INTO tbnotification (tbroleid, tbnotificationmessage, tbnotificationlink, tbnotificationdate, tbnotificationread, tbnotificationactive) VALUES
+(@ownerRoleId, 'Daniela realizó el primer abono de su crédito.', 'index.php?controller=credit&action=detail&id=1', '2026-11-01 10:01:00', FALSE, TRUE);

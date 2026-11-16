@@ -35,15 +35,50 @@
       <div class="form-hint">Entre 1 y 365 días contados desde la fecha de la reserva.</div>
     </div>
 
+    <div class="grid grid-2">
+      <div class="form-group">
+        <label for="installments">Cantidad de cuotas *</label>
+        <input class="form-control" type="text" inputmode="numeric" pattern="[0-9]*"
+               id="installments" name="installments" required
+               data-validate="required intrange" data-min="1" data-max="36"
+               data-range-message="La cantidad de cuotas debe estar entre 1 y 36."
+               value="<?= (int) $config->getInstallments() ?>">
+      </div>
+      <div class="form-group">
+        <label for="frequency">Frecuencia *</label>
+        <select class="form-control" id="frequency" name="frequency">
+          <option value="mensual" <?= $config->getFrequency() === 'mensual' ? 'selected' : '' ?>>Mensual</option>
+          <option value="quincenal" <?= $config->getFrequency() === 'quincenal' ? 'selected' : '' ?>>Quincenal</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="form-group">
+        <label for="graceDays">Días de gracia</label>
+        <input class="form-control" type="text" inputmode="numeric" pattern="[0-9]*"
+               id="graceDays" name="graceDays" data-validate="intrange" data-min="0" data-max="30"
+               data-range-message="Los días de gracia deben estar entre 0 y 30."
+               value="<?= (int) $config->getGraceDays() ?>">
+      </div>
+      <div class="form-group">
+        <label for="reminderDays">Avisar antes del vencimiento (días)</label>
+        <input class="form-control" type="text" inputmode="numeric" pattern="[0-9]*"
+               id="reminderDays" name="reminderDays" data-validate="intrange" data-min="0" data-max="30"
+               data-range-message="Los días de recordatorio deben estar entre 0 y 30."
+               value="<?= (int) $config->getReminderDays() ?>">
+      </div>
+    </div>
+
     <div class="form-group">
-      <label for="frequentMin">Reservas mínimas para ser cliente frecuente</label>
+      <label for="frequentMin">Reservas confirmadas mínimas para ser cliente frecuente</label>
       <input class="form-control" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4"
              id="frequentMin" name="frequentMin"
              data-validate="intrange"
              data-min="0" data-max="1000"
              data-range-message="Las reservas mínimas deben estar entre 0 y 1000."
              value="<?= (int) $config->getFrequentMin() ?>">
-      <div class="form-hint">0 = cualquier cliente puede financiar. Ej: 3 exige al menos 3 reservas previas.</div>
+      <div class="form-hint">0 = cualquier cliente puede financiar. Ej: 3 exige al menos 3 reservas confirmadas en tus locales.</div>
     </div>
 
     <button class="btn btn-primary" type="submit">Guardar política</button>

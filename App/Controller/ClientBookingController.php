@@ -7,6 +7,7 @@ require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
 require_once __DIR__ . '/../Repository/ServiceRepository.php';
+require_once __DIR__ . '/../Repository/VenueRentalBlockRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../View/_helpers.php';
 
@@ -42,7 +43,8 @@ class ClientBookingController
     }
 
     $services = $this->serviceService->findAvailableByLocal($idVenue);
-    $bookedDates = $this->bookingRepo->bookedDatesByVenue($idVenue);
+    $rentalBlocks = (new VenueRentalBlockRepository(DataBase::getConnection()))->findByVenue($idVenue, true);
+    $bookedDates = $rentalBlocks === [] ? $this->bookingRepo->bookedDatesByVenue($idVenue) : [];
 
     require_once __DIR__ . '/../View/Booking/Form.php';
   }
@@ -65,6 +67,18 @@ class ClientBookingController
     $endDate = trim($_POST['endDate'] ?? '') ?: null;
     $eventType = trim($_POST['eventType'] ?? '') ?: null;
     $eventDetail = trim($_POST['eventDetail'] ?? '') ?: null;
+    $attendees = isset($_POST['attendees']) && $_POST['attendees'] !== '' ? (int) $_POST['attendees'] : null;
+    $rentalBlockId = isset($_POST['rentalBlockId']) && $_POST['rentalBlockId'] !== '' ? (int) $_POST['rentalBlockId'] : null;
+
+    $serviceQuantities = [];
+    if (isset($_POST['services']) && is_array($_POST['services'])) {
+      foreach ($_POST['services'] as $serviceId => $quantity) {
+        $quantity = (int) $quantity;
+        if ($quantity > 0) {
+          $serviceQuantities[(int) $serviceId] = $quantity;
+        }
+      }
+    }
 
     try {
       $idBooking = $this->bookingActionService->create(
@@ -74,7 +88,10 @@ class ClientBookingController
         $date,
         $endDate,
         $eventType,
-        $eventDetail
+        $eventDetail,
+        $attendees,
+        $rentalBlockId,
+        $serviceQuantities
       );
 
       redirect_to('booking', 'detail', ['id' => $idBooking]);
@@ -82,7 +99,8 @@ class ClientBookingController
       $error = $e->getMessage();
       $venue = $this->venueRepo->findById($idVenue);
       $services = $this->serviceService->findAvailableByLocal($idVenue);
-      $bookedDates = $this->bookingRepo->bookedDatesByVenue($idVenue);
+      $rentalBlocks = (new VenueRentalBlockRepository(DataBase::getConnection()))->findByVenue($idVenue, true);
+      $bookedDates = $rentalBlocks === [] ? $this->bookingRepo->bookedDatesByVenue($idVenue) : [];
 
       require_once __DIR__ . '/../View/Booking/Form.php';
     }

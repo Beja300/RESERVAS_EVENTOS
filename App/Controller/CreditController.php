@@ -45,15 +45,32 @@ class CreditController
     $enabled = isset($_POST['enabled']);
     $days = (int) ($_POST['days'] ?? 30);
     $frequentMin = (int) ($_POST['frequentMin'] ?? 3);
+    $installments = (int) ($_POST['installments'] ?? 1);
+    $frequency = trim($_POST['frequency'] ?? 'mensual');
+    $graceDays = (int) ($_POST['graceDays'] ?? 0);
+    $reminderDays = (int) ($_POST['reminderDays'] ?? 3);
 
     try {
-      $this->creditService->saveConfig($owner->getIdOwner(), $enabled, $days, $frequentMin);
+      $this->creditService->saveConfig(
+        $owner->getIdOwner(),
+        $enabled,
+        $days,
+        $frequentMin,
+        $installments,
+        $frequency,
+        $graceDays,
+        $reminderDays
+      );
       redirect_to('credit', 'ownerConfig', ['saved' => '1']);
     } catch (BusinessRuleException $e) {
       $config = $this->creditService->getConfig($owner->getIdOwner());
       $config->setEnabled($enabled);
       $config->setDays($days);
       $config->setFrequentMin($frequentMin);
+      $config->setInstallments($installments);
+      $config->setFrequency($frequency);
+      $config->setGraceDays($graceDays);
+      $config->setReminderDays($reminderDays);
       $error = $e->getMessage();
       require_once __DIR__ . '/../View/Credit/OwnerConfig.php';
     }
@@ -69,6 +86,12 @@ class CreditController
     $owner = $_SESSION['user'];
     $credits = $this->creditService->listForOwner($owner->getIdOwner());
     $outstanding = $this->creditService->outstandingByOwner($owner->getIdOwner());
+
+    $reminderKey = 'credit_reminders_' . $owner->getIdOwner();
+    if (($_SESSION[$reminderKey] ?? '') !== date('Y-m-d')) {
+      $this->creditService->sendDueReminders($owner->getIdOwner());
+      $_SESSION[$reminderKey] = date('Y-m-d');
+    }
 
     require_once __DIR__ . '/../View/Credit/OwnerList.php';
   }
@@ -164,6 +187,7 @@ class CreditController
     }
 
     $payments = $this->creditService->paymentsForCredit($idCredit);
+    $installments = $this->creditService->installmentsForCredit($idCredit);
     $effectiveState = $this->creditService->effectiveState($credit->getState(), $credit->getDueDate());
     $error = $_GET['error'] ?? null;
 

@@ -58,6 +58,7 @@ class AdminProfileController
     $phoneNumber = trim($_POST['phoneNumber'] ?? '') ?: null;
     $currentPassword = $_POST['currentPassword'] ?? '';
     $newPassword = $_POST['newPassword'] ?? '';
+    $newPasswordConfirm = $_POST['newPasswordConfirm'] ?? '';
 
     try {
       if ($name === '') {
@@ -66,7 +67,7 @@ class AdminProfileController
 
       $this->profileService->validateUniqueEmail($currentEmail, $email);
       $this->profileService->validatePhone($phoneNumber);
-      $this->profileService->changePasswordIfRequested($admin, $currentPassword, $newPassword);
+      $this->profileService->changePasswordIfRequested($admin, $currentPassword, $newPassword, $newPasswordConfirm);
 
       $admin->setName($name);
       $admin->setEmail($email);

@@ -23,6 +23,12 @@ $hasTicket = $ticket !== null;
   <div class="alert alert-error"><?= e($_GET['creditError']) ?></div>
 <?php endif; ?>
 
+<?php if ($isOwner && !empty($clientIsBlocked)): ?>
+  <div class="alert alert-error">Este cliente está bloqueado. La reserva existente se conserva, pero no podrá crear nuevas reservas.</div>
+<?php elseif ($isOwner && ($clientOverdueCount ?? 0) > 0): ?>
+  <div class="alert alert-error">Atención: este cliente tiene <?= (int) $clientOverdueCount ?> cuota(s) vencida(s) en créditos contigo.</div>
+<?php endif; ?>
+
 <div class="card">
   <div class="detail-grid">
 <div class="detail-item"><div class="k">Local</div><div class="v">#<?= (int) $booking->getIdLocal() ?> <?= $venue !== null ? '— ' . e($venue->getNameVenue()) : '' ?></div></div>
@@ -51,6 +57,12 @@ $hasTicket = $ticket !== null;
           ?>
           <?= e($eventTypeLabel) ?>
         </div>
+      </div>
+    <?php endif; ?>
+    <?php if ($booking->getAttendees() !== null): ?>
+      <div class="detail-item">
+        <div class="k">Asistentes</div>
+        <div class="v"><?= (int) $booking->getAttendees() ?> personas</div>
       </div>
     <?php endif; ?>
     <?php if ($booking->getEventDescription() !== null && $booking->getEventDescription() !== ''): ?>
@@ -119,11 +131,22 @@ $hasTicket = $ticket !== null;
           <?php foreach ($details as $d): ?>
             <tr>
               <td>
-                <?php if ($d->getIdVenue() > 0): ?>
+                <?php if ($d->getConcept() !== null && $d->getConcept() !== ''): ?>
+                  <?= e($d->getConcept()) ?>
+                  <?php if ($d->getIdVenue() > 0 && $d->getQuantityDetail() > 1): ?>
+                    <span class="muted">(<?= (int) $d->getQuantityDetail() ?> días)</span>
+                  <?php endif; ?>
+                <?php elseif ($d->getIdVenue() > 0): ?>
                   Renta del local — <?= e($venue !== null ? $venue->getNameVenue() : ('Local #' . $d->getIdVenue())) ?>
                   <?php if ($d->getQuantityDetail() > 1): ?> <span class="muted">(<?= (int) $d->getQuantityDetail() ?> día<?= $d->getQuantityDetail() > 1 ? 's' : '' ?>)</span><?php endif; ?>
                 <?php else: ?>
                   Servicio — <?= isset($serviceMap[$d->getIdLocalService()]) ? e($serviceMap[$d->getIdLocalService()]->getNameService()) : ('Servicio #' . $d->getIdLocalService()) ?>
+                  <?php if ($d->getDiscount() > 0 && $d->getUnitPrice() > 0): ?>
+                    <?php $includedUnits = (int) round($d->getDiscount() / $d->getUnitPrice()); ?>
+                    <?php if ($includedUnits > 0): ?>
+                      <span class="muted">(<?= $includedUnits ?> incluida<?= $includedUnits === 1 ? '' : 's' ?>)</span>
+                    <?php endif; ?>
+                  <?php endif; ?>
                 <?php endif; ?>
               </td>
               <td><?= (int) $d->getQuantityDetail() ?></td>
@@ -171,7 +194,8 @@ $hasTicket = $ticket !== null;
           <select class="form-control" id="serviceId" name="serviceId" required>
             <?php foreach ($availableServices as $s): ?>
               <option value="<?= (int) $s->getIdService() ?>">
-                <?= e($s->getNameService()) ?> (&#8353; <?= number_format($s->getPriceService(), 2) ?>)
+                <?= e($s->getNameService()) ?> (&#8353; <?= number_format($s->getPriceService(), 2) ?>,
+                mín. <?= (int) $s->getMinQuantity() ?><?= $s->getMaxQuantity() !== null ? ', máx. ' . (int) $s->getMaxQuantity() : '' ?>)
               </option>
             <?php endforeach; ?>
           </select>

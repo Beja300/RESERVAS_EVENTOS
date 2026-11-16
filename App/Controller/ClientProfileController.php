@@ -73,11 +73,12 @@ class ClientProfileController
     $phoneNumber = trim($_POST['phoneNumber'] ?? '') ?: null;
     $currentPassword = $_POST['currentPassword'] ?? '';
     $newPassword = $_POST['newPassword'] ?? '';
+    $newPasswordConfirm = $_POST['newPasswordConfirm'] ?? '';
 
     try {
       $this->profileService->validateUniqueEmail($currentEmail, $email);
       $this->profileService->validatePhone($phoneNumber);
-      $this->profileService->changePasswordIfRequested($client, $currentPassword, $newPassword);
+      $this->profileService->changePasswordIfRequested($client, $currentPassword, $newPassword, $newPasswordConfirm);
 
       $client->setName($name);
       $client->setEmail($email);

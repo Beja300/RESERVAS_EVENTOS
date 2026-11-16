@@ -52,6 +52,13 @@ class AuthService
         }
     }
 
+    public function validatePasswordConfirmation(string $password, string $confirmation): void
+    {
+        if ($password !== $confirmation) {
+            throw new BusinessRuleException("Las contraseñas no coinciden.");
+        }
+    }
+
     public function validatePhoneFormat(?string $phoneNumber): void
     {
         if ($phoneNumber !== null && $phoneNumber !== '' && !preg_match('/^[0-9]{8}$/', $phoneNumber)) {

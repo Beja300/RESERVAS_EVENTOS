@@ -97,20 +97,9 @@ class BookingDetailService
       }
     }
 
-    // Servicios disponibles del local, excluyendo los ya agregados.
-    $bookedServiceIds = [];
-    foreach ($details as $d) {
-      if ($d->getIdLocalService() > 0) {
-        $bookedServiceIds[] = $d->getIdLocalService();
-      }
-    }
-
-    $availableServices = [];
-    foreach ($this->serviceService->findAvailableByLocal($booking->getIdLocal()) as $s) {
-      if (!in_array($s->getIdService(), $bookedServiceIds, true)) {
-        $availableServices[] = $s;
-      }
-    }
+    // Servicios disponibles del local. Se permiten líneas adicionales del
+    // mismo servicio hasta alcanzar su cantidad máxima.
+    $availableServices = $this->serviceService->findAvailableByLocal($booking->getIdLocal());
 
     // El cliente solo puede modificar (agregar servicios / pagar)
     // mientras la reserva esté pendiente y no haya subido comprobante.

@@ -7,12 +7,16 @@ require_once __DIR__ . '/EarningService.php';
 require_once __DIR__ . '/../Repository/CreditConfigRepository.php';
 require_once __DIR__ . '/../Repository/CreditRepository.php';
 require_once __DIR__ . '/../Repository/CreditPaymentRepository.php';
+require_once __DIR__ . '/../Repository/CreditInstallmentRepository.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
+require_once __DIR__ . '/../Repository/NotificationRepository.php';
+require_once __DIR__ . '/NotificationService.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/InvoiceRepository.php';
 require_once __DIR__ . '/../Model/CreditConfig.php';
 require_once __DIR__ . '/../Model/Credit.php';
 require_once __DIR__ . '/../Model/CreditPayment.php';
+require_once __DIR__ . '/../Model/CreditInstallment.php';
 
 /**
  * Módulo de crédito: cuentas por cobrar (lo que el cliente debe) y
@@ -26,11 +30,13 @@ class CreditService
   private CreditConfigRepository $configRepo;
   private CreditRepository $creditRepo;
   private CreditPaymentRepository $paymentRepo;
+  private CreditInstallmentRepository $installmentRepo;
   private BookingRepository $bookingRepo;
   private VenueRepository $venueRepo;
   private InvoiceRepository $invoiceRepo;
   private BookingService $bookingService;
   private EarningService $earningService;
+  private NotificationService $notificationService;
 
   public function __construct(?PDO $connection = null)
   {
@@ -39,11 +45,15 @@ class CreditService
     $this->configRepo = new CreditConfigRepository($this->connection);
     $this->creditRepo = new CreditRepository($this->connection);
     $this->paymentRepo = new CreditPaymentRepository($this->connection);
+    $this->installmentRepo = new CreditInstallmentRepository($this->connection);
     $this->bookingRepo = new BookingRepository($this->connection);
     $this->venueRepo = new VenueRepository($this->connection);
     $this->invoiceRepo = new InvoiceRepository($this->connection);
     $this->bookingService = new BookingService();
     $this->earningService = new EarningService($this->connection);
+    $this->notificationService = new NotificationService(
+      new NotificationRepository($this->connection)
+    );
   }
 
   // =========================================================
@@ -55,14 +65,38 @@ class CreditService
       ?? new CreditConfig(idOwner: $idOwner);
   }
 
-  public function saveConfig(int $idOwner, bool $enabled, int $days, int $frequentMin): void
-  {
+  public function saveConfig(
+    int $idOwner,
+    bool $enabled,
+    int $days,
+    int $frequentMin,
+    int $installments = 1,
+    string $frequency = 'mensual',
+    int $graceDays = 0,
+    int $reminderDays = 3
+  ): void {
     if ($days < 1 || $days > 365) {
       throw new BusinessRuleException('El plazo de crédito debe estar entre 1 y 365 días.');
     }
 
     if ($frequentMin < 0 || $frequentMin > 1000) {
       throw new BusinessRuleException('El mínimo de reservas para cliente frecuente no es válido.');
+    }
+
+    if ($installments < 1 || $installments > 36) {
+      throw new BusinessRuleException('La cantidad de cuotas debe estar entre 1 y 36.');
+    }
+
+    if (!in_array($frequency, ['quincenal', 'mensual'], true)) {
+      throw new BusinessRuleException('La frecuencia de cuotas no es válida.');
+    }
+
+    if ($graceDays < 0 || $graceDays > 30) {
+      throw new BusinessRuleException('Los días de gracia deben estar entre 0 y 30.');
+    }
+
+    if ($reminderDays < 0 || $reminderDays > 30) {
+      throw new BusinessRuleException('Los días de recordatorio deben estar entre 0 y 30.');
     }
 
     $config = $this->configRepo->findByOwner($idOwner);
@@ -72,7 +106,11 @@ class CreditService
         idOwner: $idOwner,
         enabled: $enabled,
         days: $days,
-        frequentMin: $frequentMin
+        frequentMin: $frequentMin,
+        installments: $installments,
+        frequency: $frequency,
+        graceDays: $graceDays,
+        reminderDays: $reminderDays
       ));
       return;
     }
@@ -80,19 +118,25 @@ class CreditService
     $config->setEnabled($enabled);
     $config->setDays($days);
     $config->setFrequentMin($frequentMin);
+    $config->setInstallments($installments);
+    $config->setFrequency($frequency);
+    $config->setGraceDays($graceDays);
+    $config->setReminderDays($reminderDays);
     $this->configRepo->update($config);
   }
 
   // =========================================================
   // ¿EL CLIENTE ES FRECUENTE?
+  // Cuenta solo las reservas CONFIRMADAS del cliente en los locales
+  // del propietario que ofrece el crédito.
   // =========================================================
-  public function isFrequent(int $idClient, int $minBookings): bool
+  public function isFrequent(int $idClient, int $idOwner, int $minBookings): bool
   {
     if ($minBookings <= 0) {
       return true;
     }
 
-    return count($this->bookingRepo->findByClient($idClient)) >= $minBookings;
+    return $this->bookingRepo->countConfirmedByClientAndOwner($idClient, $idOwner) >= $minBookings;
   }
 
   // =========================================================
@@ -127,10 +171,10 @@ class CreditService
       return ['allowed' => false, 'reason' => 'El propietario no ofrece crédito para este local.', 'config' => $config];
     }
 
-    if (!$this->isFrequent($idClient, $config->getFrequentMin())) {
+    if (!$this->isFrequent($idClient, $venue->getIdOwner(), $config->getFrequentMin())) {
       return [
         'allowed' => false,
-        'reason'  => 'El crédito es solo para clientes frecuentes (al menos ' . $config->getFrequentMin() . ' reservas).',
+        'reason'  => 'El crédito es solo para clientes frecuentes (al menos ' . $config->getFrequentMin() . ' reservas confirmadas).',
         'config'  => $config,
       ];
     }
@@ -160,7 +204,8 @@ class CreditService
       throw new BusinessRuleException('El monto de la reserva debe ser mayor a 0 para otorgar crédito.');
     }
 
-    $dueDate = date('Y-m-d', strtotime('+' . $config->getDays() . ' days'));
+    $installments = $this->buildInstallments($total, $config);
+    $dueDate = $installments !== [] ? end($installments)->getDueDate() : date('Y-m-d', strtotime('+' . $config->getDays() . ' days'));
 
     $idCredit = $this->creditRepo->save(new Credit(
       idBooking: $idBooking,
@@ -172,6 +217,8 @@ class CreditService
       state: 'pendiente'
     ));
 
+    $this->installmentRepo->replaceForCredit($idCredit, $installments);
+
     // La reserva queda confirmada y su factura pasa a estado "credito".
     $this->bookingRepo->updateStatus($idBooking, 'confirmado');
 
@@ -180,7 +227,44 @@ class CreditService
       $this->invoiceRepo->updateStatus($invoice->getIdInvoice(), 'credito');
     }
 
+    $ownerRolePk = $this->notificationService->findRoleIdByOwner($venue->getIdOwner());
+    if ($ownerRolePk !== null) {
+      $this->notificationService->notify(
+        $ownerRolePk,
+        'Un cliente solicitó un crédito de ₡ ' . number_format($total, 2) . '.',
+        base_url('credit', 'detail', ['id' => $idCredit])
+      );
+    }
+
     return $idCredit;
+  }
+
+  private function buildInstallments(float $total, CreditConfig $config): array
+  {
+    $count = max(1, $config->getInstallments());
+    $base = $total / $count;
+    $isBiweekly = $config->getFrequency() === 'quincenal';
+    $installments = [];
+    $accumulated = 0.0;
+    $start = strtotime(date('Y-m-d'));
+
+    for ($i = 1; $i <= $count; $i++) {
+      $amount = $i === $count ? round($total - $accumulated, 2) : round($base, 2);
+      $accumulated = round($accumulated + $amount, 2);
+      $relative = $isBiweekly ? '+' . (15 * $i) . ' days' : '+' . $i . ' months';
+      $dueDate = date('Y-m-d', strtotime($relative, $start));
+
+      $installments[] = new CreditInstallment(
+        idInstallment: 0,
+        idCredit: 0,
+        number: $i,
+        amount: $amount,
+        dueDate: $dueDate,
+        state: 'pendiente'
+      );
+    }
+
+    return $installments;
   }
 
   // =========================================================
@@ -222,6 +306,11 @@ class CreditService
 
     $newState = $newBalance <= 0 ? 'pagado' : 'parcial';
     $this->creditRepo->updateBalanceAndState($idCredit, $newBalance, $newState);
+    $this->installmentRepo->syncPaidStates(
+      $idCredit,
+      $this->installmentRepo->totalPaid($idCredit),
+      date('Y-m-d')
+    );
 
     if ($newState === 'pagado') {
       $this->settleCredit($credit);
@@ -243,6 +332,15 @@ class CreditService
     if ($this->earningService->findByBooking($idBooking) === null) {
       $totals = $this->bookingService->calculateTotals($idBooking);
       $this->earningService->recordEarning($idBooking, $totals, $credit->getIdOwner());
+    }
+
+    $rolePk = $this->notificationService->findRoleIdByOwner($credit->getIdOwner());
+    if ($rolePk !== null) {
+      $this->notificationService->notify(
+        $rolePk,
+        'El crédito #' . $credit->getIdCredit() . ' fue pagado por completo. Puedes considerar desbloquear al cliente.',
+        base_url('credit', 'detail', ['id' => $credit->getIdCredit()])
+      );
     }
   }
 
@@ -299,5 +397,54 @@ class CreditService
   public function outstandingByOwner(int $idOwner): float
   {
     return $this->creditRepo->sumOutstandingByOwner($idOwner);
+  }
+
+  public function installmentsForCredit(int $idCredit): array
+  {
+    return $this->installmentRepo->findByCredit($idCredit);
+  }
+
+  public function overdueCountByOwner(int $idOwner): int
+  {
+    return $this->installmentRepo->overdueCountByOwner($idOwner);
+  }
+
+  public function overdueCountByClient(int $idClient, ?int $idOwner = null): int
+  {
+    return $this->installmentRepo->overdueCountByClient($idClient, $idOwner);
+  }
+
+  public function sendDueReminders(int $idOwner): int
+  {
+    $config = $this->getConfig($idOwner);
+    $credits = $this->creditRepo->findByOwner($idOwner);
+    $sent = 0;
+    $limit = date('Y-m-d', strtotime('+' . $config->getReminderDays() . ' days'));
+
+    foreach ($credits as $creditRow) {
+      if (($creditRow['tbcreditstate'] ?? '') === 'pagado') {
+        continue;
+      }
+
+      foreach ($this->installmentRepo->findByCredit((int) $creditRow['tbcreditid']) as $installment) {
+        if ($installment->getState() === 'pagado') {
+          continue;
+        }
+        if ($installment->getDueDate() <= $limit) {
+          $rolePk = $this->notificationService->findRoleIdByClient((int) $creditRow['tbclientid']);
+          if ($rolePk !== null) {
+            $this->notificationService->notify(
+              $rolePk,
+              'Tu cuota #' . $installment->getNumber() . ' de ₡ ' . number_format($installment->getAmount(), 2)
+                . ' vence el ' . $installment->getDueDate() . '.',
+              base_url('credit', 'detail', ['id' => (int) $creditRow['tbcreditid']])
+            );
+            $sent++;
+          }
+        }
+      }
+    }
+
+    return $sent;
   }
 }

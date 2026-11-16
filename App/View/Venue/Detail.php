@@ -62,11 +62,34 @@ if ($venue === null) {
   </div>
 <?php endif; ?>
 
+<?php if (!empty($venueImages)): ?>
+  <div class="actions" style="flex-wrap:wrap;gap:10px;margin-bottom:18px;">
+    <?php foreach ($venueImages as $image): ?>
+      <img src="<?= e(image_url($image->getPath())) ?>" alt="Galería de <?= e($venue->getNameVenue()) ?>"
+        style="width:170px;height:120px;object-fit:cover;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.12);">
+    <?php endforeach; ?>
+  </div>
+<?php endif; ?>
+
 <div class="card">
   <div class="detail-grid">
     <div class="detail-item"><div class="k">Tipo</div><div class="v"><?= $venue->getTypeVenue() !== '' ? e($venue->getTypeVenue()) : 'General' ?></div></div>
-    <div class="detail-item"><div class="k">Capacidad</div><div class="v"><?= (int) $venue->getCapacityVenue() ?> personas</div></div>
+    <div class="detail-item"><div class="k">Capacidad</div><div class="v">
+      <?php if ($venue->getMinCapacity() !== null): ?><?= (int) $venue->getMinCapacity() ?> a <?php endif; ?><?= (int) $venue->getCapacityVenue() ?> personas
+    </div></div>
     <div class="detail-item"><div class="k">Precio de renta</div><div class="v">&#8353; <?= number_format($venue->getPriceVenue(), 2) ?> <span class="muted">por evento</span></div></div>
+    <?php if ($venue->getSizeVenue() !== null): ?>
+      <div class="detail-item"><div class="k">Tamaño</div><div class="v"><?= e($venue->getSizeVenue()) ?></div></div>
+    <?php endif; ?>
+    <?php if ($venue->getBathroomsVenue() !== null): ?>
+      <div class="detail-item"><div class="k">Baños</div><div class="v"><?= (int) $venue->getBathroomsVenue() ?></div></div>
+    <?php endif; ?>
+    <?php if ($venue->getHasParking()): ?>
+      <div class="detail-item"><div class="k">Parqueo</div><div class="v">Sí<?= $venue->getParkingCapacity() !== null ? ' (' . (int) $venue->getParkingCapacity() . ' vehículos)' : '' ?></div></div>
+    <?php endif; ?>
+    <?php if ($venue->getCleaningFee() > 0): ?>
+      <div class="detail-item"><div class="k">Limpieza</div><div class="v">&#8353; <?= number_format($venue->getCleaningFee(), 2) ?></div></div>
+    <?php endif; ?>
 
     <div class="detail-item"><div class="k">Estado</div><div class="v"><span class="badge success">Disponible</span></div></div>
     <div class="detail-item"><div class="k">Calificación</div>
@@ -121,6 +144,34 @@ if ($venue === null) {
       </div>
     </div>
 
+  <?php if ($venue->getDescriptionVenue() !== null && $venue->getDescriptionVenue() !== ''): ?>
+    <div style="margin-top:16px;">
+      <h4 style="margin-bottom:8px;">Sobre el local</h4>
+      <p><?= nl2br(e($venue->getDescriptionVenue())) ?></p>
+    </div>
+  <?php endif; ?>
+
+  <?php $rentalBlocks = $rentalBlocks ?? []; ?>
+  <?php if (!empty($rentalBlocks)): ?>
+    <div style="margin-top:16px;">
+      <h4 style="margin-bottom:8px;">Bloques de alquiler</h4>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Bloque</th><th>Horario</th><th>Precio</th></tr></thead>
+          <tbody>
+            <?php foreach ($rentalBlocks as $block): ?>
+              <tr>
+                <td><?= e($block->getName()) ?></td>
+                <td><?= e(substr($block->getStartTime(), 0, 5)) ?>–<?= e(substr($block->getEndTime(), 0, 5)) ?></td>
+                <td>&#8353; <?= number_format($block->getPrice(), 2) ?></td>
+              </tr>
+            <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <?php endif; ?>
+
   <?php if (!empty($promotions)): ?>
     <div style="margin:16px 0 0;">
       <h4 style="margin-bottom:8px;">Promociones activas</h4>
@@ -155,7 +206,14 @@ if ($venue === null) {
       <tbody>
         <?php foreach ($services as $s): ?>
           <tr>
-            <td><?= e($s->getNameService()) ?></td>
+            <td>
+              <?php $serviceGallery = $serviceImages[$s->getIdService()] ?? []; ?>
+              <?php if (!empty($serviceGallery)): ?>
+                <img src="<?= e(image_url($serviceGallery[0]->getPath())) ?>" alt="<?= e($s->getNameService()) ?>"
+                  style="width:56px;height:42px;object-fit:cover;border-radius:6px;vertical-align:middle;margin-right:8px;">
+              <?php endif; ?>
+              <?= e($s->getNameService()) ?>
+            </td>
             <td><?= $s->getTypeService() !== null ? e($s->getTypeService()) : '—' ?></td>
             <td>&#8353; <?= number_format($s->getPriceService(), 2) ?></td>
             <td id="serviceAvg-<?= (int) $s->getIdService() ?>">

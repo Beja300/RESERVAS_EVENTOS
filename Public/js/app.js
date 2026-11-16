@@ -188,6 +188,12 @@
         message = 'Correo electrónico no válido.';
       } else if (rules.indexOf('password') !== -1 && !/^(?=.*\d).{8,}$/.test(value)) {
         message = 'La contraseña debe tener al menos 8 caracteres y un número.';
+      } else if (rules.indexOf('match') !== -1) {
+        var matchId = field.getAttribute('data-match') || '';
+        var matchEl = matchId ? document.getElementById(matchId) : null;
+        if (matchEl && value !== (matchEl.value || '').trim()) {
+          message = field.getAttribute('data-match-message') || 'Los valores no coinciden.';
+        }
       } else if (rules.indexOf('url') !== -1 && !/^https?:\/\/[^\s]+$/i.test(value)) {
         message = 'La URL no es válida (debe iniciar con http:// o https://).';
       } else if (rules.indexOf('identification') !== -1

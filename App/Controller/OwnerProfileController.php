@@ -62,6 +62,7 @@ class OwnerProfileController
     $ownerIdentification = trim($_POST['ownerIdentification'] ?? '');
     $currentPassword = $_POST['currentPassword'] ?? '';
     $newPassword = $_POST['newPassword'] ?? '';
+    $newPasswordConfirm = $_POST['newPasswordConfirm'] ?? '';
 
     try {
       if ($name === '') {
@@ -78,7 +79,7 @@ class OwnerProfileController
         $this->profileService->validateUniqueIdentification($owner->getIdentificationNumberOwner(), $ownerIdentification);
       }
 
-      $this->profileService->changePasswordIfRequested($owner, $currentPassword, $newPassword);
+      $this->profileService->changePasswordIfRequested($owner, $currentPassword, $newPassword, $newPasswordConfirm);
 
       $owner->setName($name);
       $owner->setEmail($email);

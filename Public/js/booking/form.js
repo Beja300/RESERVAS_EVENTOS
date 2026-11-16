@@ -327,6 +327,7 @@
   // ---------- Preview de precio (acumulación por día) ----------
   var priceEl = document.querySelector('[data-venue-price]');
   var priceSummary = document.getElementById('bookingPriceSummary');
+  var blockSelect = document.querySelector('[data-rental-block]');
 
   function syncInputs() {
     nativeInput.value = rangeStart;
@@ -339,13 +340,96 @@
     var days = daysBetween(rangeStart, rangeEnd);
     if (days >= 1) {
       var price = parseFloat(priceEl.getAttribute('data-venue-price')) || 0;
+      if (blockSelect && blockSelect.selectedOptions.length > 0) {
+        price = parseFloat(blockSelect.selectedOptions[0].getAttribute('data-price')) || price;
+      }
       var fmt = window.App ? window.App.formatMoney(price * days) : ('\u20A1 ' + (price * days).toFixed(2));
       var fmtDay = window.App ? window.App.formatMoney(price) : ('\u20A1 ' + price.toFixed(2));
+      var servicesTotal = servicesSubtotal();
+      var extra = '';
+      if (servicesTotal > 0) {
+        var fmtServices = window.App ? window.App.formatMoney(servicesTotal) : ('\u20A1 ' + servicesTotal.toFixed(2));
+        extra = ' + servicios ' + fmtServices;
+      }
       priceSummary.textContent = 'Duración: ' + days + ' día' + (days > 1 ? 's' : '')
-        + ' -> ' + fmt + ' (precio por día ' + fmtDay + '). El total mostrará los servicios que agregues.';
+        + ' -> ' + fmt + ' (precio por día ' + fmtDay + ')' + extra + '. El total mostrará el IVA.';
     } else if (rangeStart !== '' && rangeEnd !== '') {
       priceSummary.textContent = 'Revisa las fechas: la fecha final debe ser igual o posterior a la de inicio.';
     }
+  }
+
+  // ---------- Servicios: subtotal por cantidad e incluidas ----------
+  var serviceRows = Array.prototype.slice.call(document.querySelectorAll('[data-service-row]'));
+
+  function serviceRowData(row) {
+    var price = parseFloat(row.getAttribute('data-price')) || 0;
+    var min = parseInt(row.getAttribute('data-min'), 10) || 1;
+    var maxRaw = row.getAttribute('data-max');
+    var max = maxRaw === '' ? null : (parseInt(maxRaw, 10) || 0);
+    var included = parseInt(row.getAttribute('data-included'), 10) || 0;
+    var input = row.querySelector('[data-service-qty]');
+    var qty = input ? (parseInt(input.value, 10) || 0) : 0;
+    if (qty < 0) { qty = 0; }
+    if (max !== null && qty > max) {
+      qty = max;
+      if (input) { input.value = qty; }
+    }
+    var free = Math.min(qty, included);
+    var subtotal = Math.max(0, (qty - free) * price);
+    return { row: row, input: input, qty: qty, min: min, max: max, included: included, price: price, subtotal: subtotal };
+  }
+
+  function servicesSubtotal() {
+    var total = 0;
+    serviceRows.forEach(function (row) { total += serviceRowData(row).subtotal; });
+    return total;
+  }
+
+  function refreshServiceRows() {
+    serviceRows.forEach(function (row) {
+      var data = serviceRowData(row);
+      var out = row.querySelector('[data-service-subtotal]');
+      if (out) {
+        out.textContent = window.App ? window.App.formatMoney(data.subtotal) : ('\u20A1 ' + data.subtotal.toFixed(2));
+      }
+      if (data.input) {
+        data.input.classList.toggle('is-invalid', data.qty > 0 && data.qty < data.min);
+      }
+    });
+  }
+
+  serviceRows.forEach(function (row) {
+    var input = row.querySelector('[data-service-qty]');
+    if (!input) { return; }
+    input.addEventListener('input', function () { refreshServiceRows(); updatePricePreview(); });
+    input.addEventListener('change', function () { refreshServiceRows(); updatePricePreview(); });
+  });
+
+  var serviceForm = nativeInput.closest('form');
+  if (serviceForm) {
+    serviceForm.addEventListener('submit', function (ev) {
+      var invalid = null;
+      serviceRows.forEach(function (row) {
+        var data = serviceRowData(row);
+        if (data.qty > 0 && data.qty < data.min) { invalid = data; }
+      });
+      if (!invalid) { return; }
+      ev.preventDefault();
+      var err = document.getElementById('serviceQtyError');
+      if (!err) {
+        err = document.createElement('p');
+        err.className = 'datepicker-error';
+        err.id = 'serviceQtyError';
+        invalid.row.parentNode.appendChild(err);
+      }
+      err.textContent = 'La cantidad mínima por servicio es ' + invalid.min + '. Corrige o deja 0.';
+      err.hidden = false;
+      invalid.input.focus();
+    });
+  }
+
+  if (blockSelect) {
+    blockSelect.addEventListener('change', updatePricePreview);
   }
 
   // ---------- Eventos ----------
@@ -440,5 +524,6 @@
   }
 
   refreshDisplay();
+  refreshServiceRows();
   updatePricePreview();
 })();

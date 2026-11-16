@@ -8,6 +8,8 @@ require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
 require_once __DIR__ . '/../Repository/ClientRepository.php';
 require_once __DIR__ . '/../Service/CreditService.php';
+require_once __DIR__ . '/../Repository/CreditInstallmentRepository.php';
+require_once __DIR__ . '/../Repository/BlockedClientRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../View/_helpers.php';
 
@@ -56,6 +58,15 @@ class BookingDetailController
     $data = $this->detailService->assemble($idBooking);
 
     extract($data, EXTR_SKIP);
+
+    $clientOverdueCount = 0;
+    $clientIsBlocked = false;
+    if ($type === 'owner') {
+      $clientOverdueCount = (new CreditInstallmentRepository(DataBase::getConnection()))
+        ->overdueCountByClient($booking->getIdClient(), $owner->getIdOwner());
+      $clientIsBlocked = (new BlockedClientRepository(DataBase::getConnection()))
+        ->isBlocked($owner->getIdOwner(), $booking->getIdClient());
+    }
 
     // Estado de crédito (solo relevante para el cliente dueño de la reserva).
     $creditInfo = null;

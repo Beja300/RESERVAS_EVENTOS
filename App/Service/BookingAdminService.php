@@ -97,7 +97,8 @@ class BookingAdminService
         $booking->getIdLocal(),
         $newDate,
         $newEndDate,
-        $bookingPk
+        $bookingPk,
+        $booking->getRentalBlockId()
       )
     ) {
       throw new BusinessRuleException('El local ya tiene una reserva que se cruza con ese rango de fechas. Elige otro rango.');
