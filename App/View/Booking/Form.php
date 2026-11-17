@@ -17,7 +17,7 @@ if ($venue === null) {
   </div>
 </div>
 
-<div class="card form-card" style="max-width:560px;">
+<div class="card form-card form-page">
   <?php if (!empty($error)): ?>
     <div class="alert alert-error"><?= e($error) ?></div>
   <?php endif; ?>
@@ -26,26 +26,44 @@ if ($venue === null) {
     <?= csrf_field() ?>
     <input type="hidden" name="venueId" value="<?= (int) $venue->getIdVenue() ?>">
 
-    <div class="form-group">
-      <label for="date">Rango de fechas <span class="required-mark">*</span></label>
-      <input class="form-control" type="date" id="date" name="date" required min="<?= date('Y-m-d') ?>"
-             value="<?= e(trim($_POST['date'] ?? '')) ?>"
-             data-booked-dates='<?= e(json_encode($bookedDates ?? [])) ?>'>
-      <input class="form-control" type="date" id="endDate" name="endDate" required
-             value="<?= e(trim($_POST['endDate'] ?? '')) ?>" data-end-date>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="date">Fecha de inicio <span class="required-mark">*</span></label>
+        <input class="form-control" type="date" id="date" name="date" required min="<?= date('Y-m-d') ?>"
+               value="<?= e(trim($_POST['date'] ?? '')) ?>"
+               data-booked-dates='<?= e(json_encode($bookedDates ?? [])) ?>'>
+      </div>
+      <div class="form-group">
+        <label for="endDate">Fecha final <span class="required-mark">*</span></label>
+        <input class="form-control" type="date" id="endDate" name="endDate" required
+               value="<?= e(trim($_POST['endDate'] ?? '')) ?>" data-end-date>
+      </div>
     </div>
     <p class="form-hint">Elige el día de inicio y luego el día final. El precio se acumula por día.</p>
 
-    <div class="form-group">
-      <label for="attendees">Cantidad de asistentes <span class="required-mark">*</span></label>
-      <input class="form-control no-spinners" type="text" inputmode="numeric" pattern="[0-9]*"
-             id="attendees" name="attendees" required
-             min="<?= (int) ($venue->getMinCapacity() ?? 1) ?>"
-             max="<?= (int) $venue->getCapacityVenue() ?>"
-             value="<?= e(trim($_POST['attendees'] ?? '')) ?>">
-      <p class="form-hint">
-        Capacidad: <?= (int) ($venue->getMinCapacity() ?? 1) ?> a <?= (int) $venue->getCapacityVenue() ?> personas.
-      </p>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="attendees">Cantidad de asistentes <span class="required-mark">*</span></label>
+        <input class="form-control no-spinners" type="text" inputmode="numeric" pattern="[0-9]*"
+               id="attendees" name="attendees" required
+               min="<?= (int) ($venue->getMinCapacity() ?? 1) ?>"
+               max="<?= (int) $venue->getCapacityVenue() ?>"
+               value="<?= e(trim($_POST['attendees'] ?? '')) ?>">
+        <p class="form-hint">
+          Capacidad: <?= (int) ($venue->getMinCapacity() ?? 1) ?> a <?= (int) $venue->getCapacityVenue() ?> personas.
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label for="eventType">Tipo de evento</label>
+        <select class="form-control" id="eventType" name="eventType">
+          <option value="">— Selecciona —</option>
+          <option value="boda" <?= ($_POST['eventType'] ?? '') === 'boda' ? 'selected' : '' ?>>Boda</option>
+          <option value="cumpleanos" <?= ($_POST['eventType'] ?? '') === 'cumpleanos' ? 'selected' : '' ?>>Cumpleaños</option>
+          <option value="empresarial" <?= ($_POST['eventType'] ?? '') === 'empresarial' ? 'selected' : '' ?>>Empresarial</option>
+          <option value="otro" <?= ($_POST['eventType'] ?? '') === 'otro' ? 'selected' : '' ?>>Otro</option>
+        </select>
+      </div>
     </div>
 
     <?php $rentalBlocks = $rentalBlocks ?? []; ?>
@@ -63,17 +81,6 @@ if ($venue === null) {
         </select>
       </div>
     <?php endif; ?>
-
-    <div class="form-group">
-      <label for="eventType">Tipo de evento</label>
-      <select class="form-control" id="eventType" name="eventType">
-        <option value="">— Selecciona —</option>
-        <option value="boda" <?= ($_POST['eventType'] ?? '') === 'boda' ? 'selected' : '' ?>>Boda</option>
-        <option value="cumpleanos" <?= ($_POST['eventType'] ?? '') === 'cumpleanos' ? 'selected' : '' ?>>Cumpleaños</option>
-        <option value="empresarial" <?= ($_POST['eventType'] ?? '') === 'empresarial' ? 'selected' : '' ?>>Empresarial</option>
-        <option value="otro" <?= ($_POST['eventType'] ?? '') === 'otro' ? 'selected' : '' ?>>Otro</option>
-      </select>
-    </div>
 
     <div class="form-group" id="eventDetailGroup" style="display:<?= ($_POST['eventType'] ?? '') === 'otro' ? '' : 'none' ?>;">
       <label for="eventDetail">¿De qué trata tu evento? <span class="required-mark">*</span></label>

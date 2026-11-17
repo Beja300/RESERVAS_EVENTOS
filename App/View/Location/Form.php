@@ -32,7 +32,7 @@ if ($isEdit) {
   </div>
 </div>
 
-<div class="card form-card" style="max-width:560px;">
+<div class="card form-card form-page">
   <?php if ($error !== null): ?>
     <div class="alert alert-error"><?= e($error) ?></div>
   <?php endif; ?>
@@ -42,7 +42,7 @@ if ($isEdit) {
     <?php if ($isEdit): ?>
       <input type="hidden" name="id" value="<?= (int) $location->getIdLocation() ?>">
     <?php endif; ?>
-    <div class="grid grid-3">
+    <div class="form-grid-3">
       <div class="form-group">
         <label for="province">Provincia <span class="required-mark">*</span></label>
         <select class="form-control" id="province" name="province" data-level="province" required
@@ -66,7 +66,7 @@ if ($isEdit) {
       </div>
     </div>
 
-    <div class="grid grid-2">
+    <div class="form-grid-2">
       <div class="form-group">
         <label for="town">Pueblo</label>
         <input class="form-control" type="text" id="town" name="town" maxlength="100"

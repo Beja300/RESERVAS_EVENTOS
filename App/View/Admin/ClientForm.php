@@ -15,15 +15,24 @@ require_once __DIR__ . '/../_header.php';
   <div class="alert alert-error"><?= e($error) ?></div>
 <?php endif; ?>
 
-<div class="card" style="max-width:520px;">
+<div class="card form-card form-page">
   <form method="post" action="<?= e(base_url('admin', 'createClient')) ?>" data-validate-form>
     <?= csrf_field() ?>
 
-    <div class="form-group">
-      <label for="name">Nombre <span class="required-mark">*</span></label>
-      <input class="form-control" type="text" id="name" name="name"
-             data-validate="required" maxlength="300" required>
-      <div class="form-hint">Ej: Ana Lucía</div>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="name">Nombre <span class="required-mark">*</span></label>
+        <input class="form-control" type="text" id="name" name="name"
+               data-validate="required" maxlength="300" required>
+        <div class="form-hint">Ej: Ana Lucía</div>
+      </div>
+
+      <div class="form-group">
+        <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
+        <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone"
+               data-validate="phone" maxlength="15" placeholder="+506 8888-8888">
+        <div class="form-hint">Ej: 8888-7777</div>
+      </div>
     </div>
 
     <div class="form-group">
@@ -33,38 +42,31 @@ require_once __DIR__ . '/../_header.php';
       <div class="form-hint">Ej: analucia@correo.com</div>
     </div>
 
-    <div class="form-group">
-      <label for="password">Contraseña <span class="required-mark">*</span></label>
-      <div class="password-wrapper">
-        <input class="form-control" type="password" id="password" name="password"
-               data-validate="required password" minlength="8"
-               autocomplete="new-password" required>
-        <button class="password-toggle" type="button" id="passwordToggle"
-                aria-label="Mostrar contraseña">Mostrar</button>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="password">Contraseña <span class="required-mark">*</span></label>
+        <div class="password-wrapper">
+          <input class="form-control" type="password" id="password" name="password"
+                 data-validate="required password" minlength="8"
+                 autocomplete="new-password" required>
+          <button class="password-toggle" type="button" id="passwordToggle"
+                  aria-label="Mostrar contraseña">Mostrar</button>
+        </div>
+        <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura1</div>
       </div>
-      <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura1</div>
+
+      <div class="form-group">
+        <label for="passwordConfirm">Confirmar contraseña <span class="required-mark">*</span></label>
+        <input class="form-control" type="password" id="passwordConfirm"
+               name="passwordConfirm"
+               data-validate="required match"
+               data-match="password"
+               data-match-message="Las contraseñas no coinciden."
+               minlength="8" autocomplete="new-password" required>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label for="passwordConfirm">
-        Confirmar contraseña <span class="required-mark">*</span>
-      </label>
-      <input class="form-control" type="password" id="passwordConfirm"
-             name="passwordConfirm"
-             data-validate="required match"
-             data-match="password"
-             data-match-message="Las contraseñas no coinciden."
-             minlength="8" autocomplete="new-password" required>
-    </div>
-
-    <div class="form-group">
-      <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
-      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone"
-             data-validate="phone" maxlength="15" placeholder="+506 8888-8888">
-      <div class="form-hint">Ej: 8888-7777</div>
-    </div>
-
-    <div class="form-group" style="display:flex;gap:10px;margin-bottom:0;">
+    <div class="form-actions">
       <a class="btn btn-secondary" href="<?= e(base_url('admin', 'users')) ?>">Cancelar</a>
       <button class="btn btn-primary" type="submit">Registrar cliente</button>
     </div>

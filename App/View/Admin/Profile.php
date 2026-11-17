@@ -22,7 +22,8 @@ if ($admin === null) {
   <div class="alert alert-success">Foto de perfil eliminada.</div>
 <?php endif; ?>
 
-<div class="card form-card" style="max-width:560px;margin-bottom:16px;">
+<div class="form-page">
+<div class="card form-card" style="margin-bottom:16px;">
   <h3 class="card-title">Foto de perfil</h3>
   <div style="text-align:center;">
     <img id="adminPhotoPreview" src="<?= $admin->getImageAdmin() !== '' ? e(image_url($admin->getImageAdmin())) : '' ?>" alt="Foto de perfil"
@@ -38,7 +39,7 @@ if ($admin === null) {
   </div>
 </div>
 
-<div class="card form-card" style="max-width:560px;">
+<div class="card form-card">
   <?php if (!empty($error)): ?>
     <div class="alert alert-error"><?= e($error) ?></div>
   <?php endif; ?>
@@ -47,25 +48,37 @@ if ($admin === null) {
         enctype="multipart/form-data" data-validate-form data-ajax-admin-profile>
     <?= csrf_field() ?>
 
-    <div class="form-group" style="margin-bottom:16px;">
-      <label>Cambiar foto de perfil</label>
-      <input class="form-control" type="file" id="image" name="image" accept="image/*"
-             data-photo-input="adminPhotoPreview">
-      <small class="muted">Sube una foto (jpg, png, webp, gif; máx. 2 MB).</small>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label>Cambiar foto de perfil</label>
+        <input class="form-control" type="file" id="image" name="image" accept="image/*"
+               data-photo-input="adminPhotoPreview">
+        <small class="muted">Sube una foto (jpg, png, webp, gif; máx. 2 MB).</small>
+      </div>
+
+      <div class="form-group">
+        <label>O bien, imagen por URL</label>
+        <input class="form-control" type="text" id="imageUrl" name="imageUrl"
+               placeholder="https://..."
+               value="<?= e(trim($_POST['imageUrl'] ?? '')) ?>">
+      </div>
     </div>
 
-    <div class="form-group">
-      <label>O bien, imagen por URL</label>
-      <input class="form-control" type="text" id="imageUrl" name="imageUrl"
-             placeholder="https://..."
-             value="<?= e(trim($_POST['imageUrl'] ?? '')) ?>">
-    </div>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="name">Nombre <span class="required-mark">*</span></label>
+        <input class="form-control" type="text" id="name" name="name" required maxlength="300"
+               value="<?= e($_POST['name'] ?? $admin->getName()) ?>">
+        <div class="form-hint">Ej: Laura Fernández</div>
+      </div>
 
-    <div class="form-group">
-      <label for="name">Nombre <span class="required-mark">*</span></label>
-      <input class="form-control" type="text" id="name" name="name" required maxlength="300"
-             value="<?= e($_POST['name'] ?? $admin->getName()) ?>">
-      <div class="form-hint">Ej: Laura Fernández</div>
+      <div class="form-group">
+        <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
+        <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
+               data-validate="phone" inputmode="numeric" pattern="\d{8}"
+               maxlength="15" value="<?= e(format_phone_number($_POST['phoneNumber'] ?? $admin->getPhoneNumber())) ?>" placeholder="+506 8888-8888">
+        <div class="form-hint">Ej: 8888-7777</div>
+      </div>
     </div>
 
     <div class="form-group">
@@ -73,14 +86,6 @@ if ($admin === null) {
       <input class="form-control" type="email" id="email" name="email" required
              data-validate="email" maxlength="300"
              value="<?= e($_POST['email'] ?? $admin->getEmail()) ?>">
-    </div>
-
-    <div class="form-group">
-      <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
-      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber"
-             data-validate="phone" inputmode="numeric" pattern="\d{8}"
-             maxlength="15" value="<?= e(format_phone_number($_POST['phoneNumber'] ?? $admin->getPhoneNumber())) ?>" placeholder="+506 8888-8888">
-      <div class="form-hint">Ej: 8888-7777</div>
     </div>
 
     <?php $showPasswordFields = !empty($_POST['changePassword']); ?>
@@ -91,21 +96,23 @@ if ($admin === null) {
     </label>
 
     <div id="passwordFields" <?= $showPasswordFields ? '' : 'style="display:none;"' ?>>
-      <div class="form-group">
-        <label for="currentPassword">Contraseña actual</label>
-        <div class="password-wrapper">
-          <input class="form-control" type="password" id="currentPassword" name="currentPassword" autocomplete="current-password">
-          <button class="password-toggle" type="button" id="currentPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="currentPassword">Contraseña actual</label>
+          <div class="password-wrapper">
+            <input class="form-control" type="password" id="currentPassword" name="currentPassword" autocomplete="current-password">
+            <button class="password-toggle" type="button" id="currentPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+          </div>
         </div>
-      </div>
 
-      <div class="form-group">
-        <label for="newPassword">Contraseña nueva</label>
-        <div class="password-wrapper">
-          <input class="form-control" type="password" id="newPassword" name="newPassword" minlength="8" autocomplete="new-password">
-          <button class="password-toggle" type="button" id="newPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+        <div class="form-group">
+          <label for="newPassword">Contraseña nueva</label>
+          <div class="password-wrapper">
+            <input class="form-control" type="password" id="newPassword" name="newPassword" minlength="8" autocomplete="new-password">
+            <button class="password-toggle" type="button" id="newPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+          </div>
+          <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
         </div>
-        <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
       </div>
     </div>
 
@@ -113,7 +120,7 @@ if ($admin === null) {
   </form>
 </div>
 
-<div class="card form-card" style="max-width:560px;border-color:var(--danger-light);">
+<div class="card form-card" style="border-color:var(--danger-light);">
   <h3 style="margin-bottom:6px;color:var(--danger);">Desactivar cuenta</h3>
   <p class="muted" style="margin-bottom:12px;">
     Al desactivar tu cuenta ya no podrás iniciar sesión. No podrás desactivarla si eres el
@@ -124,6 +131,7 @@ if ($admin === null) {
     <?= csrf_field() ?>
     <button class="btn btn-danger" type="submit">Desactivar mi cuenta</button>
   </form>
+</div>
 </div>
 
 <?php require_once __DIR__ . '/../_footer.php'; ?>

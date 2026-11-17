@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="<?= e(css_url('auth/register')) ?>">
 </head>
 <body class="auth-page">
-  <div class="auth-card container-narrow">
+  <div class="auth-card auth-card--wide">
     <h1>&#128100; Crear cuenta</h1>
     <p class="subtitle">Únete a Reservas de Eventos</p>
 
@@ -30,11 +30,19 @@
 
       <!-- Panel Cliente -->
       <div class="tab-panel active" id="panel-client">
-        <div class="form-group">
-          <label for="name">Nombre <span class="required-mark">*</span></label>
-          <input class="form-control" type="text" id="name" name="name"
-                 value="<?= e($_POST['name'] ?? '') ?>" required>
-          <div class="form-hint">Ej: Ana Lucía</div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="name">Nombre <span class="required-mark">*</span></label>
+            <input class="form-control" type="text" id="name" name="name"
+                   value="<?= e($_POST['name'] ?? '') ?>" required>
+            <div class="form-hint">Ej: Ana Lucía</div>
+          </div>
+          <div class="form-group">
+            <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
+            <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" required
+                   value="<?= e(format_phone_number($_POST['phoneNumber'] ?? '')) ?>" maxlength="15" placeholder="+506 8888-8888">
+            <div class="form-hint">Ej: 8888-7777</div>
+          </div>
         </div>
         <div class="form-group">
           <label for="email">Correo electrónico <span class="required-mark">*</span></label>
@@ -42,51 +50,57 @@
                  value="<?= e($_POST['email'] ?? '') ?>" required>
           <div class="form-hint">Ej: analucia@correo.com</div>
         </div>
-        <div class="form-group">
-          <label for="password">Contraseña <span class="required-mark">*</span></label>
-          <div class="password-wrapper">
-            <input class="form-control" type="password" id="password" name="password"
-                   minlength="8" required>
-            <button class="password-toggle" type="button" id="passwordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="password">Contraseña <span class="required-mark">*</span></label>
+            <div class="password-wrapper">
+              <input class="form-control" type="password" id="password" name="password"
+                     minlength="8" required>
+              <button class="password-toggle" type="button" id="passwordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+            </div>
+            <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
           </div>
-          <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
-        </div>
-        <div class="form-group">
-          <label for="passwordConfirm">Confirmar contraseña <span class="required-mark">*</span></label>
-          <div class="password-wrapper">
-            <input class="form-control" type="password" id="passwordConfirm" name="passwordConfirm"
-                   data-validate="match" data-match="password" data-match-message="Las contraseñas no coinciden."
-                   minlength="8" required>
-            <button class="password-toggle" type="button" id="passwordConfirmToggle" aria-label="Mostrar contraseña">Mostrar</button>
+          <div class="form-group">
+            <label for="passwordConfirm">Confirmar contraseña <span class="required-mark">*</span></label>
+            <div class="password-wrapper">
+              <input class="form-control" type="password" id="passwordConfirm" name="passwordConfirm"
+                     data-validate="match" data-match="password" data-match-message="Las contraseñas no coinciden."
+                     minlength="8" required>
+              <button class="password-toggle" type="button" id="passwordConfirmToggle" aria-label="Mostrar contraseña">Mostrar</button>
+            </div>
           </div>
-        </div>
-        <div class="form-group">
-          <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
-          <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" required
-                 value="<?= e(format_phone_number($_POST['phoneNumber'] ?? '')) ?>" maxlength="15" placeholder="+506 8888-8888">
-          <div class="form-hint">Ej: 8888-7777</div>
         </div>
       </div>
 
       <!-- Panel Propietario -->
       <div class="tab-panel" id="panel-owner">
-        <div class="form-group">
-          <label for="ownerFirstName">Nombre <span class="required-mark">*</span></label>
-          <input class="form-control" type="text" id="ownerFirstName" name="ownerFirstName"
-                 value="<?= e($_POST['ownerFirstName'] ?? '') ?>" required>
-          <div class="form-hint">Ej: María José</div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="ownerFirstName">Nombre <span class="required-mark">*</span></label>
+            <input class="form-control" type="text" id="ownerFirstName" name="ownerFirstName"
+                   value="<?= e($_POST['ownerFirstName'] ?? '') ?>" required>
+            <div class="form-hint">Ej: María José</div>
+          </div>
+          <div class="form-group">
+            <label for="ownerLastName">Apellidos</label>
+            <input class="form-control" type="text" id="ownerLastName" name="ownerLastName"
+                   value="<?= e($_POST['ownerLastName'] ?? '') ?>">
+            <div class="form-hint">Ej: Pérez Rodríguez</div>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="ownerLastName">Apellidos</label>
-          <input class="form-control" type="text" id="ownerLastName" name="ownerLastName"
-                 value="<?= e($_POST['ownerLastName'] ?? '') ?>">
-          <div class="form-hint">Ej: Pérez Rodríguez</div>
-        </div>
-        <div class="form-group">
-          <label for="ownerAlias">Alias (apodo)</label>
-          <input class="form-control" type="text" id="ownerAlias" name="ownerAlias"
-                 value="<?= e($_POST['ownerAlias'] ?? '') ?>">
-          <div class="form-hint">Ej: Mari</div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="ownerAlias">Alias (apodo)</label>
+            <input class="form-control" type="text" id="ownerAlias" name="ownerAlias"
+                   value="<?= e($_POST['ownerAlias'] ?? '') ?>">
+            <div class="form-hint">Ej: Mari</div>
+          </div>
+          <div class="form-group">
+            <label for="ownerIdentification">Cédula / identificación</label>
+            <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification" data-mask="identification" data-validate="identification"
+                   value="<?= e($_POST['ownerIdentification'] ?? '') ?>">
+            <div class="form-hint">Ej: 1-2345-0678</div>
+          </div>
         </div>
         <div class="form-group">
           <label for="ownerBusinessName">Nombre de negocio <span class="required-mark">*</span></label>
@@ -94,41 +108,39 @@
                  value="<?= e($_POST['ownerBusinessName'] ?? '') ?>" required>
           <div class="form-hint">Ej: Salon comunal</div>
         </div>
-        <div class="form-group">
-          <label for="ownerIdentification">Cédula / identificación</label>
-          <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification" data-mask="identification" data-validate="identification"
-                 value="<?= e($_POST['ownerIdentification'] ?? '') ?>">
-          <div class="form-hint">Ej: 1-2345-0678</div>
-        </div>
-        <div class="form-group">
-          <label for="ownerEmail">Correo electrónico <span class="required-mark">*</span></label>
-          <input class="form-control" type="email" id="ownerEmail" name="email" data-validate="email"
-                 value="<?= e($_POST['email'] ?? '') ?>" required>
-          <div class="form-hint">Ej: mariosepe@correo.com</div>
-        </div>
-        <div class="form-group">
-          <label for="ownerPassword">Contraseña <span class="required-mark">*</span></label>
-          <div class="password-wrapper">
-            <input class="form-control" type="password" id="ownerPassword" name="password"
-                   minlength="8" required>
-            <button class="password-toggle" type="button" id="ownerPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="ownerEmail">Correo electrónico <span class="required-mark">*</span></label>
+            <input class="form-control" type="email" id="ownerEmail" name="email" data-validate="email"
+                   value="<?= e($_POST['email'] ?? '') ?>" required>
+            <div class="form-hint">Ej: mariosepe@correo.com</div>
           </div>
-          <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
-        </div>
-        <div class="form-group">
-          <label for="ownerPasswordConfirm">Confirmar contraseña <span class="required-mark">*</span></label>
-          <div class="password-wrapper">
-            <input class="form-control" type="password" id="ownerPasswordConfirm" name="passwordConfirm"
-                   data-validate="match" data-match="ownerPassword" data-match-message="Las contraseñas no coinciden."
-                   minlength="8" required>
-            <button class="password-toggle" type="button" id="ownerPasswordConfirmToggle" aria-label="Mostrar contraseña">Mostrar</button>
+          <div class="form-group">
+            <label for="ownerPhone">Teléfono <span class="required-mark">*</span></label>
+            <input class="form-control" type="tel" id="ownerPhone" name="phoneNumber" required data-mask="phone" data-validate="phone"
+                   value="<?= e(format_phone_number($_POST['phoneNumber'] ?? '')) ?>" maxlength="15" placeholder="+506 8888-8888">
+            <div class="form-hint">Ej: 8888-7777</div>
           </div>
         </div>
-        <div class="form-group">
-          <label for="ownerPhone">Teléfono <span class="required-mark">*</span></label>
-          <input class="form-control" type="tel" id="ownerPhone" name="phoneNumber" required data-mask="phone" data-validate="phone" required
-                 value="<?= e(format_phone_number($_POST['phoneNumber'] ?? '')) ?>" maxlength="15" placeholder="+506 8888-8888">
-          <div class="form-hint">Ej: 8888-7777</div>
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label for="ownerPassword">Contraseña <span class="required-mark">*</span></label>
+            <div class="password-wrapper">
+              <input class="form-control" type="password" id="ownerPassword" name="password"
+                     minlength="8" required>
+              <button class="password-toggle" type="button" id="ownerPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+            </div>
+            <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
+          </div>
+          <div class="form-group">
+            <label for="ownerPasswordConfirm">Confirmar contraseña <span class="required-mark">*</span></label>
+            <div class="password-wrapper">
+              <input class="form-control" type="password" id="ownerPasswordConfirm" name="passwordConfirm"
+                     data-validate="match" data-match="ownerPassword" data-match-message="Las contraseñas no coinciden."
+                     minlength="8" required>
+              <button class="password-toggle" type="button" id="ownerPasswordConfirmToggle" aria-label="Mostrar contraseña">Mostrar</button>
+            </div>
+          </div>
         </div>
       </div>
 

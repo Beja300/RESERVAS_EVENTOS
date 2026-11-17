@@ -55,61 +55,39 @@
   Array.prototype.slice.call(document.querySelectorAll('[data-currency-mask]')).forEach(bindCurrencyInput);
   window.VenueFormCurrency = { bind: bindCurrencyInput };
 
-  // ---------- Modo de ubicación: exacta o aproximada ----------
-  var locationRadios = Array.prototype.slice.call(document.querySelectorAll('[data-location-mode]'));
-  var exactLocationSection = document.querySelector('[data-location-section="exacta"]');
-  var approxLocationSection = document.querySelector('[data-location-section="aproximada"]');
-  var townInput = document.getElementById('town');
-  var approximateInput = document.getElementById('approximate');
-
-  function selectedLocationMode() {
-    var checked = document.querySelector('[data-location-mode]:checked');
-    return checked && checked.value === 'aproximada' ? 'aproximada' : 'exacta';
-  }
-
-  function clearSectionErrors(section) {
-    if (!section) return;
-    section.querySelectorAll('.is-invalid').forEach(function (field) {
-      field.classList.remove('is-invalid');
-    });
-    section.querySelectorAll('.field-error').forEach(function (error) {
-      error.textContent = '';
-    });
-  }
-
-  function applyLocationMode(mode) {
-    var isApproximate = mode === 'aproximada';
-
-    if (exactLocationSection) exactLocationSection.hidden = isApproximate;
-    if (approxLocationSection) approxLocationSection.hidden = !isApproximate;
-
-    if (townInput) townInput.required = isApproximate;
-    if (approximateInput) approximateInput.required = isApproximate;
-
-    clearSectionErrors(isApproximate ? exactLocationSection : approxLocationSection);
-
+  // ---------- Ubicación: provincia, cantón y distrito obligatorios ----------
+  function requireLocationGroup() {
     if (window.VenueLocationGroup && typeof window.VenueLocationGroup.setRequired === 'function') {
-      window.VenueLocationGroup.setRequired(!isApproximate);
-    }
-
-    if (!isApproximate && window.VenueLocationMap && typeof window.VenueLocationMap.invalidateSize === 'function') {
-      window.requestAnimationFrame(function () {
-        window.VenueLocationMap.invalidateSize();
-      });
+      window.VenueLocationGroup.setRequired(true);
     }
   }
 
-  locationRadios.forEach(function (radio) {
-    radio.addEventListener('change', function () {
-      applyLocationMode(selectedLocationMode());
-    });
-  });
+  document.addEventListener('venue:location-ready', requireLocationGroup);
+  requireLocationGroup();
 
-  applyLocationMode(selectedLocationMode());
+  // ---------- Parqueo: muestra u oculta la capacidad según el check ----------
+  var parkingCheck = document.getElementById('parking');
+  var parkingCapacityWrap = document.getElementById('parking-capacity-wrap');
+  var parkingCapacityInput = document.getElementById('parkingCapacity');
 
-  document.addEventListener('venue:location-ready', function () {
-    applyLocationMode(selectedLocationMode());
-  });
+  function syncParking() {
+    if (!parkingCheck || !parkingCapacityWrap || !parkingCapacityInput) {
+      return;
+    }
+
+    var enabled = parkingCheck.checked;
+    parkingCapacityWrap.hidden = !enabled;
+    parkingCapacityInput.disabled = !enabled;
+
+    if (!enabled) {
+      parkingCapacityInput.value = '';
+    }
+  }
+
+  if (parkingCheck) {
+    parkingCheck.addEventListener('change', syncParking);
+    syncParking();
+  }
 
   var form = document.querySelector('form[data-ajax-venue-form]');
   if (form) {

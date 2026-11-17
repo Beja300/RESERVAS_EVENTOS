@@ -13,7 +13,7 @@ if ($booking === null) {
   </div>
 </div>
 
-<div class="card form-card" style="max-width:560px;">
+<div class="card form-card form-page">
   <div class="detail-grid" style="margin-bottom:20px;">
 <div class="detail-item"><div class="k">Reserva</div><div class="v">#<?= (int) $booking->getIdBooking() ?></div></div>
     <div class="detail-item"><div class="k">Local</div><div class="v"><?= $venue !== null ? e($venue->getNameVenue()) : ('#' . (int) $booking->getIdLocal()) ?></div></div>
@@ -39,24 +39,26 @@ if ($booking === null) {
     <?= csrf_field() ?>
     <input type="hidden" name="bookingId" value="<?= (int) $booking->getIdBooking() ?>">
 
-    <div class="form-group">
-      <label for="date">Fecha de emisión <span class="required-mark">*</span></label>
-      <input class="form-control" type="date" id="date" name="date" value="<?= $_POST['date'] ?? date('Y-m-d') ?>" required>
-    </div>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="date">Fecha de emisión <span class="required-mark">*</span></label>
+        <input class="form-control" type="date" id="date" name="date" value="<?= $_POST['date'] ?? date('Y-m-d') ?>" required>
+      </div>
 
-    <div class="form-group">
-      <label for="paymentMethodId">Método de pago <span class="required-mark">*</span></label>
-      <?php if (empty($paymentMethods)): ?>
-        <p class="muted">No tienes métodos de pago registrados.</p>
-      <?php else: ?>
-        <select class="form-control" id="paymentMethodId" name="paymentMethodId" required>
-          <option value="">— Selecciona —</option>
-          <?php foreach ($paymentMethods as $pm): ?>
-            <option value="<?= (int) $pm->getIdPaymentMethod() ?>"><?= e($pm->getPaymentMethod()) ?></option>
-          <?php endforeach; ?>
-        </select>
-        <p class="form-hint">¿No encuentras tu método? <a href="<?= e(base_url('paymentMethod', 'showForm')) ?>">Agrega uno nuevo</a>.</p>
-      <?php endif; ?>
+      <div class="form-group">
+        <label for="paymentMethodId">Método de pago <span class="required-mark">*</span></label>
+        <?php if (empty($paymentMethods)): ?>
+          <p class="muted">No tienes métodos de pago registrados.</p>
+        <?php else: ?>
+          <select class="form-control" id="paymentMethodId" name="paymentMethodId" required>
+            <option value="">— Selecciona —</option>
+            <?php foreach ($paymentMethods as $pm): ?>
+              <option value="<?= (int) $pm->getIdPaymentMethod() ?>"><?= e($pm->getPaymentMethod()) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <p class="form-hint">¿No encuentras tu método? <a href="<?= e(base_url('paymentMethod', 'showForm')) ?>">Agrega uno nuevo</a>.</p>
+        <?php endif; ?>
+      </div>
     </div>
 
     <button class="btn btn-primary btn-block" type="submit" <?= empty($paymentMethods) ? 'disabled' : '' ?>>Confirmar y generar factura</button>

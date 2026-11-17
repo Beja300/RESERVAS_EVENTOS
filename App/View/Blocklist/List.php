@@ -49,17 +49,19 @@
   </div>
 <?php endif; ?>
 
-<div class="card form-card" style="max-width:640px;margin-bottom:18px;">
+<div class="card form-card form-page" style="margin-bottom:18px;">
   <h3 style="margin-top:0;">Bloquear un cliente</h3>
   <form method="post" action="<?= e(base_url('blocklist', 'block')) ?>">
     <?= csrf_field() ?>
-    <div class="form-group">
-      <label for="email">Correo del cliente *</label>
-      <input class="form-control" type="email" id="email" name="email" required>
-    </div>
-    <div class="form-group">
-      <label for="reason">Motivo</label>
-      <input class="form-control" type="text" id="reason" name="reason" maxlength="255" placeholder="Ej: cuotas vencidas">
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="email">Correo del cliente *</label>
+        <input class="form-control" type="email" id="email" name="email" required>
+      </div>
+      <div class="form-group">
+        <label for="reason">Motivo</label>
+        <input class="form-control" type="text" id="reason" name="reason" maxlength="255" placeholder="Ej: cuotas vencidas">
+      </div>
     </div>
     <button class="btn btn-primary" type="submit">Bloquear cliente</button>
   </form>

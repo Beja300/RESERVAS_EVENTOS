@@ -292,7 +292,7 @@ class OwnerVenueController
       'size' => trim($_POST['size'] ?? ''),
       'bathrooms' => $_POST['bathrooms'] ?? null,
       'parking' => isset($_POST['parking']),
-      'parkingCapacity' => $_POST['parkingCapacity'] ?? null,
+      'parkingCapacity' => isset($_POST['parking']) ? ($_POST['parkingCapacity'] ?? null) : null,
       'minCapacity' => $_POST['minCapacity'] ?? null,
       'cleaningFee' => (float) ($_POST['cleaningFee'] ?? 0),
       'checkInTime' => $_POST['checkInTime'] ?? null,

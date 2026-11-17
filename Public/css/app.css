@@ -44,7 +44,7 @@
   --warning: #d97706;
   --warning-light: #fef3c7;
 
---neutral-50: #d2dfd5;
+--neutral-50: #ddead1;
   --neutral-100: #eef3f1;
   --neutral-200: #dbe4e0;
   --neutral-300: #c2d0cb;
@@ -288,6 +288,47 @@ a:hover {
 .grid-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 .grid-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 .grid-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+/* ============ Layout común de formularios ============ */
+.form-page {
+  width: 100%;
+  max-width: 1120px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.form-grid-2,
+.form-grid-3 {
+  display: grid;
+  gap: 18px;
+}
+
+.form-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.auth-card--wide {
+  max-width: 780px;
+}
+
+@media (max-width: 860px) {
+  .form-grid-2,
+  .form-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* ============ Stats ============ */
 .stat {

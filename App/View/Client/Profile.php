@@ -27,7 +27,8 @@ $curLng    = $location !== null ? ($location->getLongitudeLocation() !== null ? 
   <div class="alert alert-success">Foto de perfil eliminada.</div>
 <?php endif; ?>
 
-<div class="card form-card" style="max-width:620px;margin-bottom:16px;">
+<div class="form-page">
+<div class="card form-card" style="margin-bottom:16px;">
   <h3 class="card-title">Foto de perfil</h3>
   <div style="text-align:center;">
     <img id="clientPhotoPreview" src="<?= $client->getImageClient() !== '' ? e(image_url($client->getImageClient())) : '' ?>"
@@ -44,7 +45,7 @@ $curLng    = $location !== null ? ($location->getLongitudeLocation() !== null ? 
   </div>
 </div>
 
-<div class="card form-card" style="max-width:620px;">
+<div class="card form-card">
   <?php if (!empty($error)): ?>
     <div class="alert alert-error"><?= e($error) ?></div>
   <?php endif; ?>
@@ -53,24 +54,36 @@ $curLng    = $location !== null ? ($location->getLongitudeLocation() !== null ? 
         enctype="multipart/form-data" data-validate-form data-ajax-client-profile>
     <?= csrf_field() ?>
 
-    <div class="form-group" style="margin-bottom:16px;">
-      <label>Cambiar foto de perfil</label>
-      <input class="form-control" type="file" id="image" name="image" accept="image/*"
-             data-photo-input="clientPhotoPreview">
-      <small class="muted">Sube una foto (jpg, png, webp, gif; máx. 2 MB).</small>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label>Cambiar foto de perfil</label>
+        <input class="form-control" type="file" id="image" name="image" accept="image/*"
+               data-photo-input="clientPhotoPreview">
+        <small class="muted">Sube una foto (jpg, png, webp, gif; máx. 2 MB).</small>
+      </div>
+
+      <div class="form-group">
+        <label>O bien, imagen por URL</label>
+        <input class="form-control" type="text" id="imageUrl" name="imageUrl"
+               placeholder="https://..."
+               value="<?= e(trim($_POST['imageUrl'] ?? '')) ?>">
+      </div>
     </div>
 
-    <div class="form-group">
-      <label>O bien, imagen por URL</label>
-      <input class="form-control" type="text" id="imageUrl" name="imageUrl"
-             placeholder="https://..."
-             value="<?= e(trim($_POST['imageUrl'] ?? '')) ?>">
-    </div>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="name">Nombre <span class="required-mark">*</span></label>
+        <input class="form-control" type="text" id="name" name="name" required
+               value="<?= e($_POST['name'] ?? $client->getName()) ?>">
+      </div>
 
-    <div class="form-group">
-      <label for="name">Nombre <span class="required-mark">*</span></label>
-      <input class="form-control" type="text" id="name" name="name" required
-             value="<?= e($_POST['name'] ?? $client->getName()) ?>">
+      <div class="form-group">
+        <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
+        <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" required
+               data-validate="phone"
+               maxlength="15" value="<?= e(format_phone_number($_POST['phoneNumber'] ?? $client->getPhoneNumber())) ?>" placeholder="+506 8888-8888">
+        <div class="form-hint">Ej: 8888-7777</div>
+      </div>
     </div>
 
     <div class="form-group">
@@ -78,14 +91,6 @@ $curLng    = $location !== null ? ($location->getLongitudeLocation() !== null ? 
       <input class="form-control" type="email" id="email" name="email" required
              data-validate="email"
              value="<?= e($_POST['email'] ?? $client->getEmail()) ?>">
-    </div>
-
-    <div class="form-group">
-      <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
-      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" required
-             data-validate="phone"
-             maxlength="15" value="<?= e(format_phone_number($_POST['phoneNumber'] ?? $client->getPhoneNumber())) ?>" placeholder="+506 8888-8888">
-      <div class="form-hint">Ej: 8888-7777</div>
     </div>
 
     <?php $showPasswordFields = !empty($_POST['changePassword']); ?>
@@ -96,28 +101,30 @@ $curLng    = $location !== null ? ($location->getLongitudeLocation() !== null ? 
     </label>
 
     <div id="passwordFields" <?= $showPasswordFields ? '' : 'style="display:none;"' ?>>
-      <div class="form-group">
-        <label for="currentPassword">Contraseña actual</label>
-        <div class="password-wrapper">
-          <input class="form-control" type="password" id="currentPassword" name="currentPassword" autocomplete="current-password">
-          <button class="password-toggle" type="button" id="currentPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="currentPassword">Contraseña actual</label>
+          <div class="password-wrapper">
+            <input class="form-control" type="password" id="currentPassword" name="currentPassword" autocomplete="current-password">
+            <button class="password-toggle" type="button" id="currentPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+          </div>
         </div>
-      </div>
 
-      <div class="form-group">
-        <label for="newPassword">Contraseña nueva</label>
-        <div class="password-wrapper">
-          <input class="form-control" type="password" id="newPassword" name="newPassword" minlength="8" autocomplete="new-password">
-          <button class="password-toggle" type="button" id="newPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+        <div class="form-group">
+          <label for="newPassword">Contraseña nueva</label>
+          <div class="password-wrapper">
+            <input class="form-control" type="password" id="newPassword" name="newPassword" minlength="8" autocomplete="new-password">
+            <button class="password-toggle" type="button" id="newPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+          </div>
+          <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
         </div>
-        <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
       </div>
     </div>
 
     <hr style="border:none;border-top:1px solid var(--neutral-200);margin:18px 0;">
     <p style="font-weight:700;color:var(--neutral-800);margin-bottom:14px;">Ubicación</p>
 
-    <div class="grid grid-3">
+    <div class="form-grid-3">
       <div class="form-group">
         <label for="province">Provincia</label>
         <select class="form-control" id="province" name="province" data-level="province"
@@ -141,15 +148,17 @@ $curLng    = $location !== null ? ($location->getLongitudeLocation() !== null ? 
       </div>
     </div>
 
-    <div class="form-group">
-      <label for="town">Pueblo</label>
-      <input class="form-control" type="text" id="town" name="town"
-             value="<?= e($location !== null ? $location->getTownLocation() : ($_POST['town'] ?? '')) ?>">
-    </div>
-    <div class="form-group">
-      <label for="description">Descripción / señas</label>
-      <input class="form-control" type="text" id="description" name="description"
-             value="<?= e($location !== null ? $location->getDescriptionLocation() : ($_POST['description'] ?? '')) ?>">
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="town">Pueblo</label>
+        <input class="form-control" type="text" id="town" name="town"
+               value="<?= e($location !== null ? $location->getTownLocation() : ($_POST['town'] ?? '')) ?>">
+      </div>
+      <div class="form-group">
+        <label for="description">Descripción / señas</label>
+        <input class="form-control" type="text" id="description" name="description"
+               value="<?= e($location !== null ? $location->getDescriptionLocation() : ($_POST['description'] ?? '')) ?>">
+      </div>
     </div>
 
     <div class="form-group">
@@ -173,7 +182,7 @@ $curLng    = $location !== null ? ($location->getLongitudeLocation() !== null ? 
   </form>
 </div>
 
-<div class="card form-card" style="max-width:620px;margin-top:18px;">
+<div class="card form-card" style="margin-top:18px;">
   <h3 class="card-title">Actividad sospechosa</h3>
   <?php $hasSuspicious = ($suspicious['password'] ?? 0) > 0 || ($suspicious['phone'] ?? 0) > 0 || ($suspicious['email'] ?? 0) > 0; ?>
   <?php if (!$hasSuspicious): ?>
@@ -194,7 +203,7 @@ $curLng    = $location !== null ? ($location->getLongitudeLocation() !== null ? 
   <?php endif; ?>
 </div>
 
-<div class="card" style="max-width:620px;margin-top:18px;border-color:var(--danger-light);">
+<div class="card form-card" style="margin-top:18px;border-color:var(--danger-light);">
   <h3 style="margin-bottom:6px;color:var(--danger);">Desactivar cuenta</h3>
   <p class="muted" style="margin-bottom:12px;">
     Al desactivar tu cuenta ya no podrás iniciar sesión, pero tus reservas e historial
@@ -205,6 +214,7 @@ $curLng    = $location !== null ? ($location->getLongitudeLocation() !== null ? 
     <?= csrf_field() ?>
     <button class="btn btn-danger" type="submit">Desactivar mi cuenta</button>
   </form>
+</div>
 </div>
 
 <?php require_once __DIR__ . '/../_footer.php'; ?>

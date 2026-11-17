@@ -32,7 +32,7 @@ $curActive = $isEdit ? ($service->getIsActive() ? '1' : '0') : '1';
   </div>
 </div>
 
-<div class="card form-card" style="max-width:640px;">
+<div class="card form-card form-page">
   <?php if (!empty($error)): ?>
     <div class="alert alert-error"><?= e($error) ?></div>
   <?php endif; ?>
@@ -52,11 +52,15 @@ $curActive = $isEdit ? ($service->getIsActive() ? '1' : '0') : '1';
         <?php if (empty($venues)): ?>
           <div class="alert alert-error">No tienes locales activos. Activa o crea un local primero.</div>
         <?php else: ?>
-          <div class="checkbox-row" style="margin-bottom:10px;">
-            <input type="checkbox" id="allVenues" name="allVenues" value="1">
-            <label for="allVenues"><strong>Agregar servicio a todos mis locales</strong></label>
+          <div style="padding:12px 14px;margin-bottom:14px;border:1px solid var(--neutral-200);border-radius:10px;background:#f8fafc;">
+            <div class="checkbox-row">
+              <input type="checkbox" id="allVenues" name="allVenues" value="1">
+              <label for="allVenues"><strong>Agregar servicio a todos mis locales</strong></label>
+            </div>
+            <p class="form-hint" style="margin:6px 0 0;">El servicio se activará en cada uno de tus locales activos.</p>
           </div>
-          <div id="venue-checks" style="display:grid;gap:8px;">
+          <p class="muted" style="margin:0 0 10px;">O selecciona locales específicos</p>
+          <div id="venue-checks" class="form-grid-3">
             <?php foreach ($venues as $v): ?>
               <label class="radio-option" style="justify-content:flex-start;">
                 <input type="checkbox" name="venueIds[]" value="<?= (int) $v->getIdVenue() ?>"
@@ -69,25 +73,27 @@ $curActive = $isEdit ? ($service->getIsActive() ? '1' : '0') : '1';
       </div>
     <?php endif; ?>
 
-    <div class="form-group">
-      <label for="name">Nombre del servicio *</label>
-      <input class="form-control" type="text" id="name" name="name" required
-             data-validate="required" value="<?= e($curName) ?>">
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="name">Nombre del servicio *</label>
+        <input class="form-control" type="text" id="name" name="name" required
+               data-validate="required" value="<?= e($curName) ?>">
+      </div>
+
+      <div class="form-group">
+        <label for="type">Tipo *</label>
+        <input class="form-control" type="text" id="type" name="type" required list="service-types"
+               data-validate="required" placeholder="Ej: Catering, DJ, Decoración..."
+               value="<?= e($curType) ?>">
+        <datalist id="service-types">
+          <?php foreach ($types as $type): ?>
+            <option value="<?= e($type) ?>"></option>
+          <?php endforeach; ?>
+        </datalist>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label for="type">Tipo *</label>
-      <input class="form-control" type="text" id="type" name="type" required list="service-types"
-             data-validate="required" placeholder="Ej: Catering, DJ, Decoración..."
-             value="<?= e($curType) ?>">
-      <datalist id="service-types">
-        <?php foreach ($types as $type): ?>
-          <option value="<?= e($type) ?>"></option>
-        <?php endforeach; ?>
-      </datalist>
-    </div>
-
-    <div class="grid grid-2">
+    <div class="form-grid-2">
       <div class="form-group">
         <label for="price">Precio *</label>
         <input class="form-control no-spinners" type="text" inputmode="decimal" id="price" name="price" required
@@ -104,7 +110,7 @@ $curActive = $isEdit ? ($service->getIsActive() ? '1' : '0') : '1';
       </div>
     </div>
 
-    <div class="grid grid-3">
+    <div class="form-grid-3">
       <div class="form-group">
         <label for="minQuantity">Cantidad mínima *</label>
         <input class="form-control no-spinners" type="text" inputmode="numeric" pattern="[0-9]*"

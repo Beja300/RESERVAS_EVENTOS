@@ -11,7 +11,7 @@ $venues = $context['venues'];
   </div>
 </div>
 
-<div class="card form-card" style="max-width:720px;">
+<div class="card form-card form-page">
   <?php if (!empty($error)): ?>
     <div class="alert alert-error"><?= e($error) ?></div>
   <?php endif; ?>
@@ -33,7 +33,7 @@ $venues = $context['venues'];
         <label for="locationsAll"><strong>Seleccionar todos los locales activos</strong></label>
       </div>
 
-      <div style="display:grid;gap:10px;margin-bottom:18px;">
+      <div class="form-grid-3" style="margin-bottom:18px;">
         <?php foreach ($venues as $venue): ?>
           <?php
             $service = $servicesByVenue[$venue->getIdVenue()] ?? null;

@@ -12,12 +12,9 @@ $posted = static function (string $key, ?string $fallback = null): string {
   return array_key_exists($key, $_POST) ? (string) $_POST[$key] : (string) ($fallback ?? '');
 };
 
-$curType     = $posted('locationType', $location?->getTypeLocation() ?? 'exacta') === 'aproximada' ? 'aproximada' : 'exacta';
 $curProvince = $posted('province', $location?->getProvinceLocation());
 $curCanton   = $posted('canton', $location?->getCantonLocation());
 $curDistrict = $posted('district', $location?->getDistrictLocation());
-$curTown     = $posted('town', $location?->getTownLocation());
-$curApprox   = $posted('approximate', $location?->getApproximateLocation());
 $curDesc     = $posted('description', $location?->getDescriptionLocation());
 $curLat      = $posted('latitude', $location?->getLatitudeLocation() !== null ? (string) $location->getLatitudeLocation() : '');
 $curLng      = $posted('longitude', $location?->getLongitudeLocation() !== null ? (string) $location->getLongitudeLocation() : '');
@@ -45,7 +42,7 @@ $blocks = $blocks ?? [];
   </div>
 </div>
 
-<div class="card form-card" style="max-width:640px;">
+<div class="card form-card venue-form form-page">
   <?php if (!empty($error)): ?>
     <div class="alert alert-error"><?= e($error) ?></div>
   <?php endif; ?>
@@ -56,32 +53,33 @@ $blocks = $blocks ?? [];
       <input type="hidden" name="idVenue" value="<?= (int) $venue->getIdVenue() ?>">
     <?php endif; ?>
 
-    <div class="form-group">
-      <label for="name">Nombre del local *</label>
-      <input class="form-control" type="text" id="name" name="name" required
-        data-validate="required"
-        value="<?= e($isEdit ? $venue->getNameVenue() : ($_POST['name'] ?? '')) ?>">
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="name">Nombre del local *</label>
+        <input class="form-control" type="text" id="name" name="name" required
+          data-validate="required"
+          value="<?= e($isEdit ? $venue->getNameVenue() : ($_POST['name'] ?? '')) ?>">
+      </div>
+      <div class="form-group">
+        <label for="type">Tipo de local *</label>
+        <input class="form-control" type="text" id="type" name="type" required
+          data-validate="required"
+          placeholder="Ej: Salón de eventos, Restaurante, Jardín..."
+          value="<?= e($isEdit && $venue->getTypeVenue() !== '' ? $venue->getTypeVenue() : ($_POST['type'] ?? '')) ?>">
+      </div>
     </div>
 
-    <div class="form-group">
-      <label for="type">Tipo de local *</label>
-      <input class="form-control" type="text" id="type" name="type" required
-        data-validate="required"
-        placeholder="Ej: Salón de eventos, Restaurante, Jardín..."
-        value="<?= e($isEdit && $venue->getTypeVenue() !== '' ? $venue->getTypeVenue() : ($_POST['type'] ?? '')) ?>">
-    </div>
-
-    <div class="grid grid-2">
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="minCapacity">Capacidad mínima</label>
+        <input class="form-control no-spinners" type="text" inputmode="numeric" pattern="[0-9]*" id="minCapacity" name="minCapacity"
+          value="<?= e($curMinCapacity) ?>">
+      </div>
       <div class="form-group">
         <label for="capacity">Capacidad máxima *</label>
         <input class="form-control no-spinners" type="text" inputmode="numeric" pattern="[0-9]*" id="capacity" name="capacity" required
           data-validate="required positive"
           value="<?= e($isEdit ? (string) $venue->getCapacityVenue() : ($_POST['capacity'] ?? '')) ?>">
-      </div>
-      <div class="form-group">
-        <label for="minCapacity">Capacidad mínima</label>
-        <input class="form-control no-spinners" type="text" inputmode="numeric" pattern="[0-9]*" id="minCapacity" name="minCapacity"
-          value="<?= e($curMinCapacity) ?>">
       </div>
     </div>
 
@@ -93,7 +91,7 @@ $blocks = $blocks ?? [];
       <p class="form-hint">Este precio se incluye siempre en la factura de cada reserva de este local.</p>
     </div>
 
-    <div class="grid grid-3">
+    <div class="form-grid-3">
       <div class="form-group">
         <label for="size">Tamaño</label>
         <input class="form-control" type="text" id="size" name="size" maxlength="80"
@@ -113,7 +111,7 @@ $blocks = $blocks ?? [];
 
     <div class="form-group">
       <label>Horario general de uso</label>
-      <div class="grid grid-2">
+      <div class="form-grid-2">
         <div>
           <label for="checkInTime">Hora de entrada</label>
           <input class="form-control" type="time" id="checkInTime" name="checkInTime" value="<?= e($curCheckInTime) ?>">
@@ -126,15 +124,19 @@ $blocks = $blocks ?? [];
       <p class="form-hint">Se mostrará cuando la reserva sea de día completo y no use un bloque horario.</p>
     </div>
 
-    <div class="checkbox-row" style="margin-bottom:12px;">
-      <input type="checkbox" id="parking" name="parking" value="1" <?= $curParking ? 'checked' : '' ?>>
-      <label for="parking">El local cuenta con parqueo</label>
-    </div>
-
-    <div class="form-group">
-      <label for="parkingCapacity">Capacidad de parqueo</label>
-      <input class="form-control no-spinners" type="text" inputmode="numeric" pattern="[0-9]*"
-        id="parkingCapacity" name="parkingCapacity" value="<?= e($curParkingCapacity) ?>">
+    <div class="parking-row">
+      <div class="parking-check">
+        <div class="checkbox-row">
+          <input type="checkbox" id="parking" name="parking" value="1" <?= $curParking ? 'checked' : '' ?>>
+          <label for="parking">¿El local cuenta con parqueo?</label>
+        </div>
+        <p class="form-hint">Marca la casilla si el local tiene parqueo; desmárcala si no.</p>
+      </div>
+      <div class="form-group" id="parking-capacity-wrap" <?= $curParking ? '' : 'hidden' ?>>
+        <label for="parkingCapacity">Capacidad de parqueo</label>
+        <input class="form-control no-spinners" type="text" inputmode="numeric" pattern="[0-9]*"
+          id="parkingCapacity" name="parkingCapacity" value="<?= e($curParkingCapacity) ?>">
+      </div>
     </div>
 
     <div class="form-group">
@@ -210,85 +212,50 @@ $blocks = $blocks ?? [];
     <hr style="border:none;border-top:1px solid var(--neutral-200);margin:18px 0;">
     <p style="font-weight:700;color:var(--neutral-800);margin-bottom:14px;">Ubicación</p>
 
-    <div class="form-group location-mode">
-      <span class="form-label">Tipo de ubicación *</span>
-      <div class="radio-list">
-        <label class="radio-option">
-          <input type="radio" name="locationType" value="aproximada" data-location-mode
-            <?= $curType === 'aproximada' ? 'checked' : '' ?>>
-          <span>Asignar ubicación aproximada</span>
-        </label>
-        <label class="radio-option">
-          <input type="radio" name="locationType" value="exacta" data-location-mode
-            <?= $curType === 'exacta' ? 'checked' : '' ?>>
-          <span>Asignar ubicación exacta</span>
-        </label>
-      </div>
-      <p class="form-hint">La ubicación aproximada solo pide barrio y una referencia; la exacta permite elegir provincia, cantón, distrito y marcar el punto en el mapa.</p>
-    </div>
+    <input type="hidden" name="locationType" value="exacta">
 
-    <div data-location-section="exacta" <?= $curType === 'aproximada' ? 'hidden' : '' ?>>
-      <div class="grid grid-3">
-        <div class="form-group">
-          <label for="province">Provincia *</label>
-          <select class="form-control" id="province" name="province" data-level="province"
-                  data-validate="required" data-value="<?= e($curProvince) ?>">
-            <option value="">— Selecciona —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="canton">Cantón *</label>
-          <select class="form-control" id="canton" name="canton" data-level="canton" data-validate="required" disabled
-                  data-value="<?= e($curCanton) ?>">
-            <option value="">— Selecciona —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="district">Distrito *</label>
-          <select class="form-control" id="district" name="district" data-level="district" data-validate="required" disabled
-                  data-value="<?= e($curDistrict) ?>">
-            <option value="">— Selecciona —</option>
-          </select>
-        </div>
-      </div>
-
+    <div class="form-grid-3">
       <div class="form-group">
-        <label for="venue-map">Ubicación en el mapa (opcional)</label>
-        <div class="geo-search-box">
-          <input class="form-control" type="search" id="venue-map-search"
-            placeholder="Buscar dirección o cantón (ej. San José)...">
-          <ul class="geo-search-results" id="venue-map-results"></ul>
-        </div>
-        <div id="venue-map"></div>
-        <span id="geo-display" class="geo-coords <?= $curLat !== '' && $curLng !== '' ? '' : 'muted' ?>">
-          <?php if ($curLat !== '' && $curLng !== ''): ?>
-            Lat <?= e($curLat) ?> · Lon <?= e($curLng) ?>
-          <?php else: ?>
-            Marca el punto en el mapa
-          <?php endif; ?>
-        </span>
-        <input type="hidden" name="latitude" id="latitude" value="<?= e($curLat) ?>">
-        <input type="hidden" name="longitude" id="longitude" value="<?= e($curLng) ?>">
-        <p class="form-hint">Opcional: haz clic en el mapa o arrastra el marcador para marcar la ubicación del local.</p>
+        <label for="province">Provincia *</label>
+        <select class="form-control" id="province" name="province" data-level="province"
+                data-validate="required" data-value="<?= e($curProvince) ?>">
+          <option value="">— Selecciona —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="canton">Cantón *</label>
+        <select class="form-control" id="canton" name="canton" data-level="canton" data-validate="required" disabled
+                data-value="<?= e($curCanton) ?>">
+          <option value="">— Selecciona —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="district">Distrito *</label>
+        <select class="form-control" id="district" name="district" data-level="district" data-validate="required" disabled
+                data-value="<?= e($curDistrict) ?>">
+          <option value="">— Selecciona —</option>
+        </select>
       </div>
     </div>
 
-    <div data-location-section="aproximada" <?= $curType === 'exacta' ? 'hidden' : '' ?>>
-      <div class="form-group">
-        <label for="town">Barrio *</label>
-        <input class="form-control" type="text" id="town" name="town"
-          data-validate="required" maxlength="100"
-          <?= $curType === 'aproximada' ? 'required' : '' ?>
-          value="<?= e($curTown) ?>">
+    <div class="form-group">
+      <label for="venue-map">Ubicación en el mapa (opcional)</label>
+      <div class="geo-search-box">
+        <input class="form-control" type="search" id="venue-map-search"
+          placeholder="Buscar dirección o cantón (ej. San José)...">
+        <ul class="geo-search-results" id="venue-map-results"></ul>
       </div>
-      <div class="form-group">
-        <label for="approximate">Ubicación aproximada *</label>
-        <input class="form-control" type="text" id="approximate" name="approximate"
-          data-validate="required" maxlength="300"
-          <?= $curType === 'aproximada' ? 'required' : '' ?>
-          placeholder="Ej: Barrio El Carmen, 200 m norte del parque central"
-          value="<?= e($curApprox) ?>">
-      </div>
+      <div id="venue-map"></div>
+      <span id="geo-display" class="geo-coords <?= $curLat !== '' && $curLng !== '' ? '' : 'muted' ?>">
+        <?php if ($curLat !== '' && $curLng !== ''): ?>
+          Lat <?= e($curLat) ?> · Lon <?= e($curLng) ?>
+        <?php else: ?>
+          Marca el punto en el mapa
+        <?php endif; ?>
+      </span>
+      <input type="hidden" name="latitude" id="latitude" value="<?= e($curLat) ?>">
+      <input type="hidden" name="longitude" id="longitude" value="<?= e($curLng) ?>">
+      <p class="form-hint">Opcional: haz clic en el mapa o arrastra el marcador para marcar la ubicación del local. Si no marcas coordenadas, el local se guarda igual.</p>
     </div>
 
     <div class="form-group">

@@ -8,7 +8,7 @@
   <a class="btn btn-outline" href="<?= e(base_url('credit', 'ownerList')) ?>">Cuentas por cobrar</a>
 </div>
 
-<div class="card form-card" style="max-width:560px;">
+<div class="card form-card form-page">
   <?php if (!empty($_GET['saved'])): ?>
     <div class="alert alert-success">Política de crédito guardada correctamente.</div>
   <?php endif; ?>
@@ -35,7 +35,7 @@
       <div class="form-hint">Entre 1 y 365 días contados desde la fecha de la reserva.</div>
     </div>
 
-    <div class="grid grid-2">
+    <div class="form-grid-2">
       <div class="form-group">
         <label for="installments">Cantidad de cuotas *</label>
         <input class="form-control" type="text" inputmode="numeric" pattern="[0-9]*"
@@ -53,7 +53,7 @@
       </div>
     </div>
 
-    <div class="grid grid-2">
+    <div class="form-grid-2">
       <div class="form-group">
         <label for="graceDays">Días de gracia</label>
         <input class="form-control" type="text" inputmode="numeric" pattern="[0-9]*"
