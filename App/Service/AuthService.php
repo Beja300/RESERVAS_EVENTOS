@@ -86,14 +86,8 @@ class AuthService
 
     public function validateIdentificationFormat(string $identificationNumber): void
     {
-        $digits = preg_replace('/[\s-]/', '', $identificationNumber);
-
-        $valid = preg_match('/^\d{1}-\d{4}-\d{4}$/', $identificationNumber)
-            || preg_match('/^\d{1}-\d{3}-\d{6}$/', $identificationNumber)
-            || preg_match('/^\d{9,12}$/', $digits);
-
-        if (!$valid) {
-            throw new BusinessRuleException("El formato de la cédula no es válido (ej. 1-2345-0678).");
+        if (strlen(trim($identificationNumber)) > 255) {
+            throw new BusinessRuleException('La identificación no puede superar los 255 caracteres.');
         }
     }
 
@@ -147,6 +141,7 @@ class AuthService
         $this->validatePhoneFormat($phoneNumber);
 
         if ($ownerIdentification !== null && trim($ownerIdentification) !== '') {
+            $this->validateIdentificationFormat($ownerIdentification);
             $this->validateIdentificationIsUnique($ownerIdentification);
         }
 

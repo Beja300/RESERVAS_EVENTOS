@@ -76,7 +76,7 @@ CREATE TABLE tbowner (
     tbownerfirstname VARCHAR(300) NOT NULL,
     tbownerlastname VARCHAR(250),
     tbowneralias VARCHAR(100),
-    tbowneridentificationnumber VARCHAR(30),
+    tbowneridentificationnumber VARCHAR(255),
     tbownerimage VARCHAR(255),
     tbowneractive BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;

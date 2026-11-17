@@ -10,7 +10,7 @@
  */
 class SchemaMigrator
 {
-  private const VERSION = '2026-11-credit-minimum-payment-review-v2';
+  private const VERSION = '2026-11-owner-foreign-identification-v1';
 
   private PDO $connection;
 
@@ -49,6 +49,7 @@ class SchemaMigrator
 
     $this->createTables();
     $this->addColumns();
+    $this->widenOwnerIdentificationColumn();
     $this->backfillServiceGroups();
     $this->backfillLegacyServiceApproval();
     $this->backfillCreditInstallments();
@@ -185,6 +186,13 @@ class SchemaMigrator
     if ($paymentStateAdded) {
       $this->backfillCreditPaymentsApproved();
     }
+  }
+
+  private function widenOwnerIdentificationColumn(): void
+  {
+    $this->connection->exec(
+      'ALTER TABLE tbowner MODIFY COLUMN tbowneridentificationnumber VARCHAR(255) NULL'
+    );
   }
 
   private function addColumnIfMissing(string $table, string $column, string $definition): bool

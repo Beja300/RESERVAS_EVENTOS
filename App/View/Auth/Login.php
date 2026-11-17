@@ -1,4 +1,5 @@
 <?php require_once __DIR__ . '/../_helpers.php'; ?>
+<?php $showLoginForm = !empty($error) || isset($_GET['error']); ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -23,6 +24,7 @@
     </div>
   </header>
 
+  <?php if (!$showLoginForm): ?>
   <div class="clean-action">
     <form method="post" action="<?= e(base_url('auth', 'cleanDemo')) ?>"
           onsubmit="return confirm('¿Limpiar todas las tablas de la base de datos?');">
@@ -30,9 +32,10 @@
       <button class="btn btn-secondary" type="submit">Clean</button>
     </form>
   </div>
+  <?php endif; ?>
 
   <main class="auth-main" id="auth-main">
-    <div id="welcome-content">
+    <div id="welcome-content" <?= $showLoginForm ? 'hidden' : '' ?>>
       <section class="auth-hero" aria-labelledby="hero-title">
         <div class="hero-content">
           <span class="hero-eyebrow">Lugares y servicios para celebrar</span>
@@ -80,7 +83,7 @@
     </div>
 
     <section class="login-section" id="login-form"
-             aria-labelledby="login-title" hidden>
+             aria-labelledby="login-title" <?= $showLoginForm ? '' : 'hidden' ?>>
       <div class="auth-card container-narrow">
         <h2 id="login-title">Inicia sesión</h2>
         <p class="subtitle">

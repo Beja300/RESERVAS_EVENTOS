@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="<?= e(css_url('auth/login')) ?>">
   <link rel="stylesheet" href="<?= e(css_url('admin/password-toggle')) ?>">
 </head>
-<body class="auth-page">
+<body class="auth-page auth-setup-page">
   <div class="auth-card auth-card--wide">
     <a class="btn btn-secondary btn-block" href="<?= e(base_url('auth', 'showLogin')) ?>">&larr; Volver al inicio de sesión</a>
     <h1>Crear administrador inicial</h1>

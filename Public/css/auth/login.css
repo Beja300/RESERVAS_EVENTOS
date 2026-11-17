@@ -5,6 +5,18 @@
   background: #f5f7f5;
 }
 
+.auth-setup-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.auth-setup-page .auth-card {
+  margin: 24px auto;
+  padding: 34px;
+}
+
 .auth-topbar {
   position: relative;
   width: 100%;
@@ -200,6 +212,14 @@
 }
 
 @media (max-width: 680px) {
+  .auth-setup-page {
+    padding: 16px;
+  }
+
+  .auth-setup-page .auth-card {
+    padding: 26px 22px;
+  }
+
   .auth-topbar .container {
     padding: 14px 16px;
   }

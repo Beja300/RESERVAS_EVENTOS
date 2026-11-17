@@ -97,9 +97,9 @@
           </div>
           <div class="form-group">
             <label for="ownerIdentification">Cédula / identificación</label>
-            <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification" data-mask="identification" data-validate="identification"
+            <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification"
                    value="<?= e($_POST['ownerIdentification'] ?? '') ?>">
-            <div class="form-hint">Ej: 1-2345-0678</div>
+            <div class="form-hint">Puedes ingresar el número de identificación según tu documento.</div>
           </div>
         </div>
         <div class="form-group">
