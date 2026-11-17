@@ -25,7 +25,7 @@ if ($config === null) {
   <div class="alert alert-error"><?= e($_GET['error']) ?></div>
 <?php endif; ?>
 
-<div class="card form-card commission-config-card">
+<div class="card form-card commission-config-card form-page">
   <p class="muted" style="margin-bottom:14px;">
     Las tarifas se aplican a las nuevas reservas:
     el cliente paga <strong>subtotal + IVA</strong> y al propietario se le
@@ -36,25 +36,27 @@ if ($config === null) {
         data-ajax-commission-config>
     <?= csrf_field() ?>
 
-    <div class="form-group">
-      <label for="percentage">Comisión de la plataforma (%) <span class="required-mark">*</span></label>
-      <input class="form-control" type="number" id="percentage" name="percentage"
-             min="0" max="100" step="0.01" required
-             data-validate-number
-             value="<?= e(number_format($config->getPercentage(), 2)) ?>">
-      <p class="form-hint">Porcentaje descontado al propietario sobre el subtotal.</p>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="percentage">Comisión de la plataforma (%) <span class="required-mark">*</span></label>
+        <input class="form-control" type="number" id="percentage" name="percentage"
+               min="0" max="100" step="0.01" required
+               data-validate-number
+               value="<?= e(number_format($config->getPercentage(), 2)) ?>">
+        <p class="form-hint">Porcentaje descontado al propietario sobre el subtotal.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="tax">IVA (%) <span class="required-mark">*</span></label>
+        <input class="form-control" type="number" id="tax" name="tax"
+               min="0" max="100" step="0.01" required
+               data-validate-number
+               value="<?= e(number_format($config->getTax(), 2)) ?>">
+        <p class="form-hint">Impuesto que paga el cliente sobre el subtotal.</p>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label for="tax">IVA (%) <span class="required-mark">*</span></label>
-      <input class="form-control" type="number" id="tax" name="tax"
-             min="0" max="100" step="0.01" required
-             data-validate-number
-             value="<?= e(number_format($config->getTax(), 2)) ?>">
-      <p class="form-hint">Impuesto que paga el cliente sobre el subtotal.</p>
-    </div>
-
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;">
+    <div class="form-actions">
       <button class="btn btn-primary" type="submit">Guardar cambios</button>
       <a class="btn btn-outline" href="<?= e(base_url('admin', 'dashboard')) ?>">Cancelar</a>
     </div>

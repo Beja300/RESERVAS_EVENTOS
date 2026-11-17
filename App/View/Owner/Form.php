@@ -22,7 +22,8 @@ if ($owner === null) {
   <div class="alert alert-success">Foto de perfil eliminada.</div>
 <?php endif; ?>
 
-<div class="card form-card" style="max-width:560px;margin-bottom:16px;">
+<div class="form-page">
+<div class="card form-card" style="margin-bottom:16px;">
   <h3 class="card-title">Foto de perfil</h3>
   <div style="text-align:center;">
     <img id="ownerPhotoPreview" src="<?= $owner->getImageOwner() !== '' ? e(image_url($owner->getImageOwner())) : '' ?>" alt="Foto de perfil"
@@ -38,7 +39,7 @@ if ($owner === null) {
   </div>
 </div>
 
-<div class="card form-card" style="max-width:560px;">
+<div class="card form-card">
   <?php if (!empty($error)): ?>
     <div class="alert alert-error"><?= e($error) ?></div>
   <?php endif; ?>
@@ -47,66 +48,74 @@ if ($owner === null) {
         enctype="multipart/form-data" data-validate-form data-ajax-owner-profile>
     <?= csrf_field() ?>
 
-    <div class="form-group" style="margin-bottom:16px;">
-      <label>Cambiar foto de perfil</label>
-      <input class="form-control" type="file" id="image" name="image" accept="image/*"
-             data-photo-input="ownerPhotoPreview">
-      <small class="muted">Sube una foto (jpg, png, webp, gif; máx. 2 MB).</small>
-    </div>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label>Cambiar foto de perfil</label>
+        <input class="form-control" type="file" id="image" name="image" accept="image/*"
+               data-photo-input="ownerPhotoPreview">
+        <small class="muted">Sube una foto (jpg, png, webp, gif; máx. 2 MB).</small>
+      </div>
 
-    <div class="form-group">
-      <label>O bien, imagen por URL</label>
-      <input class="form-control" type="text" id="imageUrl" name="imageUrl"
-             placeholder="https://..." data-validate="url"
-             value="<?= e(trim($_POST['imageUrl'] ?? '')) ?>">
+      <div class="form-group">
+        <label>O bien, imagen por URL</label>
+        <input class="form-control" type="text" id="imageUrl" name="imageUrl"
+               placeholder="https://..." data-validate="url"
+               value="<?= e(trim($_POST['imageUrl'] ?? '')) ?>">
+      </div>
     </div>
 
     <h3 class="card-title">Datos del negocio</h3>
 
-    <div class="form-group">
-      <label for="name">Nombre de negocio *</label>
-      <input class="form-control" type="text" id="name" name="name" required
-             data-validate="required"
-             value="<?= e($_POST['name'] ?? $owner->getName()) ?>">
-      <div class="form-hint">Ej: Salon comunal</div>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="name">Nombre de negocio *</label>
+        <input class="form-control" type="text" id="name" name="name" required
+               data-validate="required"
+               value="<?= e($_POST['name'] ?? $owner->getName()) ?>">
+        <div class="form-hint">Ej: Salon comunal</div>
+      </div>
+
+      <div class="form-group">
+        <label for="ownerLastName">Apellidos *</label>
+        <input class="form-control" type="text" id="ownerLastName" name="ownerLastName" required
+               data-validate="required"
+               value="<?= e($_POST['ownerLastName'] ?? $owner->getLastNameOwner()) ?>">
+        <div class="form-hint">Ej: Pérez Rodríguez</div>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label for="ownerLastName">Apellidos *</label>
-      <input class="form-control" type="text" id="ownerLastName" name="ownerLastName" required
-             data-validate="required"
-             value="<?= e($_POST['ownerLastName'] ?? $owner->getLastNameOwner()) ?>">
-      <div class="form-hint">Ej: Pérez Rodríguez</div>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="ownerAlias">Alias (apodo)</label>
+        <input class="form-control" type="text" id="ownerAlias" name="ownerAlias"
+               value="<?= e($_POST['ownerAlias'] ?? $owner->getAliasOwner()) ?>">
+        <div class="form-hint">Ej: Mari</div>
+      </div>
+
+      <div class="form-group">
+        <label for="ownerIdentification">Cédula / identificación *</label>
+        <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification" required
+               data-validate="required identification"
+               value="<?= e($_POST['ownerIdentification'] ?? $owner->getIdentificationNumberOwner()) ?>">
+        <div class="form-hint">Ej: 1-2345-0678</div>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label for="ownerAlias">Alias (apodo)</label>
-      <input class="form-control" type="text" id="ownerAlias" name="ownerAlias"
-             value="<?= e($_POST['ownerAlias'] ?? $owner->getAliasOwner()) ?>">
-      <div class="form-hint">Ej: Mari</div>
-    </div>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="email">Correo electrónico *</label>
+        <input class="form-control" type="email" id="email" name="email" required
+               data-validate="required email"
+               value="<?= e($_POST['email'] ?? $owner->getEmail()) ?>">
+      </div>
 
-    <div class="form-group">
-      <label for="ownerIdentification">Cédula / identificación *</label>
-      <input class="form-control" type="text" id="ownerIdentification" name="ownerIdentification" required
-             data-mask="identification" data-validate="required identification" maxlength="15"
-             value="<?= e($_POST['ownerIdentification'] ?? $owner->getIdentificationNumberOwner()) ?>">
-      <div class="form-hint">Ej: 1-2345-0678</div>
-    </div>
-
-    <div class="form-group">
-      <label for="email">Correo electrónico *</label>
-      <input class="form-control" type="email" id="email" name="email" required
-             data-validate="required email"
-             value="<?= e($_POST['email'] ?? $owner->getEmail()) ?>">
-    </div>
-
-    <div class="form-group">
-      <label for="phoneNumber">Teléfono <span class="required-mark">*</span> *</label>
-      <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" required
-             data-mask="phone" data-validate="required phone"
-             maxlength="9" value="<?= e($_POST['phoneNumber'] ?? $owner->getPhoneNumber() ?? '') ?>">
-      <div class="form-hint">Ej: 8888-7777</div>
+      <div class="form-group">
+        <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
+        <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" required
+               data-validate="required phone"
+               maxlength="15" value="<?= e(format_phone_number($_POST['phoneNumber'] ?? $owner->getPhoneNumber())) ?>" placeholder="+506 8888-8888">
+        <div class="form-hint">Ej: 8888-7777</div>
+      </div>
     </div>
 
     <?php $showPasswordFields = !empty($_POST['changePassword']); ?>
@@ -117,21 +126,23 @@ if ($owner === null) {
     </label>
 
     <div id="passwordFields" <?= $showPasswordFields ? '' : 'style="display:none;"' ?>>
-      <div class="form-group">
-        <label for="currentPassword">Contraseña actual</label>
-        <div class="password-wrapper">
-          <input class="form-control" type="password" id="currentPassword" name="currentPassword" autocomplete="current-password" data-password-required-field>
-          <button class="password-toggle" type="button" id="currentPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="currentPassword">Contraseña actual</label>
+          <div class="password-wrapper">
+            <input class="form-control" type="password" id="currentPassword" name="currentPassword" autocomplete="current-password" data-password-required-field>
+            <button class="password-toggle" type="button" id="currentPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+          </div>
         </div>
-      </div>
 
-      <div class="form-group">
-        <label for="newPassword">Contraseña nueva</label>
-        <div class="password-wrapper">
-          <input class="form-control" type="password" id="newPassword" name="newPassword" minlength="8" autocomplete="new-password" data-password-required-field data-validate="password">
-          <button class="password-toggle" type="button" id="newPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+        <div class="form-group">
+          <label for="newPassword">Contraseña nueva</label>
+          <div class="password-wrapper">
+            <input class="form-control" type="password" id="newPassword" name="newPassword" minlength="8" autocomplete="new-password" data-password-required-field data-validate="password">
+            <button class="password-toggle" type="button" id="newPasswordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+          </div>
+          <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
         </div>
-        <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura7</div>
       </div>
     </div>
 
@@ -139,7 +150,7 @@ if ($owner === null) {
   </form>
 </div>
 
-<div class="card form-card" style="max-width:560px;margin-bottom:16px;">
+<div class="card form-card" style="margin-bottom:16px;">
   <h3 class="card-title">Datos de cobro</h3>
   <p class="muted" style="margin:0 0 12px;">
     Configura los métodos de pago que aceptarás para que tus clientes te paguen.
@@ -147,7 +158,7 @@ if ($owner === null) {
   <a class="btn btn-primary" href="<?= e(base_url('owner', 'paymentData')) ?>">Configurar métodos de cobro</a>
 </div>
 
-<div class="card form-card" style="max-width:560px;border-color:var(--danger-light);">
+<div class="card form-card" style="border-color:var(--danger-light);">
   <h3 style="margin-bottom:6px;color:var(--danger);">Desactivar cuenta</h3>
   <p class="muted" style="margin-bottom:12px;">
     Al desactivar tu cuenta ya no podrás iniciar sesión, pero tus locales y reservas se
@@ -159,6 +170,7 @@ if ($owner === null) {
     <?= csrf_field() ?>
     <button class="btn btn-danger" type="submit">Desactivar mi cuenta</button>
   </form>
+</div>
 </div>
 
 <?php require_once __DIR__ . '/../_footer.php'; ?>

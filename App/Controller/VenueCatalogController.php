@@ -11,7 +11,11 @@ require_once __DIR__ . '/../Service/GeoService.php';
 require_once __DIR__ . '/../Service/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/ServiceRepository.php';
 require_once __DIR__ . '/../Repository/ServiceHistoryRepository.php';
+require_once __DIR__ . '/../Repository/ServiceGroupRepository.php';
+require_once __DIR__ . '/../Repository/ServiceImageRepository.php';
+require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/OwnerRepository.php';
+require_once __DIR__ . '/../Repository/BlockedClientRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../View/_helpers.php';
 
@@ -25,6 +29,7 @@ class VenueCatalogController
   private HistoryService $historyService;
   private OwnerRepository $ownerRepository;
   private LocationService $locationService;
+  private BlockedClientRepository $blockedClientRepo;
 
   public function __construct()
   {
@@ -33,11 +38,18 @@ class VenueCatalogController
     $this->venueService = new VenueService($connection);
     $this->venueRatingService = new VenueRatingService($connection);
     $this->serviceRatingService = new ServiceRatingService($connection);
-    $this->serviceService = new ServiceService(new ServiceRepository($connection), new ServiceHistoryRepository($connection));
+    $this->serviceService = new ServiceService(
+      new ServiceRepository($connection),
+      new ServiceHistoryRepository($connection),
+      new ServiceGroupRepository($connection),
+      new ServiceImageRepository($connection),
+      new VenueRepository($connection)
+    );
     $this->promotionService = new PromotionService($connection);
     $this->historyService = new HistoryService($connection);
     $this->ownerRepository = new OwnerRepository($connection);
     $this->locationService = new LocationService(new LocationRepository($connection));
+    $this->blockedClientRepo = new BlockedClientRepository($connection);
   }
 
   // =========================================================
@@ -56,6 +68,15 @@ class VenueCatalogController
 
     $hasFilters = implode('', $filters) !== '';
     $venues = $this->venueService->findByFilters($filters);
+
+    if (($_SESSION['type'] ?? null) === 'client') {
+      $clientId = (int) $_SESSION['user']->getIdClient();
+      $venues = array_values(array_filter(
+        $venues,
+        fn($venue): bool => !$this->blockedClientRepo->isBlocked($venue->getIdOwner(), $clientId)
+      ));
+    }
+
     $serviceTypes = $this->serviceService->getDistinctTypes();
 
     if ($hasFilters && ($_SESSION['type'] ?? null) === 'client') {
@@ -139,19 +160,28 @@ class VenueCatalogController
       redirect_to('venue', 'catalog');
     }
 
+    if (($_SESSION['type'] ?? null) === 'client'
+        && $this->blockedClientRepo->isBlocked($venue->getIdOwner(), (int) $_SESSION['user']->getIdClient())) {
+      redirect_to('venue', 'catalog');
+    }
+
     $owner = $this->ownerRepository->findByOwnerPk($venue->getIdOwner());
 
     $avgRating = $this->venueRatingService->getAverage($idVenue);
     $venueRatingBreakdown = $this->venueRatingService->getBreakdown($idVenue);
     $promotions = $this->promotionService->getActiveByVenue($idVenue);
+    $venueImages = $this->venueService->getImages($idVenue);
+    $rentalBlocks = $this->venueService->getRentalBlocks($idVenue, true);
 
     $services = $this->serviceService->findAvailableByLocal($idVenue);
     $ratingByService = [];
+    $serviceImages = [];
     foreach ($services as $s) {
       $avg = $this->serviceRatingService->getAverage($s->getIdService());
       if ($avg !== null) {
         $ratingByService[$s->getIdService()] = round($avg, 1);
       }
+      $serviceImages[$s->getIdService()] = $this->serviceService->getImages($s->getIdService());
     }
 
     $loggedRolePk = isset($_SESSION['user']) ? (int) $_SESSION['user']->getIdRol() : 0;

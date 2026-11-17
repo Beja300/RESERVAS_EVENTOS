@@ -163,3 +163,60 @@
   font-size: 0.8rem;
   margin-top: 8px;
 }
+/* =========================================================
+   Selector de servicios con cantidad (formulario de reserva)
+   ========================================================= */
+.service-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.service-picker-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--neutral-200);
+  border-radius: 8px;
+  background: var(--neutral-50);
+}
+
+.service-picker-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.service-picker-info .muted {
+  font-size: 0.85rem;
+}
+
+.service-picker-qty {
+  width: 90px;
+  text-align: center;
+}
+
+.service-picker-qty.is-invalid {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-light);
+}
+
+.service-picker-subtotal {
+  min-width: 110px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 560px) {
+  .service-picker-row {
+    grid-template-columns: 1fr auto;
+  }
+
+  .service-picker-subtotal {
+    grid-column: 1 / -1;
+    text-align: left;
+  }
+}

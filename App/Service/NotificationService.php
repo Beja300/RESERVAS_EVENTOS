@@ -142,6 +142,16 @@ class NotificationService
         return $this->notificationRepo->findByRole($rolePk);
     }
 
+    public function findRoleIdByOwner(int $ownerId): ?int
+    {
+        return $this->notificationRepo->findRoleIdByOwner($ownerId);
+    }
+
+    public function findRoleIdByClient(int $clientId): ?int
+    {
+        return $this->notificationRepo->findRoleIdByClient($clientId);
+    }
+
     public function notifyPaymentVerification(int $ownerRolePk): int
     {
         return $this->notify(

@@ -2,14 +2,17 @@
 
 require_once __DIR__ . '/BusinessRuleException.php';
 require_once __DIR__ . '/../Repository/OwnerPaymentRepository.php';
+require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
 
 class OwnerPaymentService
 {
   private OwnerPaymentRepository $repo;
+  private PaymentMethodRepository $methodRepo;
 
   public function __construct(PDO $connection)
   {
     $this->repo = new OwnerPaymentRepository($connection);
+    $this->methodRepo = new PaymentMethodRepository($connection);
   }
 
   // =========================================================
@@ -21,15 +24,21 @@ class OwnerPaymentService
       throw new BusinessRuleException('Selecciona un método de pago.');
     }
 
-    if (trim($holder) === '') {
-      throw new BusinessRuleException('El titular es obligatorio para este método de cobro.');
+    $method = $this->methodRepo->findById($paymentMethodPk);
+    if ($method === null || !$method->getIsActive()) throw new BusinessRuleException('Selecciona un método de pago activo.');
+    $kind = $this->methodType($method->getPaymentMethod());
+    if ($kind === 'onsite') {
+      $holder = '';
+      $account = '';
+      $instructions = stripos($method->getPaymentMethod(), 'tarjeta') !== false
+        ? 'Pago con tarjeta en el lugar.'
+        : 'Pago en el lugar.';
+    } else {
+      if (trim($holder) === '') throw new BusinessRuleException('Indica el nombre del titular.');
+      if ($kind === 'sinpe') $account = $this->normalizeSinpe($account);
+      elseif ($kind === 'iban') $account = $this->normalizeIban($account);
+      elseif (trim($account) === '') throw new BusinessRuleException('Indica el número de cuenta o teléfono.');
     }
-
-    if (trim($account) === '') {
-      throw new BusinessRuleException('La cuenta bancaria o teléfono SINPE es obligatoria.');
-    }
-
-    $this->assertValidAccount($account);
 
     if ($ownerPaymentPk > 0) {
       $op = $this->repo->findById($ownerPaymentPk);
@@ -96,17 +105,42 @@ class OwnerPaymentService
   }
 
   // =========================================================
-  // LA CUENTA DEBE SER UN SINPE MÓVIL (8 DÍGITOS) O UN IBAN.
+  // Normalización y validación según el método seleccionado.
   // =========================================================
-  private function assertValidAccount(string $account): void
+  private function methodType(string $method): string
   {
-    $normalized = preg_replace('/[\s-]/', '', $account);
+    $name = strtolower($method);
+    if (str_contains($name, 'sinpe')) return 'sinpe';
+    if (str_contains($name, 'transfer') || str_contains($name, 'iban')) return 'iban';
+    if (str_contains($name, 'efectivo') || str_contains($name, 'lugar') || str_contains($name, 'local') || str_contains($name, 'cash') || str_contains($name, 'tarjeta')) return 'onsite';
+    return 'other';
+  }
 
-    $isSinpe = preg_match('/^\d{8}$/', $normalized) === 1;
-    $isIban = preg_match('/^[A-Za-z]{2}[\dA-Za-z]{18,22}$/', $normalized) === 1;
+  private function normalizeSinpe(string $account): string
+  {
+    $digits = preg_replace('/\D/', '', $account);
+    if (strlen($digits) === 11 && str_starts_with($digits, '506')) $digits = substr($digits, 3);
+    if (strlen($digits) !== 8) throw new BusinessRuleException('El teléfono SINPE Móvil debe tener exactamente 8 dígitos.');
+    return $digits;
+  }
 
-    if (!$isSinpe && !$isIban) {
-      throw new BusinessRuleException('La cuenta debe ser un teléfono SINPE de 8 dígitos o un IBAN válido.');
+  private function normalizeIban(string $account): string
+  {
+    $iban = strtoupper(preg_replace('/[\s-]/', '', $account));
+    if (!preg_match('/^CR\d{20}$/', $iban) || !$this->isValidIbanChecksum($iban)) {
+      throw new BusinessRuleException('El IBAN de Costa Rica debe tener 22 caracteres: CR seguido de 20 dígitos, con verificación válida.');
     }
+    return $iban;
+  }
+
+  private function isValidIbanChecksum(string $iban): bool
+  {
+    $rearranged = substr($iban, 4) . substr($iban, 0, 4);
+    $remainder = 0;
+    foreach (str_split($rearranged) as $char) {
+      $digits = ctype_alpha($char) ? (string) (ord($char) - 55) : $char;
+      foreach (str_split($digits) as $digit) $remainder = ($remainder * 10 + (int) $digit) % 97;
+    }
+    return $remainder === 1;
   }
 }

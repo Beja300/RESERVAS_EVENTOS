@@ -9,6 +9,10 @@ require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/InvoiceRepository.php';
 require_once __DIR__ . '/../Repository/BookingHistoryRepository.php';
 require_once __DIR__ . '/../Repository/BookingRefundRepository.php';
+require_once __DIR__ . '/../Repository/VenueRentalBlockRepository.php';
+require_once __DIR__ . '/../Repository/BlockedClientRepository.php';
+require_once __DIR__ . '/../Repository/ServiceRepository.php';
+require_once __DIR__ . '/ServiceService.php';
 require_once __DIR__ . '/../Model/Booking.php';
 require_once __DIR__ . '/../Model/BookingHistory.php';
 require_once __DIR__ . '/../Model/BookingRefund.php';
@@ -26,6 +30,9 @@ class BookingService
     private BookingHistoryRepository $historyRepo;
     private BookingRefundRepository $refundRepo;
     private CommissionConfigService $configService;
+    private VenueRentalBlockRepository $blockRepo;
+    private BlockedClientRepository $blockedClientRepo;
+    private ServiceService $serviceService;
 
     public function __construct()
     {
@@ -40,6 +47,9 @@ class BookingService
         $this->configService = new CommissionConfigService(
             new CommissionConfigRepository($this->connection)
         );
+        $this->blockRepo = new VenueRentalBlockRepository($this->connection);
+        $this->blockedClientRepo = new BlockedClientRepository($this->connection);
+        $this->serviceService = new ServiceService(new ServiceRepository($this->connection));
     }
 
     public function createBooking(
@@ -48,7 +58,10 @@ class BookingService
         string $date,
         ?string $endDate = null,
         ?string $eventType = null,
-        ?string $eventDetail = null
+        ?string $eventDetail = null,
+        ?int $attendees = null,
+        ?int $rentalBlockId = null,
+        array $serviceQuantities = []
     ): int {
         // Primero se valida el formato de las fechas; recién después las
         // comparaciones, para no confundir una fecha inválida con una fuera
@@ -107,17 +120,47 @@ class BookingService
             );
         }
 
-        if ($venue->getPriceVenue() <= 0) {
+        if ($venue->getPriceVenue() <= 0 && ($rentalBlockId === null || $rentalBlockId <= 0)) {
             throw new BusinessRuleException(
                 'Este local no tiene un precio de renta configurado. Contacta al propietario.'
             );
+        }
+
+        if ($this->blockedClientRepo->isBlocked($venue->getIdOwner(), $clientPk)) {
+            throw new BusinessRuleException(
+                'El propietario de este local no acepta nuevas reservas de tu cuenta.'
+            );
+        }
+
+        if ($attendees !== null) {
+            $minCapacity = $venue->getMinCapacity() ?? 1;
+            if ($attendees < $minCapacity) {
+                throw new BusinessRuleException(
+                    'La cantidad de asistentes debe ser al menos ' . $minCapacity . '.'
+                );
+            }
+            if ($attendees > $venue->getCapacityVenue()) {
+                throw new BusinessRuleException(
+                    'La cantidad de asistentes no puede superar la capacidad máxima de ' . $venue->getCapacityVenue() . '.'
+                );
+            }
+        }
+
+        $rentalBlock = null;
+        if ($rentalBlockId !== null && $rentalBlockId > 0) {
+            $rentalBlock = $this->blockRepo->findById($rentalBlockId);
+            if ($rentalBlock === null || !$rentalBlock->getIsActive() || $rentalBlock->getIdVenue() !== $venuePk) {
+                throw new BusinessRuleException('El bloque de alquiler seleccionado no está disponible.');
+            }
         }
 
         if (
             $this->bookingRepo->hasActiveRangeConflict(
                 $venuePk,
                 $date,
-                $endDate
+                $endDate,
+                0,
+                $rentalBlock !== null ? $rentalBlock->getIdBlock() : null
             )
         ) {
             throw new BusinessRuleException(
@@ -134,7 +177,9 @@ class BookingService
             true,
             $endDate,
             $eventType,
-            $eventDetail
+            $eventDetail,
+            $attendees,
+            $rentalBlock !== null ? $rentalBlock->getIdBlock() : null
         );
 
         DataBase::beginTransaction($this->connection);
@@ -143,9 +188,49 @@ class BookingService
 
             $idBooking = $this->bookingRepo->save($booking);
 
-            // Línea base: renta del local por el número de días
-            // (garantiza factura nunca en 0 y acumula precio por día)
-            $this->detailRepo->addVenueLine($idBooking, $venue, $days);
+            // Línea base: renta del local por el número de días. Si se eligió
+            // un bloque horario, se usa su precio y se identifica el bloque.
+            $unitPrice = $rentalBlock !== null ? $rentalBlock->getPrice() : $venue->getPriceVenue();
+            $concept = $rentalBlock !== null
+                ? 'Renta del local — ' . $rentalBlock->getName()
+                : null;
+            $this->detailRepo->addVenueLine($idBooking, $venue, $days, $unitPrice, $concept);
+
+            if ($venue->getCleaningFee() > 0) {
+                $this->detailRepo->addConceptLine(
+                    $idBooking,
+                    $venue->getIdVenue(),
+                    'Limpieza del local',
+                    1,
+                    $venue->getCleaningFee()
+                );
+            }
+
+            // Servicios elegidos por el cliente al crear la reserva.
+            // Se insertan en la misma transacción para que un error en
+            // cualquiera revierta también la reserva.
+            foreach ($serviceQuantities as $serviceId => $requestedQuantity) {
+                $requestedQuantity = (int) $requestedQuantity;
+
+                if ($requestedQuantity <= 0) {
+                    continue;
+                }
+
+                $service = $this->serviceService->findById((int) $serviceId);
+
+                if ($service === null || !$service->getIsActive()) {
+                    throw new BusinessRuleException('Este servicio ya no está disponible.');
+                }
+
+                if ($service->getIdLocal() !== $venuePk) {
+                    throw new BusinessRuleException('Este servicio no pertenece al local de la reserva.');
+                }
+
+                $this->serviceService->assertQuantityAllowed($service, $requestedQuantity, 0);
+                $discount = $this->serviceService->lineDiscount($service, $requestedQuantity, 0);
+
+                $this->detailRepo->addServiceLine($idBooking, $service, $requestedQuantity, $discount);
+            }
 
             DataBase::commit();
 

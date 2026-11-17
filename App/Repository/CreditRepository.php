@@ -116,6 +116,16 @@ class CreditRepository
     return $row ? $this->mapRow($row) : null;
   }
 
+  public function hasOutstandingByClient(int $idClient): bool
+  {
+    $stmt = $this->connection->prepare(
+      "SELECT 1 FROM tbcredit WHERE tbclientid = :client AND tbcreditactive = true
+       AND tbcreditbalance > 0 LIMIT 1"
+    );
+    $stmt->execute([':client' => $idClient]);
+    return (bool) $stmt->fetchColumn();
+  }
+
   // =========================================================
   // CUENTAS POR COBRAR DE UN CLIENTE (con datos para mostrar)
   // =========================================================

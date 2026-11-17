@@ -1,3 +1,38 @@
+.venue-form {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: clamp(20px, 3vw, 36px);
+}
+
+.venue-form .grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.venue-form .grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.parking-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.parking-check .checkbox-row {
+  margin-bottom: 4px;
+}
+
+@media (max-width: 860px) {
+  .venue-form .grid-2,
+  .venue-form .grid-3,
+  .parking-row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .geo-search-box {
   position: relative;
   margin-bottom: 10px;
@@ -50,17 +85,26 @@
   font-size: 0.9rem;
   color: var(--neutral-700);
 }
-
-#price::-webkit-outer-spin-button,
-#price::-webkit-inner-spin-button,
-#capacity::-webkit-outer-spin-button,
-#capacity::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
+.location-mode > .form-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
 }
 
-#price,
-#capacity {
-  -moz-appearance: textfield;
-  appearance: textfield;
+.radio-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--neutral-800);
+}
+
+.radio-option input[type="radio"] {
+  accent-color: var(--primary);
 }

@@ -24,7 +24,6 @@
  *  6  Venue/Form.php                    venue/showForm        (crear: vacío / editar: &id=)
  *  7  Service/List.php                  service/list&venueId=
  *  8  Service/Form.php                  service/showForm      (crear: &venueId= / editar: &id=&venueId=)
- *  9  Admin/PendingServices.php         service/pending
  * 10  Booking/Form.php                  booking/showForm&venueId=
  * 11  Booking/List.php                  booking/myBookings    (cliente) | booking/venueBookings&venueId= (owner-venuero)
  * 12  Booking/Detail.php                booking/detail&id=
@@ -68,6 +67,7 @@ require_once __DIR__ . '/../Configuration/Autoloader.php';
 Autoloader::register();
 
 require_once __DIR__ . '/../Configuration/DataBase.php';
+require_once __DIR__ . '/../Configuration/SchemaMigrator.php';
 require_once __DIR__ . '/../App/Service/BusinessRuleException.php';
 
 // $_SESSION['user'] guarda un DTO liviano (UserSessionDTO), no entidades de
@@ -78,6 +78,9 @@ require_once __DIR__ . '/../App/Service/BusinessRuleException.php';
 // Helpers globales (incluyen is_ajax()/respond_json()/csrf_*), disponibles
 // para todos los controladores y vistas.
 require_once __DIR__ . '/../App/View/_helpers.php';
+
+// Mantiene compatibles las bases ya instaladas con el esquema actual.
+SchemaMigrator::ensure(DataBase::getConnection());
 
 // =========================================================
 // SESIÓN + TOKEN CSRF
@@ -121,13 +124,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $routeMap = [
   // ---------- service ----------
   'service.list'       => ['OwnerServiceController', 'list'],
+  'service.groups'     => ['OwnerServiceController', 'groups'],
   'service.showForm'   => ['OwnerServiceController', 'showForm'],
   'service.create'     => ['OwnerServiceController', 'create'],
   'service.update'     => ['OwnerServiceController', 'update'],
-  'service.pending'    => ['AdminServiceController', 'pending'],
-  'service.approve'    => ['AdminServiceController', 'approve'],
-  'service.reject'     => ['AdminServiceController', 'reject'],
-  'service.detail'     => ['AdminServiceController', 'detail'],
+  'service.locations'  => ['OwnerServiceController', 'locations'],
+  'service.updateLocations' => ['OwnerServiceController', 'updateLocations'],
+  'service.transfer'   => ['OwnerServiceController', 'transfer'],
+  'service.moveOrDuplicate' => ['OwnerServiceController', 'moveOrDuplicate'],
 
   // ---------- venue ----------
   'venue.catalog'      => ['VenueCatalogController', 'catalog'],
@@ -147,6 +151,10 @@ $routeMap = [
   'booking.showForm'      => ['ClientBookingController', 'showForm'],
   'booking.myBookings'    => ['ClientBookingController', 'myBookings'],
   'booking.addLine'       => ['ClientBookingController', 'addLine'],
+  'booking.updateDetails' => ['ClientBookingController', 'updateDetails'],
+  'booking.updateLine'    => ['ClientBookingController', 'updateLine'],
+  'booking.removeLine'    => ['ClientBookingController', 'removeLine'],
+  'booking.setServiceSelection' => ['ClientBookingController', 'setServiceSelection'],
   'booking.cancel'        => ['ClientBookingController', 'cancel'],
   'booking.requestRefund' => ['ClientBookingController', 'requestRefund'],
   'booking.pay'           => ['ClientBookingController', 'pay'],
@@ -219,6 +227,7 @@ $fallbackControllers = [
   'promotion'     => 'PromotionController',
   'api'           => 'ApiController',
   'credit'        => 'CreditController',
+  'blocklist'     => 'BlocklistController',
 ];
 
 // =========================================================
@@ -227,9 +236,9 @@ $fallbackControllers = [
 // =========================================================
 $allowedActions = [
   'auth'          => ['showLogin', 'login', 'showRegister', 'registerClient', 'registerOwner', 'logout', 'cleanDemo', 'showSetup', 'createFirstAdmin'],
-  'service'       => ['list', 'showForm', 'create', 'update', 'pending', 'approve', 'reject', 'detail'],
+  'service'       => ['list', 'groups', 'showForm', 'create', 'update', 'locations', 'updateLocations', 'transfer', 'moveOrDuplicate'],
   'venue'         => ['catalog', 'detail', 'showOwner', 'list', 'showForm', 'create', 'update', 'rate', 'rateService', 'updateComment', 'favorite'],
-  'booking'       => ['create', 'showForm', 'myBookings', 'detail', 'addLine', 'cancel', 'pay', 'venueBookings', 'pendingBookings', 'uploadTicket', 'approveTicket', 'rejectTicket', 'requestRefund'],
+  'booking'       => ['create', 'showForm', 'myBookings', 'detail', 'addLine', 'updateDetails', 'updateLine', 'removeLine', 'setServiceSelection', 'cancel', 'pay', 'venueBookings', 'pendingBookings', 'uploadTicket', 'approveTicket', 'rejectTicket', 'requestRefund'],
   'admin'         => ['dashboard', 'users', 'activateUser', 'deactivateUser', 'bookings', 'userHistory', 'profile', 'updateProfile', 'removePhoto', 'deactivateAccount', 'approvePayment', 'rejectPayment', 'cleanTestData', 'showAdminForm', 'createAdmin', 'showClientForm', 'createClient', 'showOwnerForm', 'createOwner', 'showEditForm', 'updateUser', 'bookingDetail', 'cancelBooking', 'rescheduleBooking', 'changeBookingVenue', 'refundBooking', 'rejectRefundBooking', 'commissionConfig', 'saveCommissionConfig'],
   'client'        => ['dashboard', 'recommendations', 'favorites', 'profile', 'updateProfile', 'updateLocation', 'removePhoto', 'deactivateAccount'],
   'owner'         => ['dashboard', 'profile', 'updateProfile', 'removePhoto', 'deactivateAccount', 'paymentData', 'savePayment', 'removePayment'],
@@ -239,7 +248,8 @@ $allowedActions = [
   'notification'  => ['list', 'markAsRead', 'markAllAsRead', 'open'],
   'promotion'     => ['list', 'showForm', 'create', 'edit', 'update', 'addService'],
   'api'           => ['locations', 'geolocate', 'venueComments', 'serviceComments'],
-  'credit'        => ['ownerConfig', 'saveConfig', 'ownerList', 'clientList', 'request', 'pay', 'detail', 'adminList'],
+  'credit'        => ['ownerConfig', 'saveConfig', 'ownerList', 'clientList', 'request', 'pay', 'approvePayment', 'rejectPayment', 'detail', 'adminList'],
+  'blocklist'     => ['list', 'block', 'unblock'],
 ];
 
 // Ruta por defecto (acceso a /Public/index.php sin parámetros)

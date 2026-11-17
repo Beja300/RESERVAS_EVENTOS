@@ -20,70 +20,122 @@
       .replace(/'/g, '&#039;');
   };
 
-  App.normalizeMoney = function (value) {
-    var s = String(value == null ? '' : value).replace(/[^\d.,-]/g, '');
-    if (s === '') return '';
-
-    var negative = s.charAt(0) === '-';
-    if (negative) s = s.slice(1);
-
-    var lastComma = s.lastIndexOf(',');
-    var lastDot = s.lastIndexOf('.');
-    var decSep = null;
-
-    if (lastComma !== -1 && lastDot !== -1) {
-      decSep = lastComma > lastDot ? ',' : '.';
-    } else if (lastComma !== -1) {
-      var commaParts = s.split(',');
-      if (commaParts.length === 2 && commaParts[1].length <= 2) decSep = ',';
-    } else if (lastDot !== -1) {
-      var dotParts = s.split('.');
-      if (dotParts.length === 2 && dotParts[1].length <= 2) decSep = '.';
-    }
-
-    if (decSep !== null) {
-      var idx = s.lastIndexOf(decSep);
-      var intPart = s.slice(0, idx).replace(/[.,]/g, '');
-      var decPart = s.slice(idx + 1).replace(/\D/g, '');
-      s = intPart + '.' + decPart;
-    } else {
-      s = s.replace(/[.,]/g, '');
-    }
-
-    return (negative ? '-' : '') + s;
+  App.parseMoney = function (value) {
+    return parseFloat(String(value).replace(/[^\d.-]/g, '')) || 0;
   };
 
-  App.parseMoney = function (value) {
-    var amount = parseFloat(App.normalizeMoney(value));
-    return isNaN(amount) ? 0 : amount;
+  App.formatPhoneInput = function (field) {
+    var raw = field.value || '';
+    var before = raw.slice(0, field.selectionStart || 0);
+    var beforeDigits = before.replace(/\D/g, '').length;
+    var digits = raw.replace(/\D/g, '');
+    if ((/^\s*\+?506(?:\D|$)/.test(raw) || digits.length > 8) && digits.slice(0, 3) === '506') {
+      digits = digits.slice(3);
+      if (/^\s*\+?506/.test(before)) beforeDigits = Math.max(0, beforeDigits - 3);
+    }
+    digits = digits.slice(0, 8);
+
+    if (digits === '') {
+      field.value = '';
+      return;
+    }
+
+    var formatted = digits.slice(0, 4);
+    if (digits.length > 4) formatted += '-' + digits.slice(4);
+    field.value = formatted;
+
+    var caret = Math.min(beforeDigits, 4);
+    if (beforeDigits > 4) caret = beforeDigits + 1;
+    if (caret > formatted.length) caret = formatted.length;
+    try { field.setSelectionRange(caret, caret); } catch (ignore) {}
+  };
+
+  App.initPhoneMasks = function () {
+    var fields = document.querySelectorAll('[data-mask="phone"], input[type="tel"][name="phoneNumber"]');
+    for (var i = 0; i < fields.length; i++) {
+      (function (field) {
+        var group = field.closest('.phone-input-group');
+        if (!group) {
+          group = document.createElement('div');
+          group.className = 'phone-input-group';
+          field.parentNode.insertBefore(group, field);
+          var prefix = document.createElement('span');
+          prefix.className = 'phone-prefix';
+          prefix.textContent = field.getAttribute('data-phone-prefix') || '+506';
+          prefix.setAttribute('aria-hidden', 'true');
+          group.appendChild(prefix);
+          group.appendChild(field);
+        }
+        field.setAttribute('maxlength', '15');
+        field.setAttribute('inputmode', 'numeric');
+        field.setAttribute('placeholder', '8888-8888');
+        if ((field.value || '').trim() !== '') App.formatPhoneInput(field);
+        field.addEventListener('input', function () { App.formatPhoneInput(field); });
+        field.addEventListener('paste', function () {
+          setTimeout(function () { App.formatPhoneInput(field); }, 0);
+        });
+      })(fields[i]);
+    }
   };
 
   App.formatMoney = function (amount) {
-    var n = Number(amount);
-    if (!isFinite(n)) n = 0;
-
-    var negative = n < 0;
-    n = Math.abs(n);
-
-    var fixed = n.toFixed(2).split('.');
-    var intPart = fixed[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-    return (negative ? '-' : '') + '\u20A1 ' + intPart + '.' + fixed[1];
+    return '\u20A1 ' + Number(amount).toLocaleString('es-CR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   };
 
-  // ---------- Formato de cédula (solo dígitos) ----------
-  // Física 9 -> 1-2345-0678 | Jurídica 10 -> 3-101-123456
-  // DIMEX 11 -> 1-2345-67890 | DIMEX 12 -> 1-2345-678901
-  App.formatCedula = function (value) {
-    var d = String(value == null ? '' : value).replace(/\D/g, '');
-    var cut = function (start, len) { return d.substr(start, len); };
-    switch (d.length) {
-      case 9:  return cut(0, 1) + '-' + cut(1, 4) + '-' + cut(5, 4);
-      case 10: return cut(0, 1) + '-' + cut(1, 3) + '-' + cut(4, 6);
-      case 11: return cut(0, 1) + '-' + cut(1, 4) + '-' + cut(5, 6);
-      case 12: return cut(0, 1) + '-' + cut(1, 4) + '-' + cut(5, 7);
+  App.formatCurrencyInput = function (field) {
+    var raw = field.value || '';
+    var before = raw.slice(0, field.selectionStart || 0);
+    var tokensBefore = before.replace(/[^\d.]/g, '').length;
+    var beforeNumber = before.replace(/[^\d,.]/g, '');
+    if (beforeNumber.indexOf('.') === -1 && /,\d{0,2}$/.test(beforeNumber)) tokensBefore++;
+    var numericRaw = raw.replace(/[^\d.,]/g, '');
+    if (numericRaw.indexOf('.') === -1 && /,$/.test(numericRaw)) {
+      numericRaw = numericRaw.slice(0, -1) + '.';
+    } else if (numericRaw.indexOf('.') === -1 && /,\d{1,2}$/.test(numericRaw)) {
+      numericRaw = numericRaw.replace(/,(\d{1,2})$/, '.$1');
     }
-    return String(value == null ? '' : value);
+    var cleaned = numericRaw.replace(/,/g, '');
+    var decimalAt = cleaned.indexOf('.');
+    if (decimalAt !== -1) {
+      cleaned = cleaned.slice(0, decimalAt + 1) + cleaned.slice(decimalAt + 1).replace(/\./g, '');
+    }
+    var parts = cleaned.split('.');
+    var integer = parts[0].replace(/^0+(?=\d)/, '');
+    if (integer === '' && decimalAt === 0) integer = '0';
+    var decimals = (parts[1] || '').slice(0, 2);
+    var formatted = integer ? Number(integer).toLocaleString('en-US') : '';
+    if (decimalAt !== -1) formatted += '.' + decimals;
+    field.value = formatted ? '\u20A1 ' + formatted : '';
+
+    var seen = 0;
+    var caret = field.value.length;
+    for (var i = 2; i < field.value.length; i++) {
+      if (/[\d.]/.test(field.value.charAt(i))) seen++;
+      if (seen >= tokensBefore) {
+        caret = i + 1;
+        break;
+      }
+    }
+    if (tokensBefore === 0 && field.value !== '') caret = 2;
+    try { field.setSelectionRange(caret, caret); } catch (ignore) {}
+  };
+
+  App.initCurrencyMasks = function () {
+    var fields = document.querySelectorAll('[data-currency-mask="credit"]');
+    for (var i = 0; i < fields.length; i++) {
+      (function (field) {
+        field.setAttribute('inputmode', 'decimal');
+        field.setAttribute('placeholder', '\u20A1 0.00');
+        if ((field.value || '').trim() !== '') App.formatCurrencyInput(field);
+        field.addEventListener('input', function () { App.formatCurrencyInput(field); });
+        field.addEventListener('paste', function () {
+          setTimeout(function () { App.formatCurrencyInput(field); }, 0);
+        });
+      })(fields[i]);
+    }
   };
 
   // ---------- Toast (notificación no intrusiva) ----------
@@ -222,91 +274,14 @@
     }
   };
 
-  // ---------- Máscaras de entrada (data-mask) ----------
-  // phone: solo 8 dígitos, se muestra como 8888-8888.
-  // identification: solo dígitos (máx 12), se muestra con guiones al salir.
-  App.initMasks = function () {
-    var fields = document.querySelectorAll('[data-mask]');
-
-    var formatPhone = function (v) {
-      var digits = String(v || '').replace(/\D/g, '').slice(0, 8);
-      return digits.length > 4 ? digits.slice(0, 4) + '-' + digits.slice(4) : digits;
-    };
-
-    var formatMoneyInput = function (v) {
-      var normalized = App.normalizeMoney(v);
-      if (normalized === '' || normalized === '-') return '';
-
-      var negative = normalized.charAt(0) === '-';
-      if (negative) normalized = normalized.slice(1);
-
-      var dot = normalized.indexOf('.');
-      var intPart = dot === -1 ? normalized : normalized.slice(0, dot);
-      var decPart = dot === -1 ? '' : normalized.slice(dot + 1).slice(0, 2);
-
-      intPart = intPart.replace(/^0+(?=\d)/, '');
-      if (intPart === '') intPart = '0';
-      intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-      return (negative ? '-' : '') + '\u20A1 ' + intPart + (dot === -1 ? '' : '.' + decPart);
-    };
-
-    for (var i = 0; i < fields.length; i++) {
-      (function (field) {
-        var kind = field.getAttribute('data-mask');
-
-        if (kind === 'phone') {
-          field.addEventListener('input', function () {
-            field.value = formatPhone(field.value);
-          });
-          if (field.value) field.value = formatPhone(field.value);
-        } else if (kind === 'identification') {
-          field.addEventListener('input', function () {
-            field.value = field.value.replace(/\D/g, '').slice(0, 12);
-          });
-          field.addEventListener('blur', function () {
-            field.value = App.formatCedula(field.value);
-          });
-          if (field.value) field.value = App.formatCedula(field.value);
-        } else if (kind === 'money') {
-          field.addEventListener('input', function () {
-            var value = field.value;
-            var start = field.selectionStart || 0;
-            var atEnd = start >= value.length;
-            var sigBefore = value.slice(0, start).replace(/[^\d.]/g, '').length;
-            var formatted = formatMoneyInput(value);
-
-            field.value = formatted;
-
-            if (document.activeElement === field) {
-              if (atEnd) {
-                field.setSelectionRange(formatted.length, formatted.length);
-              } else {
-                var pos = 0;
-                var seen = 0;
-                while (pos < formatted.length && seen < sigBefore) {
-                  if (/[\d.]/.test(formatted.charAt(pos))) seen++;
-                  pos++;
-                }
-                field.setSelectionRange(pos, pos);
-              }
-            }
-          });
-          field.addEventListener('blur', function () {
-            if (field.value.trim() !== '') {
-              field.value = App.formatMoney(App.parseMoney(field.value));
-            }
-          });
-          if (field.value) field.value = formatMoneyInput(field.value);
-        }
-      })(fields[i]);
-    }
-  };
-
   // ---------- Validación en vivo (genérica, data-validate) ----------
   App.validateField = function (field) {
     var value = (field.value || '').trim();
     var rules = (field.getAttribute('data-validate') || '').split(' ');
+    var min = field.getAttribute('data-min');
+    var max = field.getAttribute('data-max');
+    var rangeMessage = field.getAttribute('data-range-message');
+    var numericValue = field.hasAttribute('data-currency-mask') ? App.parseMoney(value) : parseFloat(value);
     var container = field.closest('.form-group') || field.parentNode;
     var err = container.querySelector('.field-error');
     var message = '';
@@ -314,12 +289,18 @@
     if (rules.indexOf('required') !== -1 && value === '') {
       message = 'Este campo es obligatorio.';
     } else if (value !== '') {
-      if (rules.indexOf('phone') !== -1 && !/^\d{8}$/.test(value.replace(/\D/g, ''))) {
-        message = 'El teléfono debe tener 8 dígitos (ej. 8888-8888).';
+      if (rules.indexOf('phone') !== -1 && !/^\d{8}$/.test(value.replace(/^\+?506\s*/, '').replace(/\D/g, ''))) {
+        message = 'El teléfono debe tener 8 dígitos.';
       } else if (rules.indexOf('email') !== -1 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
         message = 'Correo electrónico no válido.';
       } else if (rules.indexOf('password') !== -1 && !/^(?=.*\d).{8,}$/.test(value)) {
         message = 'La contraseña debe tener al menos 8 caracteres y un número.';
+      } else if (rules.indexOf('match') !== -1) {
+        var matchId = field.getAttribute('data-match') || '';
+        var matchEl = matchId ? document.getElementById(matchId) : null;
+        if (matchEl && value !== (matchEl.value || '').trim()) {
+          message = field.getAttribute('data-match-message') || 'Los valores no coinciden.';
+        }
       } else if (rules.indexOf('url') !== -1 && !/^https?:\/\/[^\s]+$/i.test(value)) {
         message = 'La URL no es válida (debe iniciar con http:// o https://).';
       } else if (rules.indexOf('identification') !== -1
@@ -331,10 +312,20 @@
         && !/^\d{8}$/.test(value.replace(/[\s-]/g, ''))
         && !/^[A-Za-z]{2}[\dA-Za-z]{18,22}$/.test(value.replace(/[\s-]/g, ''))) {
         message = 'Cuenta no válida (8 dígitos SINPE o IBAN).';
-      } else if (rules.indexOf('minprice') !== -1 && App.parseMoney(value) < 0) {
+      } else if (rules.indexOf('minprice') !== -1 && (isNaN(numericValue) || numericValue < 0)) {
         message = 'El precio no puede ser negativo.';
-      } else if (rules.indexOf('positive') !== -1 && App.parseMoney(value) <= 0) {
+      } else if (rules.indexOf('positive') !== -1 && (isNaN(numericValue) || numericValue <= 0)) {
         message = 'Debe ser un número mayor que 0.';
+      } else if (rules.indexOf('minamount') !== -1 && min !== null && numericValue + 0.001 < Number(min)) {
+        message = 'El abono mínimo es ' + App.formatMoney(Number(min)) + '.';
+      } else if (rules.indexOf('intrange') !== -1) {
+        if (!/^\d+$/.test(value)) {
+          message = 'Debe ser un número entero.';
+        } else if (min !== null && Number(value) < Number(min)) {
+          message = rangeMessage || 'El valor mínimo permitido es ' + min + '.';
+        } else if (max !== null && Number(value) > Number(max)) {
+          message = rangeMessage || 'El valor máximo permitido es ' + max + '.';
+        }
       }
     }
 
@@ -381,10 +372,11 @@
 
   // ---------- Inicialización global (común a cualquier vista) ----------
   App.init = function () {
+    App.initPhoneMasks();
+    App.initCurrencyMasks();
     App.initConfirm();
     App.initTableFilter();
     App.initCardFilter();
-    App.initMasks();
     App.initValidation();
   };
 

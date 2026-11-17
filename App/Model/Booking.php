@@ -14,6 +14,8 @@ class Booking
   private bool $isBookingActive;
   private ?string $eventType;
   private ?string $eventDescription;
+  private ?int $attendees;
+  private ?int $rentalBlockId;
 
   public function __construct(
     int $idBooking,
@@ -24,7 +26,9 @@ class Booking
     bool $isBookingActive,
     ?string $bookingEndDate = null,
     ?string $eventType = null,
-    ?string $eventDescription = null
+    ?string $eventDescription = null,
+    ?int $attendees = null,
+    ?int $rentalBlockId = null
   ) {
     $this->idBooking = $idBooking;
     $this->idClient = $idClient;
@@ -35,6 +39,8 @@ class Booking
     $this->isBookingActive = $isBookingActive;
     $this->eventType = $eventType;
     $this->eventDescription = $eventDescription;
+    $this->attendees = $attendees;
+    $this->rentalBlockId = $rentalBlockId;
   }
 
   // Getters
@@ -83,6 +89,16 @@ class Booking
     return $this->eventDescription;
   }
 
+  public function getAttendees(): ?int
+  {
+    return $this->attendees;
+  }
+
+  public function getRentalBlockId(): ?int
+  {
+    return $this->rentalBlockId;
+  }
+
   // Setters
   public function setIdBooking(int $idBooking): void
   {
@@ -127,5 +143,15 @@ class Booking
   public function setEventDescription(?string $eventDescription): void
   {
     $this->eventDescription = $eventDescription;
+  }
+
+  public function setAttendees(?int $attendees): void
+  {
+    $this->attendees = $attendees;
+  }
+
+  public function setRentalBlockId(?int $rentalBlockId): void
+  {
+    $this->rentalBlockId = $rentalBlockId;
   }
 }

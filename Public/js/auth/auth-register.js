@@ -48,8 +48,9 @@
         });
       })(tabButtons[i]);
     }
-    // Sincronizar con el estado inicial del DOM (pestaña por defecto).
-    setPanels('client');
+    // Abrir el formulario indicado por la página de bienvenida, si aplica.
+    var requestedType = new URLSearchParams(window.location.search).get('tipo');
+    showTab(requestedType === 'propietario' ? 'owner' : 'client');
   }
 
   // Exponer para uso global (compatibilidad) y arrancar en DOM ready.

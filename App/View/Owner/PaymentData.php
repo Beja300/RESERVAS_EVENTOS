@@ -11,10 +11,9 @@ $paymentMethods = $paymentMethods ?? [];
   </div>
 </div>
 
-<p class="muted" style="margin-bottom:16px;max-width:640px;">
-  Configura cómo deseas que te paguen tus clientes. Cuando un cliente reserva tu local,
-  elegirá uno de estos métodos y verá los datos que indiques (titular, cuenta/teléfono,
-  instrucciones) para pagarte y subir su comprobante.
+<p class="muted" style="margin-bottom:16px;">
+  Al reservar, el cliente verá los datos que correspondan al método que elijas: SINPE Móvil,
+  transferencia bancaria o pago en el lugar.
   Solo se muestran los métodos que tengas <strong>activos</strong>.
 </p>
 
@@ -22,53 +21,63 @@ $paymentMethods = $paymentMethods ?? [];
   <div class="alert alert-error"><?= e($error) ?></div>
 <?php endif; ?>
 
-<div style="margin-bottom:18px;max-width:640px;">
+<div style="margin-bottom:18px;">
   <button class="btn btn-primary" type="button" data-toggle-payment-form>
     + Agregar método de pago nuevo
   </button>
 </div>
 
-<div class="card form-card" style="max-width:640px;margin-bottom:18px;" data-payment-form-wrap hidden>
+<div class="card form-card form-page" style="margin-bottom:18px;" data-payment-form-wrap hidden>
   <h3 class="card-title">Agregar / actualizar método</h3>
   <form method="post" action="<?= e(base_url('owner', 'savePayment')) ?>"
         data-ajax-payment-save data-payment-form>
     <?= csrf_field() ?>
     <input type="hidden" name="idOwnerPayment" data-payment-id value="0">
 
-    <div class="form-group">
-      <label for="paymentMethodId">Método de pago *</label>
-      <select class="form-control" id="paymentMethodId" name="paymentMethodId" required
-              data-validate="required">
-        <option value="">— Selecciona —</option>
-        <?php foreach ($paymentMethods as $pm): ?>
-          <option value="<?= (int) $pm->getIdPaymentMethod() ?>"><?= e($pm->getPaymentMethod()) ?></option>
-        <?php endforeach; ?>
-      </select>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label for="paymentMethodId">Método de pago *</label>
+        <select class="form-control" id="paymentMethodId" name="paymentMethodId" required
+                data-validate="required">
+          <option value="">— Selecciona —</option>
+          <?php foreach ($paymentMethods as $pm): ?>
+            <option value="<?= (int) $pm->getIdPaymentMethod() ?>"><?= e($pm->getPaymentMethod()) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <p class="form-hint">SINPE Móvil solicita un teléfono; transferencia, un IBAN costarricense; pago en el lugar no solicita datos bancarios.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="active">Disponibilidad</label>
+        <select class="form-control" id="active" name="active">
+          <option value="1" selected>Activo</option>
+          <option value="0">Desactivado</option>
+        </select>
+        <p class="form-hint">Activo: visible a tus clientes. Desactivado: se oculta.</p>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label for="holder">Titular / nombre *</label>
-      <input class="form-control" type="text" id="holder" name="holder" required
-             data-validate="required"
-             placeholder="Ej: Salón La Quinta S.A.">
+    <div class="form-grid-2">
+      <div class="form-group" data-payment-holder-group>
+        <label for="holder">Titular / nombre *</label>
+        <input class="form-control" type="text" id="holder" name="holder"
+               placeholder="Ej: Salón La Quinta S.A.">
+      </div>
+
+      <div class="form-group" data-payment-account-group>
+        <label for="account">Cuenta bancaria / teléfono SINPE *</label>
+        <div style="display:flex;align-items:stretch;gap:8px;">
+          <span class="form-control" data-sinpe-prefix hidden style="width:auto;align-items:center;">+506</span>
+          <input class="form-control" type="text" id="account" name="account"
+                 autocomplete="off" inputmode="numeric" placeholder="">
+        </div>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label for="account">Cuenta bancaria / teléfono SINPE *</label>
-      <input class="form-control" type="text" id="account" name="account" required
-             data-validate="required account"
-             placeholder="Ej: 88887777 o CR12 1234 5678 9012 3456 7">
-    </div>
-
-    <div class="form-group">
+    <div class="form-group" data-payment-instructions-group>
       <label for="instructions">Instrucciones de pago</label>
       <textarea class="form-control" id="instructions" name="instructions" rows="2"
                 placeholder="Ej: Transferencia SINPE; enviar el comprobante al subirlo."></textarea>
-    </div>
-
-    <div class="checkbox-row">
-      <input type="checkbox" id="active" name="active" checked>
-      <label for="active">Activo (ofrecer a mis clientes)</label>
     </div>
 
     <button class="btn btn-primary" type="submit">Guardar método</button>
@@ -93,10 +102,20 @@ $paymentMethods = $paymentMethods ?? [];
         </thead>
         <tbody>
           <?php foreach ($ownerPayments as $op): ?>
+            <?php
+              $paymentName = mb_strtolower($op->getPaymentMethod(), 'UTF-8');
+              $paymentAccount = (string) $op->getAccount();
+              if (str_contains($paymentName, 'sinpe')) {
+                $paymentAccount = preg_replace('/\D/', '', $paymentAccount);
+                if (strlen($paymentAccount) === 8) $paymentAccount = '+506 ' . substr($paymentAccount, 0, 4) . '-' . substr($paymentAccount, 4);
+              } elseif (str_contains($paymentName, 'transfer') || str_contains($paymentName, 'iban')) {
+                $paymentAccount = trim(chunk_split(strtoupper(preg_replace('/\s+/', '', $paymentAccount)), 4, ' '));
+              }
+            ?>
             <tr>
               <td><?= e($op->getPaymentMethod()) ?></td>
               <td><?= e($op->getHolder()) ?></td>
-              <td><?= e($op->getAccount()) ?></td>
+              <td><?= e($paymentAccount !== '' ? $paymentAccount : '—') ?></td>
               <td>
                 <span class="badge <?= $op->getIsActive() ? 'success' : 'neutral' ?>">
                   <?= $op->getIsActive() ? 'Activo' : 'Inactivo' ?>

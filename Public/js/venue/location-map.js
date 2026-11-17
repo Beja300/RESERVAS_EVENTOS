@@ -30,7 +30,17 @@
 
   var base = getBasePath();
 
-  L.Icon.Default.imagePath = base + '/vendor/leaflet/images/';
+  var iconBase = base + '/vendor/leaflet/images/';
+
+  var venueIcon = L.icon({
+    iconUrl: iconBase + 'marker-icon.png',
+    iconRetinaUrl: iconBase + 'marker-icon-2x.png',
+    shadowUrl: iconBase + 'marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+  });
 
   var mapEl = document.getElementById('venue-map');
   var latInput = document.getElementById('latitude');
@@ -75,7 +85,7 @@
 
   function placeMarker(latLng) {
     if (marker === null) {
-      marker = L.marker([latLng.lat, latLng.lng], { draggable: true }).addTo(map);
+      marker = L.marker([latLng.lat, latLng.lng], { draggable: true, icon: venueIcon }).addTo(map);
       marker.on('dragend', function () {
         setCoords(marker.getLatLng().lat, marker.getLatLng().lng);
       });
@@ -216,17 +226,9 @@
     cantonSel.addEventListener('change', recenterToAddress);
   }
 
-  // =========================================================
-  // Validación cliente: no se guarda sin marcar la ubicación.
-  // Se registra en fase de captura para correr antes que el AJAX de form.js.
-  // =========================================================
-  window.addEventListener('submit', function (e) {
-    if (e.target && e.target.matches && e.target.matches('form[data-ajax-venue-form]')) {
-      if (!latInput.value || !lngInput.value) {
-        e.preventDefault();
-        e.stopPropagation();
-        window.App && App.toast('Marca la ubicación en el mapa antes de guardar.', 'error');
-      }
+  window.VenueLocationMap = {
+    invalidateSize: function () {
+      map.invalidateSize();
     }
-  }, true);
+  };
 })(window, document, window.L);

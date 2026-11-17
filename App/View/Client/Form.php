@@ -3,7 +3,7 @@
 $error = $error ?? null;
 $client = $client ?? ($_SESSION['user'] ?? null);
 if ($client === null) {
-  echo '<div class="auth-card container-narrow"><div class="alert alert-error">Sesión no válida. Inicia sesión de nuevo.</div></div>';
+  echo '<div class="auth-card auth-card--wide"><div class="alert alert-error">Sesión no válida. Inicia sesión de nuevo.</div></div>';
   exit;
 }
 ?>
@@ -16,24 +16,26 @@ if ($client === null) {
   <link rel="stylesheet" href="<?= e(css_url()) ?>">
 </head>
 <body class="auth-page">
-  <div class="auth-card container-narrow">
+  <div class="auth-card auth-card--wide">
     <h1>Editar perfil</h1>
     <?php if (!empty($error)): ?>
       <div class="alert alert-error"><?= e($error) ?></div>
     <?php endif; ?>
     <form method="post" action="<?= e(base_url('client', 'updateProfile')) ?>">
       <?= csrf_field() ?>
-      <div class="form-group">
-        <label for="name">Nombre <span class="required-mark">*</span></label>
-        <input class="form-control" type="text" id="name" name="name" required value="<?= e($client->getName()) ?>">
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="name">Nombre <span class="required-mark">*</span></label>
+          <input class="form-control" type="text" id="name" name="name" required value="<?= e($client->getName()) ?>">
+        </div>
+        <div class="form-group">
+          <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
+          <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" required maxlength="15" value="<?= e(format_phone_number($client->getPhoneNumber())) ?>" placeholder="+506 8888-8888">
+        </div>
       </div>
       <div class="form-group">
         <label for="email">Correo <span class="required-mark">*</span></label>
         <input class="form-control" type="email" id="email" name="email" data-validate="email" required value="<?= e($client->getEmail()) ?>">
-      </div>
-      <div class="form-group">
-        <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
-        <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" pattern="[0-9]{4}-?[0-9]{4}" required maxlength="9" placeholder="8888-8888" value="<?= e($client->getPhoneNumber() ?? '') ?>">
       </div>
       <button class="btn btn-primary btn-block" type="submit">Guardar</button>
     </form>

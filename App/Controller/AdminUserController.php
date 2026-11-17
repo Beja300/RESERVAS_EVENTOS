@@ -112,9 +112,11 @@ class AdminUserController
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
+    $passwordConfirm = $_POST['passwordConfirm'] ?? '';
     $phoneNumber = trim($_POST['phoneNumber'] ?? '') ?: null;
 
     try {
+      $this->authService->validatePasswordConfirmation($password, $passwordConfirm);
       $this->authService->registerAdmin($name, $email, $password, $phoneNumber);
 
       redirect_to('admin', 'users', ['created' => 1]);
@@ -149,9 +151,11 @@ class AdminUserController
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
+    $passwordConfirm = $_POST['passwordConfirm'] ?? '';
     $phoneNumber = trim($_POST['phoneNumber'] ?? '') ?: null;
 
     try {
+      $this->authService->validatePasswordConfirmation($password, $passwordConfirm);
       $this->authService->registerClient($name, $email, $password, $phoneNumber);
 
       redirect_to('admin', 'users', ['created' => 'client']);
@@ -186,6 +190,7 @@ class AdminUserController
     $businessName = trim($_POST['ownerBusinessName'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
+    $passwordConfirm = $_POST['passwordConfirm'] ?? '';
     $ownerFirstName = trim($_POST['ownerFirstName'] ?? '');
     $ownerLastName = trim($_POST['ownerLastName'] ?? '') ?: null;
     $phoneNumber = trim($_POST['phoneNumber'] ?? '') ?: null;
@@ -196,6 +201,8 @@ class AdminUserController
       if ($businessName === '') {
         throw new BusinessRuleException('El nombre de negocio es obligatorio.');
       }
+
+      $this->authService->validatePasswordConfirmation($password, $passwordConfirm);
 
       $this->authService->registerOwner(
         $businessName,

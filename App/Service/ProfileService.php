@@ -28,7 +28,7 @@ class ProfileService
    * Cambia la contraseña solo si el usuario la solicitó (ambos campos
    * presentes). Exige confirmar la contraseña actual y validar la nueva.
    */
-  public function changePasswordIfRequested(Role $role, string $currentPassword, string $newPassword): void
+  public function changePasswordIfRequested(Role $role, string $currentPassword, string $newPassword, string $newPasswordConfirm = ''): void
   {
     $hasCurrent = trim($currentPassword) !== '';
     $hasNew = trim($newPassword) !== '';
@@ -43,6 +43,10 @@ class ProfileService
 
     if (!password_verify($currentPassword, $role->getPassword())) {
       throw new BusinessRuleException('La contraseña actual no es correcta.');
+    }
+
+    if ($newPassword !== $newPasswordConfirm) {
+      throw new BusinessRuleException('Las contraseñas nuevas no coinciden.');
     }
 
     $this->authService->validatePasswordStrength($newPassword);

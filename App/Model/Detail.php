@@ -13,6 +13,7 @@ class Detail
   private float $unitPrice;
   private float $discount;
   private bool $isActiveDetail;
+  private ?string $concept;
 
   public function __construct(
     int $idDetail,
@@ -22,7 +23,8 @@ class Detail
     float $unitPrice,
     float $discount,
     bool $isActiveDetail,
-    int $idVenue = 0
+    int $idVenue = 0,
+    ?string $concept = null
   ) {
     $this->idDetail = $idDetail;
     $this->idClientBooking = $idClientBooking;
@@ -32,6 +34,7 @@ class Detail
     $this->unitPrice = $unitPrice;
     $this->discount = $discount;
     $this->isActiveDetail = $isActiveDetail;
+    $this->concept = $concept;
   }
 
   // Getters
@@ -73,6 +76,11 @@ class Detail
   public function getIsActiveDetail(): bool
   {
     return $this->isActiveDetail;
+  }
+
+  public function getConcept(): ?string
+  {
+    return $this->concept;
   }
 
   // Subtotal de la línea: cantidad x precio unitario - descuento
@@ -120,5 +128,10 @@ class Detail
   public function setIsActiveDetail(bool $isActiveDetail): void
   {
     $this->isActiveDetail = $isActiveDetail;
+  }
+
+  public function setConcept(?string $concept): void
+  {
+    $this->concept = $concept;
   }
 }
