@@ -256,12 +256,6 @@ class VenueService
 
     usort($blocks, static fn(VenueRentalBlock $a, VenueRentalBlock $b): int => strcmp($a->getStartTime(), $b->getStartTime()));
 
-    for ($i = 1; $i < count($blocks); $i++) {
-      if ($blocks[$i]->getStartTime() < $blocks[$i - 1]->getEndTime()) {
-        throw new BusinessRuleException('Los bloques de alquiler no pueden superponerse entre sí.');
-      }
-    }
-
     $this->blockRepo->replaceForVenue($idVenue, $blocks);
   }
 

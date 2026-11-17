@@ -3,11 +3,8 @@
 -- haberse ejecutado antes, sobre una base limpia).
 
 USE dbeventhall;
--- La clave de los accesos demo (owner/clientes) es: Clave123
--- (hash bcrypt: $2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W)
---
--- IMPORTANTE: este seed NO crea ningún administrador. El primer admin se
--- crea desde la aplicación (auth/setup) tras importar el esquema y el seed.
+-- La clave de todos los accesos demo es: clave123
+-- (bcrypt PASSWORD_DEFAULT; actualizar el hash si se cambia la clave).
 --
 -- Conventional FK naming: cada columna que apunta a otra tabla
 -- lleva exactamente el nombre de la PK de su tabla madre
@@ -19,29 +16,33 @@ USE dbeventhall;
 -- 1) ROLES BASE (identidad de acceso)
 -- =========================================================
 INSERT INTO tbrole (tbrolename, tbroleemail, tbrolepassword, tbrolephone, tbroleactive) VALUES
-('María Fernanda',    'owner@eventhall.com',   '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '88888888', TRUE);
+('María Fernanda',    'owner@gmail.com', '$2y$12$rtVF9XtjNLdgSXQS.muyT.X0RnAxJYsNxCE9O4PV/4d0gWMf4DBqS', '88888888', TRUE);
 SET @ownerRoleId = LAST_INSERT_ID();
 
 INSERT INTO tbrole (tbrolename, tbroleemail, tbrolepassword, tbrolephone, tbroleactive) VALUES
-('Carlos El Cliente', 'cliente@eventhall.com', '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '88888889', TRUE);
+('Carlos El Cliente', 'client@gmail.com', '$2y$12$rtVF9XtjNLdgSXQS.muyT.X0RnAxJYsNxCE9O4PV/4d0gWMf4DBqS', '88888889', TRUE);
 SET @clientRoleId = LAST_INSERT_ID();
+
+INSERT INTO tbrole (tbrolename, tbroleemail, tbrolepassword, tbrolephone, tbroleactive) VALUES
+('Administración Demo', 'admin@gmail.com', '$2y$12$rtVF9XtjNLdgSXQS.muyT.X0RnAxJYsNxCE9O4PV/4d0gWMf4DBqS', '88888890', TRUE);
+SET @adminRoleId = LAST_INSERT_ID();
 
 -- Clientes adicionales para que los dashboards de estadísticas
 -- tengan datos (nuevos del mes / recurrentes / top clientes).
 INSERT INTO tbrole (tbrolename, tbroleemail, tbrolepassword, tbrolephone, tbroleactive) VALUES
-('Ana Vargas',        'cliente2@eventhall.com', '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '88880001', TRUE);
+('Ana Vargas',        'cliente2@eventhall.com', '$2y$12$rtVF9XtjNLdgSXQS.muyT.X0RnAxJYsNxCE9O4PV/4d0gWMf4DBqS', '88880001', TRUE);
 SET @clientRoleId2 = LAST_INSERT_ID();
 
 INSERT INTO tbrole (tbrolename, tbroleemail, tbrolepassword, tbrolephone, tbroleactive) VALUES
-('Luis Mora',         'cliente3@eventhall.com', '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '88880002', TRUE);
+('Luis Mora',         'cliente3@eventhall.com', '$2y$12$rtVF9XtjNLdgSXQS.muyT.X0RnAxJYsNxCE9O4PV/4d0gWMf4DBqS', '88880002', TRUE);
 SET @clientRoleId3 = LAST_INSERT_ID();
 
 INSERT INTO tbrole (tbrolename, tbroleemail, tbrolepassword, tbrolephone, tbroleactive) VALUES
-('Sofía Jiménez',     'cliente4@eventhall.com', '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '88880003', TRUE);
+('Sofía Jiménez',     'cliente4@eventhall.com', '$2y$12$rtVF9XtjNLdgSXQS.muyT.X0RnAxJYsNxCE9O4PV/4d0gWMf4DBqS', '88880003', TRUE);
 SET @clientRoleId4 = LAST_INSERT_ID();
 
 INSERT INTO tbrole (tbrolename, tbroleemail, tbrolepassword, tbrolephone, tbroleactive) VALUES
-('Pedro Rojas',       'cliente5@eventhall.com', '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '88880004', TRUE);
+('Pedro Rojas',       'cliente5@eventhall.com', '$2y$12$rtVF9XtjNLdgSXQS.muyT.X0RnAxJYsNxCE9O4PV/4d0gWMf4DBqS', '88880004', TRUE);
 SET @clientRoleId5 = LAST_INSERT_ID();
 
 -- =========================================================
@@ -65,6 +66,13 @@ SET @ownerId = LAST_INSERT_ID();
 
 INSERT INTO tbroleowner (tbroleid, tbownerid, tbroleowneractive) VALUES
 (@ownerRoleId, @ownerId, TRUE);
+
+INSERT INTO tbadmin (tbadminname, tbadminimage, tbadminactive) VALUES
+('Administración Demo', NULL, TRUE);
+SET @adminId = LAST_INSERT_ID();
+
+INSERT INTO tbroleadmin (tbroleid, tbadminid, tbroleadminactive) VALUES
+(@adminRoleId, @adminId, TRUE);
 
 -- Client 1
 INSERT INTO tbclient (tbclientname, tbclientimage, tblocationid, tbclientactive) VALUES
@@ -114,8 +122,8 @@ INSERT INTO tbroleclient (tbroleid, tbclientid, tbroleclientactive) VALUES
 -- "nuevo" es el hash vigente; en producción los guarda el servicio
 -- de seguridad al momento del cambio.
 INSERT INTO tbrolpasswordhistorical (tbroleid, tbrolpasswordhistoricalactualpassword, tbrolpasswordhistoricalnewpassword, tbrolpasswordhistoricaldate) VALUES
-(@ownerRoleId,       '$2y$12$zZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZz12', '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '2026-05-15 18:30:00'),
-(@clientRoleId,      '$2y$12$qQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQq12', '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '2026-07-20 10:05:00');
+(@ownerRoleId,       '$2y$12$zZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZzZz12', '$2y$12$rtVF9XtjNLdgSXQS.muyT.X0RnAxJYsNxCE9O4PV/4d0gWMf4DBqS', '2026-05-15 18:30:00'),
+(@clientRoleId,      '$2y$12$qQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQqQq12', '$2y$12$rtVF9XtjNLdgSXQS.muyT.X0RnAxJYsNxCE9O4PV/4d0gWMf4DBqS', '2026-07-20 10:05:00');
 
 -- Phone: Carlos cambia de teléfono DOS veces muy seguido en agosto
 -- (08-10 y 08-15) -> dispara la "advertencia por cambio excesivo".
@@ -125,7 +133,7 @@ INSERT INTO tbrolphonehistorical (tbroleid, tbrolphonehistoricalactualphone, tbr
 (@clientRoleId,      '88888885', '88888889', '2026-08-15 09:45:00');
 
 INSERT INTO tbrolemailhistorical (tbroleid, tbrolemailhistoricalactualemail, tbrolemailhistoricalnewemail, tbrolemailhistoricaldate) VALUES
-(@ownerRoleId,       'mari.antigua@gmail.com', 'owner@eventhall.com', '2026-05-15 18:35:00');
+(@ownerRoleId,       'mari.antigua@gmail.com', 'owner@gmail.com', '2026-05-15 18:35:00');
 
 -- =========================================================
 -- 4) LOCAL (VENUE) DEL OWNER
@@ -468,15 +476,15 @@ INSERT INTO tbnotification (tbroleid, tbnotificationmessage, tbnotificationlink,
 --  notificaciones cruzadas)
 -- =========================================================
 INSERT INTO tbrole (tbrolename, tbroleemail, tbrolepassword, tbrolephone, tbroleactive) VALUES
-('Pedro El Propietario', 'pedro@eventhall.com',  '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '88888810', TRUE);
+('Pedro El Propietario', 'pedro@eventhall.com',  '$2y$12$rtVF9XtjNLdgSXQS.muyT.X0RnAxJYsNxCE9O4PV/4d0gWMf4DBqS', '88888810', TRUE);
 SET @owner2RoleId = LAST_INSERT_ID();
 
 INSERT INTO tbrole (tbrolename, tbroleemail, tbrolepassword, tbrolephone, tbroleactive) VALUES
-('Daniela La Clienta', 'daniela@eventhall.com',  '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '88888811', TRUE);
+('Daniela La Clienta', 'daniela@eventhall.com',  '$2y$12$rtVF9XtjNLdgSXQS.muyT.X0RnAxJYsNxCE9O4PV/4d0gWMf4DBqS', '88888811', TRUE);
 SET @client2RoleId = LAST_INSERT_ID();
 
 INSERT INTO tbrole (tbrolename, tbroleemail, tbrolepassword, tbrolephone, tbroleactive) VALUES
-('Sofía La Clienta',  'sofia@eventhall.com',     '$2y$12$LFUzMhzDUs4gyS.qrVzvPuqMyFabRoMokeccN09MOs5sBcwnHy87W', '88888812', TRUE);
+('Sofía La Clienta',  'sofia@eventhall.com',     '$2y$12$rtVF9XtjNLdgSXQS.muyT.X0RnAxJYsNxCE9O4PV/4d0gWMf4DBqS', '88888812', TRUE);
 SET @client3RoleId = LAST_INSERT_ID();
 
 INSERT INTO tbowner (tbownerfirstname, tbownerlastname, tbowneralias, tbowneridentificationnumber, tbownerimage, tbowneractive) VALUES
