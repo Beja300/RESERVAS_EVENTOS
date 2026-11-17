@@ -73,7 +73,8 @@ class CreditService
     int $installments = 1,
     string $frequency = 'mensual',
     int $graceDays = 0,
-    int $reminderDays = 3
+    int $reminderDays = 3,
+    float $minimumPayment = 6.0
   ): void {
     if ($days < 1 || $days > 365) {
       throw new BusinessRuleException('El plazo de crédito debe estar entre 1 y 365 días.');
@@ -99,6 +100,13 @@ class CreditService
       throw new BusinessRuleException('Los días de recordatorio deben estar entre 0 y 30.');
     }
 
+    if ($enabled && $minimumPayment <= 6) {
+      throw new BusinessRuleException('El abono mínimo debe ser mayor a ₡ 6.00 cuando el crédito está habilitado.');
+    }
+    if (!is_finite($minimumPayment) || $minimumPayment < 0) {
+      throw new BusinessRuleException('El abono mínimo no es válido.');
+    }
+
     $config = $this->configRepo->findByOwner($idOwner);
 
     if ($config === null) {
@@ -107,6 +115,7 @@ class CreditService
         enabled: $enabled,
         days: $days,
         frequentMin: $frequentMin,
+        minimumPayment: $minimumPayment,
         installments: $installments,
         frequency: $frequency,
         graceDays: $graceDays,
@@ -118,6 +127,7 @@ class CreditService
     $config->setEnabled($enabled);
     $config->setDays($days);
     $config->setFrequentMin($frequentMin);
+    $config->setMinimumPayment($minimumPayment);
     $config->setInstallments($installments);
     $config->setFrequency($frequency);
     $config->setGraceDays($graceDays);
@@ -145,6 +155,9 @@ class CreditService
   // =========================================================
   public function canRequestCredit(int $idBooking, int $idClient): array
   {
+    if ($this->creditRepo->hasOutstandingByClient($idClient)) {
+      return ['allowed' => false, 'reason' => 'Debes cancelar tu crédito pendiente antes de solicitar otro.', 'config' => null];
+    }
     $booking = $this->bookingRepo->findById($idBooking);
 
     if ($booking === null || $booking->getIdClient() !== $idClient) {
@@ -279,7 +292,7 @@ class CreditService
   // =========================================================
   // REGISTRAR UN ABONO (pago parcial) DE UN CRÉDITO
   // =========================================================
-  public function registerPayment(
+  public function submitPayment(
     int $idCredit,
     float $amount,
     int $rolePk,
@@ -295,6 +308,9 @@ class CreditService
 
     if ($credit->getState() === 'pagado') {
       throw new BusinessRuleException('Este crédito ya está cancelado por completo.');
+    }
+    if ($this->paymentRepo->hasPendingByCredit($idCredit)) {
+      throw new BusinessRuleException('Ya tienes un abono pendiente de verificación para este crédito.');
     }
 
     $amount = round($amount, 2);
@@ -312,22 +328,59 @@ class CreditService
       proofFile: $proofFile
     ));
 
-    $newBalance = round($credit->getBalance() - $amount, 2);
-    if ($newBalance < 0) {
-      $newBalance = 0.0;
+    $ownerRole = $this->notificationService->findRoleIdByOwner($credit->getIdOwner());
+    if ($ownerRole !== null) {
+      $this->notificationService->notify($ownerRole, 'Hay un comprobante de abono por verificar para el crédito #' . $idCredit . '.', base_url('credit', 'detail', ['id' => $idCredit]));
     }
+  }
 
-    $newState = $newBalance <= 0 ? 'pagado' : 'parcial';
-    $this->creditRepo->updateBalanceAndState($idCredit, $newBalance, $newState);
-    $this->installmentRepo->syncPaidStates(
-      $idCredit,
-      $this->installmentRepo->totalPaid($idCredit),
-      date('Y-m-d')
-    );
-
-    if ($newState === 'pagado') {
-      $this->settleCredit($credit);
+  public function approvePayment(int $idCredit, int $idPayment, int $idOwner): void
+  {
+    $credit = $this->creditRepo->findById($idCredit);
+    $payment = $this->paymentRepo->findById($idPayment);
+    if ($credit === null || $credit->getIdOwner() !== $idOwner || $payment === null || (int) $payment['tbcreditid'] !== $idCredit) {
+      throw new BusinessRuleException('El comprobante no pertenece a un crédito de tu propiedad.');
     }
+    if ($payment['tbcreditpaymentstate'] !== 'pendiente') {
+      throw new BusinessRuleException('Este comprobante ya fue revisado.');
+    }
+    $amount = round((float) $payment['tbcreditpaymentamount'], 2);
+    if ($amount > $credit->getBalance() + 0.001) {
+      throw new BusinessRuleException('El monto del comprobante supera el saldo actual.');
+    }
+    $this->connection->beginTransaction();
+    try {
+      if (!$this->paymentRepo->updateState($idPayment, 'aprobado', $idOwner)) {
+        throw new BusinessRuleException('Este comprobante ya fue revisado.');
+      }
+      $newBalance = max(0.0, round($credit->getBalance() - $amount, 2));
+      $newState = $newBalance <= 0 ? 'pagado' : 'parcial';
+      $this->creditRepo->updateBalanceAndState($idCredit, $newBalance, $newState);
+      $this->installmentRepo->syncPaidStates($idCredit, $this->installmentRepo->totalPaid($idCredit), date('Y-m-d'));
+      if ($newState === 'pagado') {
+        $this->settleCredit($credit);
+      }
+      $this->connection->commit();
+    } catch (\Throwable $e) {
+      if ($this->connection->inTransaction()) $this->connection->rollBack();
+      throw $e;
+    }
+    $clientRole = $this->notificationService->findRoleIdByClient($credit->getIdClient());
+    if ($clientRole !== null) $this->notificationService->notify($clientRole, 'Tu abono al crédito #' . $idCredit . ' fue aprobado.', base_url('credit', 'detail', ['id' => $idCredit]));
+  }
+
+  public function rejectPayment(int $idCredit, int $idPayment, int $idOwner): void
+  {
+    $credit = $this->creditRepo->findById($idCredit);
+    $payment = $this->paymentRepo->findById($idPayment);
+    if ($credit === null || $credit->getIdOwner() !== $idOwner || $payment === null || (int) $payment['tbcreditid'] !== $idCredit) {
+      throw new BusinessRuleException('El comprobante no pertenece a un crédito de tu propiedad.');
+    }
+    if (!$this->paymentRepo->updateState($idPayment, 'rechazado', $idOwner)) {
+      throw new BusinessRuleException('Este comprobante ya fue revisado.');
+    }
+    $clientRole = $this->notificationService->findRoleIdByClient($credit->getIdClient());
+    if ($clientRole !== null) $this->notificationService->notify($clientRole, 'Tu comprobante del crédito #' . $idCredit . ' fue rechazado. Puedes enviar uno nuevo.', base_url('credit', 'detail', ['id' => $idCredit]));
   }
 
   public function minimumPayment(int $idCredit): float
@@ -337,6 +390,10 @@ class CreditService
       return 0.0;
     }
 
+    $ownerConfig = $this->getConfig($credit->getIdOwner());
+    if ($ownerConfig->getMinimumPayment() > 6) {
+      return round(min($ownerConfig->getMinimumPayment(), $credit->getBalance()), 2);
+    }
     foreach ($this->installmentRepo->findByCredit($idCredit) as $installment) {
       if ($installment->getState() !== 'pagado') {
         return round(min($credit->getBalance(), $installment->getAmount()), 2);

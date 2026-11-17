@@ -829,9 +829,9 @@ INSERT INTO tbownerblockedclient (tbownerid, tbclientid, tbownerblockedclientrea
 (@ownerId, @client3Id, 'El cliente canceló dos reservas con poca anticipación; revisar antes de aceptar nuevas solicitudes.', '2026-10-20 10:30:00', TRUE);
 
 -- Políticas de crédito de ambos propietarios.
-INSERT INTO tbcreditconfig (tbownerid, tbcreditconfigenabled, tbcreditconfigdays, tbcreditconfigfrequentmin, tbcreditconfiginstallments, tbcreditconfigfrequency, tbcreditconfiggracedays, tbcreditconfigreminderdays, tbcreditconfigactive) VALUES
-(@ownerId,  TRUE, 90, 2, 3, 'mensual',  5, 3, TRUE),
-(@owner2Id, TRUE, 60, 2, 2, 'quincenal', 0, 2, TRUE);
+INSERT INTO tbcreditconfig (tbownerid, tbcreditconfigenabled, tbcreditconfigdays, tbcreditconfigfrequentmin, tbcreditconfigminpayment, tbcreditconfiginstallments, tbcreditconfigfrequency, tbcreditconfiggracedays, tbcreditconfigreminderdays, tbcreditconfigactive) VALUES
+(@ownerId,  TRUE, 90, 2, 50000.00, 3, 'mensual',  5, 3, TRUE),
+(@owner2Id, TRUE, 60, 2, 40000.00, 2, 'quincenal', 0, 2, TRUE);
 
 -- Reserva confirmada con crédito parcial y calendario de cuotas.
 INSERT INTO tbbooking (tbclientid, tbvenueid, tbbookingdate, tbbookingenddate, tbbookingeventtype, tbbookingeventdetail, tbbookingstate, tbbookingactive) VALUES
@@ -864,8 +864,8 @@ INSERT INTO tbcreditinstallment (tbcreditid, tbcreditinstallmentnumber, tbcredit
 (@credit1Id, 2,  94166.67, '2027-01-01', NULL,         'pendiente', TRUE),
 (@credit1Id, 3,  94166.66, '2027-02-01', NULL,         'pendiente', TRUE);
 
-INSERT INTO tbcreditpayment (tbcreditid, tbcreditpaymentamount, tbcreditpaymentnote, tbroleid, tbcreditpaymentdate, tbcreditpaymentactive) VALUES
-(@credit1Id, 94166.67, 'Primer abono del cliente.', @client2RoleId, '2026-11-01 10:00:00', TRUE);
+INSERT INTO tbcreditpayment (tbcreditid, tbcreditpaymentamount, tbcreditpaymentnote, tbcreditpaymentstate, tbcreditpaymentreviewedat, tbroleid, tbcreditpaymentdate, tbcreditpaymentactive) VALUES
+(@credit1Id, 94166.67, 'Primer abono del cliente.', 'aprobado', '2026-11-01 12:00:00', @client2RoleId, '2026-11-01 10:00:00', TRUE);
 
 INSERT INTO tbnotification (tbroleid, tbnotificationmessage, tbnotificationlink, tbnotificationdate, tbnotificationread, tbnotificationactive) VALUES
 (@ownerRoleId, 'Daniela realizó el primer abono de su crédito.', 'index.php?controller=credit&action=detail&id=1', '2026-11-01 10:01:00', FALSE, TRUE);

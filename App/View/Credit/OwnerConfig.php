@@ -53,6 +53,14 @@
       </div>
     </div>
 
+    <div class="form-group">
+      <label for="minimumPayment">Abono mínimo *</label>
+      <input class="form-control" type="text" id="minimumPayment" name="minimumPayment"
+             inputmode="decimal" data-currency-mask="credit" required
+             value="<?= e(number_format($config->getMinimumPayment(), 2, '.', '')) ?>">
+      <div class="form-hint">Este mínimo aplica en cada periodo según la frecuencia mensual o quincenal. Si el saldo es menor, el cliente podrá pagar el saldo completo.</div>
+    </div>
+
     <div class="form-grid-2">
       <div class="form-group">
         <label for="graceDays">Días de gracia</label>

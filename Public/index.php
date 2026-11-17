@@ -230,7 +230,7 @@ $allowedActions = [
   'notification'  => ['list', 'markAsRead', 'markAllAsRead', 'open'],
   'promotion'     => ['list', 'showForm', 'create', 'edit', 'update', 'addService'],
   'api'           => ['locations', 'geolocate', 'venueComments', 'serviceComments'],
-  'credit'        => ['ownerConfig', 'saveConfig', 'ownerList', 'clientList', 'request', 'pay', 'detail', 'adminList'],
+  'credit'        => ['ownerConfig', 'saveConfig', 'ownerList', 'clientList', 'request', 'pay', 'approvePayment', 'rejectPayment', 'detail', 'adminList'],
   'blocklist'     => ['list', 'block', 'unblock'],
 ];
 

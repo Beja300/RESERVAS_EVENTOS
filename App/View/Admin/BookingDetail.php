@@ -191,6 +191,7 @@
           <input class="form-control" type="date" name="date"
                  value="<?= e($booking->getBookingDate()) ?>"
                  min="<?= e(date('Y-m-d')) ?>"
+                 max="<?= e(date('Y-m-d', strtotime('+1 year'))) ?>"
                  required
                  data-booked-dates='<?= e(json_encode($bookedDates)) ?>'
                  data-current-date="<?= e($booking->getBookingDate()) ?>">

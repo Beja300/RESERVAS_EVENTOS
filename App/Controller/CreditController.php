@@ -50,6 +50,12 @@ class CreditController
     $frequency = trim($_POST['frequency'] ?? 'mensual');
     $graceDays = (int) ($_POST['graceDays'] ?? 0);
     $reminderDays = (int) ($_POST['reminderDays'] ?? 3);
+    $minimumRaw = trim((string) ($_POST['minimumPayment'] ?? ''));
+    $minimumText = preg_replace('/[^0-9.,]/', '', $minimumRaw) ?? '';
+    $minimumText = str_replace(',', '', $minimumText);
+    $minimumPayment = preg_match('/^\d+(?:\.\d{1,2})?$/', $minimumText)
+      ? (float) $minimumText
+      : -1.0;
 
     try {
       $this->creditService->saveConfig(
@@ -60,7 +66,8 @@ class CreditController
         $installments,
         $frequency,
         $graceDays,
-        $reminderDays
+        $reminderDays,
+        $minimumPayment
       );
       redirect_to('credit', 'ownerConfig', ['saved' => '1']);
     } catch (BusinessRuleException $e) {
@@ -72,6 +79,7 @@ class CreditController
       $config->setFrequency($frequency);
       $config->setGraceDays($graceDays);
       $config->setReminderDays($reminderDays);
+      $config->setMinimumPayment($minimumPayment);
       $error = $e->getMessage();
       require_once __DIR__ . '/../View/Credit/OwnerConfig.php';
     }
@@ -175,18 +183,46 @@ class CreditController
         'El comprobante debe ser JPG, PNG o PDF.'
       );
 
-      $this->creditService->registerPayment(
+      $this->creditService->submitPayment(
         $idCredit,
         $amount,
         (int) $client->getIdRol(),
         $note,
         $storedProof
       );
-      redirect_to('credit', 'detail', ['id' => $idCredit, 'paid' => '1']);
+      redirect_to('credit', 'detail', ['id' => $idCredit, 'submitted' => '1']);
     } catch (BusinessRuleException $e) {
       if ($storedProof !== null) {
         ImageStorageService::deleteLocal($storedProof);
       }
+      redirect_to('credit', 'detail', ['id' => $idCredit, 'error' => $e->getMessage()]);
+    }
+  }
+
+  public function approvePayment(): void
+  {
+    require_role('owner');
+    require_post();
+    $owner = $_SESSION['user'];
+    $idCredit = (int) ($_POST['creditId'] ?? 0);
+    try {
+      $this->creditService->approvePayment($idCredit, (int) ($_POST['paymentId'] ?? 0), $owner->getIdOwner());
+      redirect_to('credit', 'detail', ['id' => $idCredit, 'approved' => '1']);
+    } catch (BusinessRuleException $e) {
+      redirect_to('credit', 'detail', ['id' => $idCredit, 'error' => $e->getMessage()]);
+    }
+  }
+
+  public function rejectPayment(): void
+  {
+    require_role('owner');
+    require_post();
+    $owner = $_SESSION['user'];
+    $idCredit = (int) ($_POST['creditId'] ?? 0);
+    try {
+      $this->creditService->rejectPayment($idCredit, (int) ($_POST['paymentId'] ?? 0), $owner->getIdOwner());
+      redirect_to('credit', 'detail', ['id' => $idCredit, 'rejected' => '1']);
+    } catch (BusinessRuleException $e) {
       redirect_to('credit', 'detail', ['id' => $idCredit, 'error' => $e->getMessage()]);
     }
   }
@@ -225,6 +261,12 @@ class CreditController
     $installments = $this->creditService->installmentsForCredit($idCredit);
     $minimumPayment = $this->creditService->minimumPayment($idCredit);
     $effectiveState = $this->creditService->effectiveState($credit->getState(), $credit->getDueDate());
+    $isOwner = $type === 'owner' && $credit->getIdOwner() === $user->getIdOwner();
+    $hasPendingPayment = false;
+    foreach ($payments as $paymentRow) {
+      if (($paymentRow['tbcreditpaymentstate'] ?? '') === 'pendiente') $hasPendingPayment = true;
+    }
+    $clientCanPay = $type === 'client' && $credit->getIdClient() === $user->getIdClient() && !$hasPendingPayment && $effectiveState !== 'pagado';
     $error = $_GET['error'] ?? null;
 
     require_once __DIR__ . '/../View/Credit/Detail.php';

@@ -29,16 +29,19 @@ if ($venue === null) {
     <div class="form-grid-2">
       <div class="form-group">
         <label for="date">Fecha de inicio <span class="required-mark">*</span></label>
-        <input class="form-control" type="date" id="date" name="date" required min="<?= date('Y-m-d') ?>"
+        <input class="form-control" type="date" id="date" name="date" required
+               min="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d', strtotime('+1 year')) ?>"
                value="<?= e(trim($_POST['date'] ?? '')) ?>"
                data-booked-dates='<?= e(json_encode($bookedDates ?? [])) ?>'>
       </div>
       <div class="form-group">
         <label for="endDate">Fecha final <span class="required-mark">*</span></label>
         <input class="form-control" type="date" id="endDate" name="endDate" required
-               value="<?= e(trim($_POST['endDate'] ?? '')) ?>" data-end-date>
+               min="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d', strtotime('+1 year')) ?>"
+               value="<?= e(trim($_POST['endDate'] ?? '')) ?>">
       </div>
     </div>
+    <p class="datepicker-error" id="bookingDateError" hidden></p>
     <p class="form-hint">Elige el día de inicio y luego el día final. El precio se acumula por día.</p>
 
     <div class="form-grid-2">

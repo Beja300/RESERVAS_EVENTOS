@@ -31,6 +31,7 @@
     var digits = raw.replace(/\D/g, '');
     if ((/^\s*\+?506(?:\D|$)/.test(raw) || digits.length > 8) && digits.slice(0, 3) === '506') {
       digits = digits.slice(3);
+      if (/^\s*\+?506/.test(before)) beforeDigits = Math.max(0, beforeDigits - 3);
     }
     digits = digits.slice(0, 8);
 
@@ -39,18 +40,13 @@
       return;
     }
 
-    var formatted = '+506';
-    formatted += ' ' + digits.slice(0, 4);
+    var formatted = digits.slice(0, 4);
     if (digits.length > 4) formatted += '-' + digits.slice(4);
     field.value = formatted;
 
-    var targetDigitCount = beforeDigits;
-    if (/^\s*\+?506/.test(before)) targetDigitCount = Math.max(0, targetDigitCount - 3);
-    var caret = 4;
-    if (targetDigitCount > 0) {
-      caret = 5 + Math.min(targetDigitCount, 4);
-      if (targetDigitCount > 4) caret += 1 + targetDigitCount - 4;
-    }
+    var caret = Math.min(beforeDigits, 4);
+    if (beforeDigits > 4) caret = beforeDigits + 1;
+    if (caret > formatted.length) caret = formatted.length;
     try { field.setSelectionRange(caret, caret); } catch (ignore) {}
   };
 
@@ -58,9 +54,21 @@
     var fields = document.querySelectorAll('[data-mask="phone"], input[type="tel"][name="phoneNumber"]');
     for (var i = 0; i < fields.length; i++) {
       (function (field) {
+        var group = field.closest('.phone-input-group');
+        if (!group) {
+          group = document.createElement('div');
+          group.className = 'phone-input-group';
+          field.parentNode.insertBefore(group, field);
+          var prefix = document.createElement('span');
+          prefix.className = 'phone-prefix';
+          prefix.textContent = field.getAttribute('data-phone-prefix') || '+506';
+          prefix.setAttribute('aria-hidden', 'true');
+          group.appendChild(prefix);
+          group.appendChild(field);
+        }
         field.setAttribute('maxlength', '15');
-        field.setAttribute('inputmode', 'tel');
-        field.setAttribute('placeholder', '+506 8888-8888');
+        field.setAttribute('inputmode', 'numeric');
+        field.setAttribute('placeholder', '8888-8888');
         if ((field.value || '').trim() !== '') App.formatPhoneInput(field);
         field.addEventListener('input', function () { App.formatPhoneInput(field); });
         field.addEventListener('paste', function () {

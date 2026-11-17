@@ -450,6 +450,8 @@ CREATE TABLE tbcreditconfig (
     tbcreditconfigenabled BOOLEAN NOT NULL DEFAULT FALSE,
     tbcreditconfigdays INT NOT NULL DEFAULT 30,
     tbcreditconfigfrequentmin INT NOT NULL DEFAULT 3,
+    tbcreditconfigminpayment DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    tbcreditconfigninpayment DECIMAL(12,2) NOT NULL DEFAULT 6.00,
     tbcreditconfiginstallments INT NOT NULL DEFAULT 1,
     tbcreditconfigfrequency VARCHAR(20) NOT NULL DEFAULT 'mensual',
     tbcreditconfiggracedays INT NOT NULL DEFAULT 0,
@@ -477,6 +479,7 @@ CREATE TABLE tbcredit (
 
 -- =========================================================
 -- 31) tbcreditpayment: abonos (pagos parciales) de un crédito.
+--     estados: pendiente | aprobado | rechazado
 -- =========================================================
 CREATE TABLE tbcreditpayment (
     tbcreditpaymentid INT AUTO_INCREMENT PRIMARY KEY,
@@ -484,6 +487,9 @@ CREATE TABLE tbcreditpayment (
     tbcreditpaymentamount DECIMAL(12,2) NOT NULL,
     tbcreditpaymentnote VARCHAR(255),
     tbcreditpaymentproof VARCHAR(255) NULL,
+    tbcreditpaymentstate VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+    tbcreditpaymentreviewedat DATETIME NULL,
+    tbcreditpaymentreviewedby INT NULL,
     tbroleid INT,
     tbcreditpaymentdate DATETIME DEFAULT CURRENT_TIMESTAMP,
     tbcreditpaymentactive BOOLEAN NOT NULL DEFAULT TRUE

@@ -54,7 +54,8 @@ class CreditInstallmentRepository
   {
     $stmt = $this->connection->prepare(
       'SELECT COALESCE(SUM(tbcreditpaymentamount), 0) FROM tbcreditpayment
-       WHERE tbcreditid = :creditId AND tbcreditpaymentactive = true'
+       WHERE tbcreditid = :creditId AND tbcreditpaymentactive = true
+         AND tbcreditpaymentstate = \'aprobado\''
     );
     $stmt->execute([':creditId' => $idCredit]);
 

@@ -9,7 +9,7 @@ $stateLabels = [
 [$label, $tone] = $stateLabels[$effectiveState] ?? [$effectiveState, 'info'];
 $isClientOwner = current_user_type() === 'client'
   && (int) $_SESSION['user']->getIdClient() === $credit->getIdClient();
-$canPay = $isClientOwner && $effectiveState !== 'pagado';
+$canPay = !empty($clientCanPay) && $isClientOwner;
 ?>
 
 <div class="page-head">
@@ -23,8 +23,32 @@ $canPay = $isClientOwner && $effectiveState !== 'pagado';
 <?php if (!empty($_GET['created'])): ?>
   <div class="alert alert-success">Crédito otorgado. La reserva quedó confirmada.</div>
 <?php endif; ?>
-<?php if (!empty($_GET['paid'])): ?>
-  <div class="alert alert-success">Abono registrado correctamente.</div>
+<?php if (!empty($_GET['submitted'])): ?>
+  <div class="alert alert-success">Abono enviado, pendiente de verificación.</div>
+<?php endif; ?>
+<?php if (!empty($_GET['approved'])): ?>
+  <div class="alert alert-success">Comprobante aprobado y saldo actualizado.</div>
+<?php endif; ?>
+<?php if (!empty($_GET['rejected'])): ?>
+  <div class="alert alert-success">Comprobante rechazado. El cliente puede enviar otro.</div>
+<?php endif; ?>
+
+<?php if (!empty($isOwner) && !empty($hasPendingPayment)): ?>
+  <div class="card" style="margin-bottom:18px;">
+    <h3 style="margin-top:0;">Comprobantes por verificar</h3>
+    <?php foreach ($payments as $pending): if (($pending['tbcreditpaymentstate'] ?? '') !== 'pendiente') continue; ?>
+      <div class="detail-grid" style="margin-bottom:14px;">
+        <div class="detail-item"><div class="k">Monto</div><div class="v">₡ <?= number_format((float) $pending['tbcreditpaymentamount'], 2) ?></div></div>
+        <div class="detail-item"><div class="k">Fecha</div><div class="v"><?= e($pending['tbcreditpaymentdate']) ?></div></div>
+        <div class="detail-item"><div class="k">Nota</div><div class="v"><?= e($pending['tbcreditpaymentnote'] ?? '—') ?></div></div>
+        <div class="detail-item"><div class="k">Comprobante</div><div class="v"><?php if (!empty($pending['tbcreditpaymentproof'])): ?><a href="<?= e(image_url($pending['tbcreditpaymentproof'])) ?>" target="_blank" rel="noopener">Abrir comprobante</a><?php else: ?>—<?php endif; ?></div></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <form method="post" action="<?= e(base_url('credit', 'approvePayment')) ?>"><?= csrf_field() ?><input type="hidden" name="creditId" value="<?= (int) $credit->getIdCredit() ?>"><input type="hidden" name="paymentId" value="<?= (int) $pending['tbcreditpaymentid'] ?>"><button class="btn btn-primary" type="submit">Aprobar</button></form>
+        <form method="post" action="<?= e(base_url('credit', 'rejectPayment')) ?>"><?= csrf_field() ?><input type="hidden" name="creditId" value="<?= (int) $credit->getIdCredit() ?>"><input type="hidden" name="paymentId" value="<?= (int) $pending['tbcreditpaymentid'] ?>"><button class="btn btn-outline" type="submit">Rechazar</button></form>
+      </div>
+    <?php endforeach; ?>
+  </div>
 <?php endif; ?>
 <?php if (!empty($error)): ?>
   <div class="alert alert-error"><?= e($error) ?></div>
@@ -95,6 +119,8 @@ $minimumAllowed = min($minimumPayment, $balance);
         <button class="btn btn-primary" type="submit">Registrar abono</button>
       </form>
     </div>
+  <?php elseif ($isClientOwner && $hasPendingPayment): ?>
+    <div class="card"><h3 style="margin-top:0;">Abono pendiente de verificación</h3><p class="muted">Podrás enviar otro comprobante después de que el propietario revise este.</p></div>
   <?php endif; ?>
 
   <div class="card">
@@ -171,13 +197,14 @@ $minimumAllowed = min($minimumPayment, $balance);
     <div class="table-wrap">
       <table class="table">
         <thead>
-          <tr><th>Fecha</th><th>Monto</th><th>Comprobante</th><th>Nota</th><th>Registrado por</th></tr>
+          <tr><th>Fecha</th><th>Monto</th><th>Estado</th><th>Comprobante</th><th>Nota</th><th>Registrado por</th></tr>
         </thead>
         <tbody>
           <?php foreach ($payments as $p): ?>
             <tr>
               <td><?= e($p['tbcreditpaymentdate']) ?></td>
               <td>&#8353; <?= number_format((float) $p['tbcreditpaymentamount'], 2) ?></td>
+              <td><span class="badge <?= ($p['tbcreditpaymentstate'] ?? '') === 'aprobado' ? 'success' : (($p['tbcreditpaymentstate'] ?? '') === 'rechazado' ? 'danger' : 'warning') ?>"><?= e(ucfirst($p['tbcreditpaymentstate'] ?? 'pendiente')) ?></span></td>
               <td>
                 <?php if (!empty($p['tbcreditpaymentproof'])): ?>
                   <a href="<?= e(image_url($p['tbcreditpaymentproof'])) ?>" target="_blank" rel="noopener">Ver comprobante</a>

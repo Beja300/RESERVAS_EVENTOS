@@ -13,6 +13,9 @@ class CreditPayment
   private string $paymentDate;
   private bool $isActive;
   private ?string $proofFile;
+  private string $state;
+  private ?string $reviewedAt;
+  private ?int $reviewedBy;
 
   public function __construct(
     int $idCreditPayment = 0,
@@ -22,7 +25,10 @@ class CreditPayment
     ?int $idRole = null,
     string $paymentDate = '',
     bool $isActive = true,
-    ?string $proofFile = null
+    ?string $proofFile = null,
+    string $state = 'pendiente',
+    ?string $reviewedAt = null,
+    ?int $reviewedBy = null
   ) {
     $this->idCreditPayment = $idCreditPayment;
     $this->idCredit = $idCredit;
@@ -32,6 +38,9 @@ class CreditPayment
     $this->paymentDate = $paymentDate;
     $this->isActive = $isActive;
     $this->proofFile = $proofFile;
+    $this->state = $state;
+    $this->reviewedAt = $reviewedAt;
+    $this->reviewedBy = $reviewedBy;
   }
 
   public function getIdCreditPayment(): int { return $this->idCreditPayment; }
@@ -42,6 +51,9 @@ class CreditPayment
   public function getPaymentDate(): string { return $this->paymentDate; }
   public function getIsActive(): bool { return $this->isActive; }
   public function getProofFile(): ?string { return $this->proofFile; }
+  public function getState(): string { return $this->state; }
+  public function getReviewedAt(): ?string { return $this->reviewedAt; }
+  public function getReviewedBy(): ?int { return $this->reviewedBy; }
 
   public function setIdCreditPayment(int $idCreditPayment): void { $this->idCreditPayment = $idCreditPayment; }
   public function setIdCredit(int $idCredit): void { $this->idCredit = $idCredit; }
@@ -51,4 +63,7 @@ class CreditPayment
   public function setPaymentDate(string $paymentDate): void { $this->paymentDate = $paymentDate; }
   public function setIsActive(bool $isActive): void { $this->isActive = $isActive; }
   public function setProofFile(?string $proofFile): void { $this->proofFile = $proofFile; }
+  public function setState(string $state): void { $this->state = $state; }
+  public function setReviewedAt(?string $reviewedAt): void { $this->reviewedAt = $reviewedAt; }
+  public function setReviewedBy(?int $reviewedBy): void { $this->reviewedBy = $reviewedBy; }
 }

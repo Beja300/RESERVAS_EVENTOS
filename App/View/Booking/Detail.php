@@ -199,11 +199,13 @@ $isCashPayment = !$isCreditPayment
       <div class="form-group" style="margin:0;">
         <label for="editStartDate">Fecha de inicio</label>
         <input class="form-control" type="date" id="editStartDate" name="startDate"
+               min="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d', strtotime('+1 year')) ?>"
                value="<?= e(date('Y-m-d', strtotime($booking->getBookingDate()))) ?>" required>
       </div>
       <div class="form-group" style="margin:0;">
         <label for="editEndDate">Fecha final</label>
         <input class="form-control" type="date" id="editEndDate" name="endDate"
+               min="<?= date('Y-m-d') ?>" max="<?= date('Y-m-d', strtotime('+1 year')) ?>"
                value="<?= e(date('Y-m-d', strtotime($booking->getBookingEndDate() ?? $booking->getBookingDate()))) ?>" required>
       </div>
       <div class="form-group" style="margin:0;">

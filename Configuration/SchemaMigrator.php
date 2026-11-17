@@ -10,7 +10,7 @@
  */
 class SchemaMigrator
 {
-  private const VERSION = '2026-11-owner-payment-method-defaults-v1';
+  private const VERSION = '2026-11-credit-minimum-payment-review-v2';
 
   private PDO $connection;
 
@@ -154,6 +154,8 @@ class SchemaMigrator
         'tblocationapproximate' => 'VARCHAR(300) NULL',
       ],
       'tbcreditconfig' => [
+        'tbcreditconfigminpayment' => 'DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+        'tbcreditconfigninpayment' => 'DECIMAL(12,2) NOT NULL DEFAULT 6.00',
         'tbcreditconfiginstallments' => 'INT NOT NULL DEFAULT 1',
         'tbcreditconfigfrequency' => "VARCHAR(20) NOT NULL DEFAULT 'mensual'",
         'tbcreditconfiggracedays' => 'INT NOT NULL DEFAULT 0',
@@ -161,6 +163,8 @@ class SchemaMigrator
       ],
       'tbcreditpayment' => [
         'tbcreditpaymentproof' => 'VARCHAR(255) NULL',
+        'tbcreditpaymentreviewedat' => 'DATETIME NULL',
+        'tbcreditpaymentreviewedby' => 'INT NULL',
       ],
     ];
 
@@ -169,9 +173,21 @@ class SchemaMigrator
         $this->addColumnIfMissing($table, $column, $definition);
       }
     }
+
+    // El estado de revisión se agrega aparte para poder aprobar los abonos
+    // históricos solo cuando la columna se crea por primera vez.
+    $paymentStateAdded = $this->addColumnIfMissing(
+      'tbcreditpayment',
+      'tbcreditpaymentstate',
+      "VARCHAR(20) NOT NULL DEFAULT 'pendiente'"
+    );
+
+    if ($paymentStateAdded) {
+      $this->backfillCreditPaymentsApproved();
+    }
   }
 
-  private function addColumnIfMissing(string $table, string $column, string $definition): void
+  private function addColumnIfMissing(string $table, string $column, string $definition): bool
   {
     $stmt = $this->connection->prepare(
       "SELECT COUNT(*) FROM information_schema.COLUMNS
@@ -181,7 +197,17 @@ class SchemaMigrator
 
     if ((int) $stmt->fetchColumn() === 0) {
       $this->connection->exec("ALTER TABLE {$table} ADD COLUMN {$column} {$definition}");
+      return true;
     }
+
+    return false;
+  }
+
+  private function backfillCreditPaymentsApproved(): void
+  {
+    $this->connection->exec(
+      "UPDATE tbcreditpayment SET tbcreditpaymentstate = 'aprobado'"
+    );
   }
 
   private function backfillServiceGroups(): void
