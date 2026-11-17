@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../Model/Detail.php';
 require_once __DIR__ . '/../Model/Venue.php';
+require_once __DIR__ . '/../Model/Service.php';
 
 class DetailRepository
 {
@@ -41,7 +42,7 @@ class DetailRepository
   // $quantity = número de días rentados (precio se acumula por día).
   // Sin transacción propia: el llamador (BookingService) la envuelve.
   // =========================================================
-  public function addVenueLine(int $bookingPk, Venue $venue, int $quantity = 1): int
+  public function addVenueLine(int $bookingPk, Venue $venue, int $quantity = 1, ?float $unitPrice = null, ?string $concept = null): int
   {
     $detail = new Detail(
       idDetail: 0,
@@ -49,9 +50,10 @@ class DetailRepository
       idLocalService: 0,
       idVenue: $venue->getIdVenue(),
       quantityDetail: $quantity,
-      unitPrice: $venue->getPriceVenue(),
+      unitPrice: $unitPrice ?? $venue->getPriceVenue(),
       discount: 0.0,
-      isActiveDetail: true
+      isActiveDetail: true,
+      concept: $concept
     );
 
     return $this->insertRow($detail);
@@ -70,6 +72,7 @@ class DetailRepository
                     tbdetailquantity,
                     tbdetailunitprice,
                     tbdetaildiscount,
+                    tbdetailconcept,
                     tbdetailactive
                 )
                 VALUES (
@@ -78,6 +81,7 @@ class DetailRepository
                     :quantityDetail,
                     :unitPrice,
                     :discount,
+                    :concept,
                     :isActiveDetail
                 )
             ";
@@ -90,6 +94,7 @@ class DetailRepository
       ':quantityDetail' => $detail->getQuantityDetail(),
       ':unitPrice'      => $detail->getUnitPrice(),
       ':discount'       => $detail->getDiscount(),
+      ':concept'        => $detail->getConcept(),
       ':isActiveDetail' => $this->toDb($detail->getIsActiveDetail())
     ]);
 
@@ -134,6 +139,7 @@ class DetailRepository
                 d.tbdetailquantity AS tbbookingdetailquantity,
                 d.tbdetailunitprice AS tbbookingdetailunitprice,
                 d.tbdetaildiscount AS tbbookingdetaildiscount,
+                d.tbdetailconcept AS tbbookingdetailconcept,
                 d.tbdetailactive AS tbbookingdetailactive
 
             FROM tbbookingdetail b
@@ -173,6 +179,7 @@ class DetailRepository
                 d.tbdetailquantity AS tbbookingdetailquantity,
                 d.tbdetailunitprice AS tbbookingdetailunitprice,
                 d.tbdetaildiscount AS tbbookingdetaildiscount,
+                d.tbdetailconcept AS tbbookingdetailconcept,
                 d.tbdetailactive AS tbbookingdetailactive
 
             FROM tbbookingdetail b
@@ -185,6 +192,8 @@ class DetailRepository
               AND d.tbdetailactive = true
               AND d.tbvenueid IS NOT NULL
               AND d.tbvenueid > 0
+              AND d.tbserviceid IS NULL
+              AND (d.tbdetailconcept IS NULL OR d.tbdetailconcept LIKE 'Renta del local%')
 
             LIMIT 1
         ";
@@ -208,7 +217,8 @@ class DetailRepository
     $sql = "
             UPDATE tbdetail
             SET tbvenueid = :venueId,
-                tbdetailunitprice = :unitPrice
+                tbdetailunitprice = :unitPrice,
+                tbdetailconcept = NULL
             WHERE tbdetailid = :detailId
         ";
 
@@ -221,6 +231,109 @@ class DetailRepository
     ]);
   }
 
+  /** Ajusta los días de la línea base de renta sin cambiar su precio diario. */
+  public function updateVenueLineQuantity(int $bookingId, int $quantity): bool
+  {
+    $sql = "
+      UPDATE tbdetail d
+      INNER JOIN tbbookingdetail bd ON bd.tbdetailid = d.tbdetailid
+      SET d.tbdetailquantity = :quantity
+      WHERE bd.tbbookingid = :bookingId
+        AND bd.tbbookingdetailactive = true
+        AND d.tbdetailactive = true
+        AND d.tbvenueid IS NOT NULL
+        AND d.tbvenueid > 0
+        AND d.tbserviceid IS NULL
+        AND (d.tbdetailconcept IS NULL OR d.tbdetailconcept LIKE 'Renta del local%')
+    ";
+    $stmt = $this->connection->prepare($sql);
+    return $stmt->execute([':quantity' => $quantity, ':bookingId' => $bookingId]);
+  }
+
+  /** Actualiza cantidad y descuento de una línea de servicio de esa reserva. */
+  public function updateServiceLine(int $bookingId, int $detailId, int $quantity, float $discount): bool
+  {
+    $sql = "
+      UPDATE tbdetail d
+      INNER JOIN tbbookingdetail bd ON bd.tbdetailid = d.tbdetailid
+      SET d.tbdetailquantity = :quantity,
+          d.tbdetaildiscount = :discount
+      WHERE bd.tbbookingid = :bookingId
+        AND bd.tbdetailid = :detailId
+        AND bd.tbbookingdetailactive = true
+        AND d.tbdetailactive = true
+        AND d.tbserviceid IS NOT NULL
+    ";
+    $stmt = $this->connection->prepare($sql);
+    return $stmt->execute([
+      ':quantity' => $quantity,
+      ':discount' => $discount,
+      ':bookingId' => $bookingId,
+      ':detailId' => $detailId,
+    ]);
+  }
+
+  /** Desactiva una línea de servicio sin afectar la renta u otras reservas. */
+  public function deactivateServiceLine(int $bookingId, int $detailId): bool
+  {
+    $junction = $this->connection->prepare(
+      'UPDATE tbbookingdetail
+       SET tbbookingdetailactive = false
+       WHERE tbbookingid = :bookingId AND tbdetailid = :detailId
+         AND tbbookingdetailactive = true'
+    );
+    $junction->execute([':bookingId' => $bookingId, ':detailId' => $detailId]);
+
+    if ($junction->rowCount() < 1) {
+      return false;
+    }
+
+    $detail = $this->connection->prepare(
+      'UPDATE tbdetail SET tbdetailactive = false
+       WHERE tbdetailid = :detailId AND tbserviceid IS NOT NULL'
+    );
+    return $detail->execute([':detailId' => $detailId]);
+  }
+
+
+  // =========================================================
+  // LÍNEA LIBRE (limpieza, bloque de alquiler, etc.)
+  // =========================================================
+  public function addConceptLine(int $bookingPk, int $venueId, string $concept, int $quantity, float $unitPrice): int
+  {
+    $detail = new Detail(
+      idDetail: 0,
+      idClientBooking: $bookingPk,
+      idLocalService: 0,
+      quantityDetail: max(1, $quantity),
+      unitPrice: $unitPrice,
+      discount: 0.0,
+      isActiveDetail: true,
+      idVenue: $venueId,
+      concept: $concept
+    );
+
+    return $this->insertRow($detail);
+  }
+
+  // =========================================================
+  // LÍNEA DE SERVICIO. Sin transacción propia: la envuelve el
+  // llamador (BookingService durante la creación de la reserva).
+  // =========================================================
+  public function addServiceLine(int $bookingPk, Service $service, int $quantity, float $discount): int
+  {
+    $detail = new Detail(
+      idDetail: 0,
+      idClientBooking: $bookingPk,
+      idLocalService: $service->getIdService(),
+      quantityDetail: max(1, $quantity),
+      unitPrice: $service->getPriceService(),
+      discount: $discount,
+      isActiveDetail: true
+    );
+
+    return $this->insertRow($detail);
+  }
 
   // =========================================================
   // SERVICIOS MÁS SOLICITADOS (para estadísticas del Admin)
@@ -319,7 +432,10 @@ private function mapRow(array $row): Detail
           quantityDetail: (int) $row['tbbookingdetailquantity'],
           unitPrice: (float) $row['tbbookingdetailunitprice'],
           discount: (float) $row['tbbookingdetaildiscount'],
-          isActiveDetail: $this->toBool($row['tbbookingdetailactive'])
+          isActiveDetail: $this->toBool($row['tbbookingdetailactive']),
+          concept: ($row['tbbookingdetailconcept'] ?? null) !== null && $row['tbbookingdetailconcept'] !== ''
+            ? (string) $row['tbbookingdetailconcept']
+            : null
         );
     }
 

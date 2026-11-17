@@ -8,7 +8,7 @@
   </div>
 </div>
 
-<div class="card form-card" style="max-width:520px;">
+<div class="card form-card form-page">
   <?php if (isset($error)): ?>
     <div class="alert alert-error"><?= e($error) ?></div>
   <?php endif; ?>
@@ -20,22 +20,24 @@
           data-promotion-form data-validate-form>
       <?= csrf_field() ?>
 
-      <div class="form-group">
-        <label for="venueId">Local *</label>
-        <select class="form-control" id="venueId" name="venueId" required data-validate="required">
-          <option value="">— Selecciona —</option>
-          <?php foreach ($venues as $v): ?>
-            <option value="<?= (int) $v->getIdVenue() ?>" <?= (int) $idVenue === (int) $v->getIdVenue() ? 'selected' : '' ?>>
-              <?= e($v->getNameVenue()) ?>
-            </option>
-          <?php endforeach; ?>
-        </select>
-      </div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="venueId">Local *</label>
+          <select class="form-control" id="venueId" name="venueId" required data-validate="required">
+            <option value="">— Selecciona —</option>
+            <?php foreach ($venues as $v): ?>
+              <option value="<?= (int) $v->getIdVenue() ?>" <?= (int) $idVenue === (int) $v->getIdVenue() ? 'selected' : '' ?>>
+                <?= e($v->getNameVenue()) ?>
+              </option>
+            <?php endforeach; ?>
+          </select>
+        </div>
 
-      <div class="form-group">
-        <label for="label">Etiqueta *</label>
-        <input class="form-control" type="text" id="label" name="label" required data-validate="required"
-               placeholder="Ej. 2x1 en sonido">
+        <div class="form-group">
+          <label for="label">Etiqueta *</label>
+          <input class="form-control" type="text" id="label" name="label" required data-validate="required"
+                 placeholder="Ej. 2x1 en sonido">
+        </div>
       </div>
 
       <div class="form-group">
@@ -43,7 +45,7 @@
         <textarea class="form-control" id="description" name="description" rows="3"></textarea>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="form-grid-2">
         <div class="form-group">
           <label for="startDate">Fecha inicio *</label>
           <input class="form-control" type="date" id="startDate" name="startDate" required data-validate="required">

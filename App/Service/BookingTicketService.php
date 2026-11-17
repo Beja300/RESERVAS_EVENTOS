@@ -124,6 +124,16 @@ class BookingTicketService
     }
 
     $bookingPk = $ticket->getIdBooking();
+    $booking = $this->bookingRepo->findById($bookingPk);
+    if ($booking !== null && $this->bookingRepo->hasActiveRangeConflict(
+      $booking->getIdLocal(),
+      $booking->getBookingDate(),
+      $booking->getBookingEndDate() ?? $booking->getBookingDate(),
+      $bookingPk,
+      $booking->getRentalBlockId()
+    )) {
+      throw new BusinessRuleException('Fecha no disponible. No se puede confirmar el pago hasta corregir las fechas de la reserva.');
+    }
 
     DataBase::beginTransaction($this->connection);
 

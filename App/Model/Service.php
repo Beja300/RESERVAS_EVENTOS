@@ -15,9 +15,15 @@ class Service
   private bool $isActive;
   private ?int $approvedBy;      // tbroleid del administrador que aprobó
   private ?string $approvedOn;   // fecha/hora de la aprobación
+  private ?string $descriptionService;
+  private string $unitService;
+  private int $minQuantity;
+  private ?int $maxQuantity;
+  private int $includedQuantity;
+  private ?int $idGroup;
 
 
-  public function __construct(int $idService, int $idLocal, string $nameService, ?string $typeService, float $priceService, string $stateService, bool $isActive, ?int $approvedBy = null, ?string $approvedOn = null)
+  public function __construct(int $idService, int $idLocal, string $nameService, ?string $typeService, float $priceService, string $stateService, bool $isActive, ?int $approvedBy = null, ?string $approvedOn = null, ?string $descriptionService = null, string $unitService = 'unidad', int $minQuantity = 1, ?int $maxQuantity = null, int $includedQuantity = 0, ?int $idGroup = null)
   {
     $this->idService = $idService;
     $this->idLocal = $idLocal;
@@ -28,6 +34,12 @@ class Service
     $this->isActive = $isActive;
     $this->approvedBy = $approvedBy;
     $this->approvedOn = $approvedOn;
+    $this->descriptionService = $descriptionService;
+    $this->unitService = $unitService;
+    $this->minQuantity = $minQuantity;
+    $this->maxQuantity = $maxQuantity;
+    $this->includedQuantity = $includedQuantity;
+    $this->idGroup = $idGroup;
   }
 
   // Getters
@@ -77,6 +89,36 @@ class Service
     return $this->approvedOn;
   }
 
+  public function getDescriptionService(): ?string
+  {
+    return $this->descriptionService;
+  }
+
+  public function getUnitService(): string
+  {
+    return $this->unitService;
+  }
+
+  public function getMinQuantity(): int
+  {
+    return $this->minQuantity;
+  }
+
+  public function getMaxQuantity(): ?int
+  {
+    return $this->maxQuantity;
+  }
+
+  public function getIncludedQuantity(): int
+  {
+    return $this->includedQuantity;
+  }
+
+  public function getIdGroup(): ?int
+  {
+    return $this->idGroup;
+  }
+
   // Setters
 
   public function setIdService(int $idService): void
@@ -122,5 +164,35 @@ class Service
   public function setApprovedOn(?string $approvedOn): void
   {
     $this->approvedOn = $approvedOn;
+  }
+
+  public function setDescriptionService(?string $descriptionService): void
+  {
+    $this->descriptionService = $descriptionService;
+  }
+
+  public function setUnitService(string $unitService): void
+  {
+    $this->unitService = $unitService;
+  }
+
+  public function setMinQuantity(int $minQuantity): void
+  {
+    $this->minQuantity = $minQuantity;
+  }
+
+  public function setMaxQuantity(?int $maxQuantity): void
+  {
+    $this->maxQuantity = $maxQuantity;
+  }
+
+  public function setIncludedQuantity(int $includedQuantity): void
+  {
+    $this->includedQuantity = $includedQuantity;
+  }
+
+  public function setIdGroup(?int $idGroup): void
+  {
+    $this->idGroup = $idGroup;
   }
 }

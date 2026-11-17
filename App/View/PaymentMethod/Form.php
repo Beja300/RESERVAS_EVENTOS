@@ -10,7 +10,7 @@ require_once __DIR__ . '/../_header.php';
   </div>
 </div>
 
-<div class="card form-card" style="max-width:520px;">
+<div class="card form-card form-page">
   <?php if (!empty($error)): ?>
     <div class="alert alert-error"><?= e($error) ?></div>
   <?php endif; ?>

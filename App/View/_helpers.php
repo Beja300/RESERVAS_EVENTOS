@@ -63,6 +63,22 @@ if (!function_exists('e')) {
     }
 }
 
+if (!function_exists('format_phone_number')) {
+    /** Muestra teléfonos costarricenses como +506 8888-8888. */
+    function format_phone_number(?string $phone): string
+    {
+        $phone = trim((string) $phone);
+        $digits = preg_replace('/\\D+/', '', $phone) ?? '';
+        if (strlen($digits) === 11 && str_starts_with($digits, '506')) {
+            $digits = substr($digits, 3);
+        }
+        if (strlen($digits) === 8) {
+            return '+506 ' . substr($digits, 0, 4) . '-' . substr($digits, 4);
+        }
+        return $phone;
+    }
+}
+
 if (!function_exists('image_url')) {
     /**
      * Convierte una ruta de imagen (relativa a Public/ o URL completa)
@@ -203,6 +219,18 @@ if (!function_exists('format_venue_location')) {
     {
         if ($location === null) {
             return '';
+        }
+
+        if ($location->getTypeLocation() === 'aproximada') {
+            $parts = array_values(array_filter(
+                [
+                    trim((string) $location->getTownLocation()),
+                    trim((string) $location->getApproximateLocation()),
+                ],
+                static fn(string $part): bool => $part !== ''
+            ));
+
+            return $parts === [] ? '' : e(implode(' · ', $parts));
         }
 
         $province = trim((string) $location->getProvinceLocation());

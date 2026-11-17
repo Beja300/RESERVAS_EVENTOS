@@ -24,6 +24,12 @@ class CreditConfigRepository
         tbcreditconfigenabled,
         tbcreditconfigdays,
         tbcreditconfigfrequentmin,
+        tbcreditconfigminpayment,
+        tbcreditconfigninpayment,
+        tbcreditconfiginstallments,
+        tbcreditconfigfrequency,
+        tbcreditconfiggracedays,
+        tbcreditconfigreminderdays,
         tbcreditconfigactive
       FROM tbcreditconfig
       WHERE tbownerid = :idOwner
@@ -51,6 +57,12 @@ class CreditConfigRepository
         tbcreditconfigenabled,
         tbcreditconfigdays,
         tbcreditconfigfrequentmin,
+        tbcreditconfigminpayment,
+        tbcreditconfigninpayment,
+        tbcreditconfiginstallments,
+        tbcreditconfigfrequency,
+        tbcreditconfiggracedays,
+        tbcreditconfigreminderdays,
         tbcreditconfigactive
       )
       VALUES (
@@ -58,6 +70,12 @@ class CreditConfigRepository
         :enabled,
         :days,
         :frequentMin,
+        :minimumPayment,
+        :ninimumPayment,
+        :installments,
+        :frequency,
+        :graceDays,
+        :reminderDays,
         :isActive
       )
     ";
@@ -68,6 +86,12 @@ class CreditConfigRepository
       ':enabled'     => $this->toDb($config->isEnabled()),
       ':days'        => $config->getDays(),
       ':frequentMin' => $config->getFrequentMin(),
+      ':minimumPayment' => $config->getMinimumPayment(),
+      ':ninimumPayment' => $config->getMinimumPayment(),
+      ':installments' => $config->getInstallments(),
+      ':frequency'   => $config->getFrequency(),
+      ':graceDays'   => $config->getGraceDays(),
+      ':reminderDays' => $config->getReminderDays(),
       ':isActive'    => $this->toDb($config->getIsActive()),
     ]);
 
@@ -85,6 +109,12 @@ class CreditConfigRepository
         tbcreditconfigenabled = :enabled,
         tbcreditconfigdays = :days,
         tbcreditconfigfrequentmin = :frequentMin,
+        tbcreditconfigminpayment = :minimumPayment,
+        tbcreditconfigninpayment = :ninimumPayment,
+        tbcreditconfiginstallments = :installments,
+        tbcreditconfigfrequency = :frequency,
+        tbcreditconfiggracedays = :graceDays,
+        tbcreditconfigreminderdays = :reminderDays,
         tbcreditconfigactive = :isActive
       WHERE tbcreditconfigid = :idCreditConfig
     ";
@@ -95,6 +125,12 @@ class CreditConfigRepository
       ':enabled'        => $this->toDb($config->isEnabled()),
       ':days'           => $config->getDays(),
       ':frequentMin'    => $config->getFrequentMin(),
+      ':minimumPayment' => $config->getMinimumPayment(),
+      ':ninimumPayment' => $config->getMinimumPayment(),
+      ':installments'   => $config->getInstallments(),
+      ':frequency'      => $config->getFrequency(),
+      ':graceDays'      => $config->getGraceDays(),
+      ':reminderDays'   => $config->getReminderDays(),
       ':isActive'       => $this->toDb($config->getIsActive()),
       ':idCreditConfig' => $config->getIdCreditConfig(),
     ]);
@@ -108,7 +144,12 @@ class CreditConfigRepository
       enabled: $this->toBool($row['tbcreditconfigenabled']),
       days: (int) $row['tbcreditconfigdays'],
       frequentMin: (int) $row['tbcreditconfigfrequentmin'],
-      isActive: $this->toBool($row['tbcreditconfigactive'])
+      minimumPayment: (float) ($row['tbcreditconfigninpayment'] ?? 6),
+      isActive: $this->toBool($row['tbcreditconfigactive']),
+      installments: (int) ($row['tbcreditconfiginstallments'] ?? 1),
+      frequency: (string) ($row['tbcreditconfigfrequency'] ?? 'mensual'),
+      graceDays: (int) ($row['tbcreditconfiggracedays'] ?? 0),
+      reminderDays: (int) ($row['tbcreditconfigreminderdays'] ?? 3)
     );
   }
 

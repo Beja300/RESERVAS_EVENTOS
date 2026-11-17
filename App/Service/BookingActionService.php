@@ -10,9 +10,6 @@ require_once __DIR__ . '/NotificationService.php';
 require_once __DIR__ . '/HistoryService.php';
 require_once __DIR__ . '/ImageStorageService.php';
 require_once __DIR__ . '/BusinessRuleException.php';
-require_once __DIR__ . '/ServiceException.php';
-require_once __DIR__ . '/ErrorLogger.php';
-require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
@@ -26,7 +23,6 @@ require_once __DIR__ . '/../Repository/NotificationRepository.php';
  */
 class BookingActionService
 {
-  private PDO $connection;
   private BookingService $bookingService;
   private DetailService $detailService;
   private InvoiceService $invoiceService;
@@ -41,7 +37,6 @@ class BookingActionService
 
   public function __construct(PDO $connection)
   {
-    $this->connection = $connection;
     $this->bookingService = new BookingService();
     $this->detailService = new DetailService($connection);
     $this->invoiceService = new InvoiceService();
@@ -65,7 +60,10 @@ class BookingActionService
     string $date,
     ?string $endDate,
     ?string $eventType,
-    ?string $eventDetail
+    ?string $eventDetail,
+    ?int $attendees = null,
+    ?int $rentalBlockId = null,
+    array $serviceQuantities = []
   ): int
   {
     if ($eventType === 'otro' && ($eventDetail === null || $eventDetail === '')) {
@@ -82,48 +80,32 @@ class BookingActionService
 
     $this->clientService->assertCanBook($clientId);
 
-    DataBase::beginTransaction($this->connection);
+    $idBooking = $this->bookingService->createBooking(
+      $clientId,
+      $idVenue,
+      $date,
+      $endDate,
+      $eventType,
+      $eventDetail,
+      $attendees,
+      $rentalBlockId,
+      $serviceQuantities
+    );
 
-    try {
-      $idBooking = $this->bookingService->createBooking(
-        $clientId,
-        $idVenue,
-        $date,
-        $endDate,
-        $eventType,
-        $eventDetail
-      );
+    $this->historyService->logVenueBooking($roleId, $idVenue);
 
-      $this->historyService->logVenueBooking($roleId, $idVenue);
-
-      $venue = $this->venueRepo->findById($idVenue);
-      if ($venue !== null) {
-        $this->notificationService->notifyOwnerOfNewBooking(
-          (int) $venue->getIdOwner(),
-          $venue->getNameVenue(),
-          (int) $idBooking
-        );
-      }
-
-      $this->notificationService->notifyNewBookingToAdmins((int) $idBooking);
-
-      DataBase::commit();
-
-      return $idBooking;
-    } catch (\Throwable $e) {
-      DataBase::rollBack();
-
-      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
-        throw $e;
-      }
-
-      ErrorLogger::log($e, __METHOD__);
-      throw new ServiceException(
-        'No se pudo completar la operación. Intenta de nuevo.',
-        0,
-        $e
+    $venue = $this->venueRepo->findById($idVenue);
+    if ($venue !== null) {
+      $this->notificationService->notifyOwnerOfNewBooking(
+        (int) $venue->getIdOwner(),
+        $venue->getNameVenue(),
+        (int) $idBooking
       );
     }
+
+    $this->notificationService->notifyNewBookingToAdmins((int) $idBooking);
+
+    return $idBooking;
   }
 
   // =========================================================
@@ -135,44 +117,67 @@ class BookingActionService
     $this->detailService->addLine($idBooking, $idService, $quantity);
   }
 
+  public function updateEditableDetails(
+    int $clientId,
+    int $idBooking,
+    string $startDate,
+    string $endDate,
+    ?string $eventType,
+    ?string $eventDetail,
+    int $attendees
+  ): void {
+    $this->clientService->assertOwnsBooking($clientId, $idBooking);
+    $this->detailService->updateBookingDetails(
+      $idBooking,
+      $startDate,
+      $endDate,
+      $eventType,
+      $eventDetail,
+      $attendees
+    );
+  }
+
+  public function updateServiceLine(int $clientId, int $idBooking, int $detailId, int $quantity): void
+  {
+    $this->clientService->assertOwnsBooking($clientId, $idBooking);
+    $this->detailService->updateServiceQuantity($idBooking, $detailId, $quantity);
+  }
+
+  public function removeServiceLine(int $clientId, int $idBooking, int $detailId): void
+  {
+    $this->clientService->assertOwnsBooking($clientId, $idBooking);
+    $this->detailService->removeServiceLine($idBooking, $detailId);
+  }
+
+  public function setServiceSelection(
+    int $clientId,
+    int $idBooking,
+    int $serviceId,
+    bool $selected,
+    int $quantity
+  ): void {
+    $this->clientService->assertOwnsBooking($clientId, $idBooking);
+    $this->detailService->setServiceSelection($idBooking, $serviceId, $selected, $quantity);
+  }
+
   // =========================================================
   // CANCELAR RESERVA (cliente)
   // =========================================================
   public function cancel(int $clientId, int $roleId, int $idBooking): void
   {
     $this->clientService->assertOwnsBooking($clientId, $idBooking);
+    $this->bookingService->cancel($idBooking);
 
-    DataBase::beginTransaction($this->connection);
-
-    try {
-      $this->bookingService->cancel($idBooking);
-
-      $cancelledBooking = $this->bookingRepo->findById($idBooking);
-      if ($cancelledBooking !== null) {
-        $cancelledVenue = $this->venueRepo->findById($cancelledBooking->getIdLocal());
-        if ($cancelledVenue !== null) {
-          $this->historyService->logVenueCancel($roleId, (int) $cancelledBooking->getIdLocal());
-          $this->notificationService->notifyOwnerBookingCancelled(
-            (int) $cancelledVenue->getIdOwner(),
-            (int) $idBooking
-          );
-        }
+    $cancelledBooking = $this->bookingRepo->findById($idBooking);
+    if ($cancelledBooking !== null) {
+      $cancelledVenue = $this->venueRepo->findById($cancelledBooking->getIdLocal());
+      if ($cancelledVenue !== null) {
+        $this->historyService->logVenueCancel($roleId, (int) $cancelledBooking->getIdLocal());
+        $this->notificationService->notifyOwnerBookingCancelled(
+          (int) $cancelledVenue->getIdOwner(),
+          (int) $idBooking
+        );
       }
-
-      DataBase::commit();
-    } catch (\Throwable $e) {
-      DataBase::rollBack();
-
-      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
-        throw $e;
-      }
-
-      ErrorLogger::log($e, __METHOD__);
-      throw new ServiceException(
-        'No se pudo completar la operación. Intenta de nuevo.',
-        0,
-        $e
-      );
     }
   }
 
@@ -182,28 +187,8 @@ class BookingActionService
   public function requestRefund(int $clientId, int $roleId, int $idBooking, string $motivo): void
   {
     $this->clientService->assertOwnsBooking($clientId, $idBooking);
-
-    DataBase::beginTransaction($this->connection);
-
-    try {
-      $this->bookingService->requestRefund($idBooking, $roleId, $motivo);
-      $this->notificationService->notifyAdminsRefundRequested($idBooking);
-
-      DataBase::commit();
-    } catch (\Throwable $e) {
-      DataBase::rollBack();
-
-      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
-        throw $e;
-      }
-
-      ErrorLogger::log($e, __METHOD__);
-      throw new ServiceException(
-        'No se pudo completar la operación. Intenta de nuevo.',
-        0,
-        $e
-      );
-    }
+    $this->bookingService->requestRefund($idBooking, $roleId, $motivo);
+    $this->notificationService->notifyAdminsRefundRequested($idBooking);
   }
 
   // =========================================================
@@ -212,31 +197,11 @@ class BookingActionService
   public function pay(int $clientId, int $roleId, int $idBooking, int $idPaymentMethod): void
   {
     $this->clientService->assertOwnsBooking($clientId, $idBooking);
+    $this->invoiceService->generate($idBooking, $idPaymentMethod, date('Y-m-d'));
 
-    DataBase::beginTransaction($this->connection);
-
-    try {
-      $this->invoiceService->generate($idBooking, $idPaymentMethod, date('Y-m-d'));
-
-      $paidBooking = $this->bookingRepo->findById($idBooking);
-      if ($paidBooking !== null) {
-        $this->historyService->logVenuePurchase($roleId, (int) $paidBooking->getIdLocal());
-      }
-
-      DataBase::commit();
-    } catch (\Throwable $e) {
-      DataBase::rollBack();
-
-      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
-        throw $e;
-      }
-
-      ErrorLogger::log($e, __METHOD__);
-      throw new ServiceException(
-        'No se pudo completar la operación. Intenta de nuevo.',
-        0,
-        $e
-      );
+    $paidBooking = $this->bookingRepo->findById($idBooking);
+    if ($paidBooking !== null) {
+      $this->historyService->logVenuePurchase($roleId, (int) $paidBooking->getIdLocal());
     }
   }
 
@@ -247,6 +212,7 @@ class BookingActionService
   public function uploadTicket(int $clientId, int $roleId, int $idBooking, int $idPaymentMethod): void
   {
     $this->clientService->assertOwnsBooking($clientId, $idBooking);
+    $this->assertBookingDatesAvailable($idBooking);
 
     $file = $_FILES['ticket'] ?? null;
 
@@ -265,38 +231,19 @@ class BookingActionService
 
     $extension = strtolower(pathinfo($file['name'] ?? '', PATHINFO_EXTENSION));
 
-    DataBase::beginTransaction($this->connection);
+    $this->bookingTicketService->upload($idBooking, $storedPath, $extension, $idPaymentMethod);
 
-    try {
-      $this->bookingTicketService->upload($idBooking, $storedPath, $extension, $idPaymentMethod);
+    $ticketBooking = $this->bookingRepo->findById($idBooking);
+    if ($ticketBooking !== null) {
+      $this->historyService->logVenuePurchase($roleId, (int) $ticketBooking->getIdLocal());
 
-      $ticketBooking = $this->bookingRepo->findById($idBooking);
-      if ($ticketBooking !== null) {
-        $this->historyService->logVenuePurchase($roleId, (int) $ticketBooking->getIdLocal());
-
-        $ticketVenue = $this->venueRepo->findById($ticketBooking->getIdLocal());
-        if ($ticketVenue !== null) {
-          $this->notificationService->notifyOwnerPaymentVerification(
-            (int) $ticketVenue->getIdOwner(),
-            (int) $idBooking
-          );
-        }
+      $ticketVenue = $this->venueRepo->findById($ticketBooking->getIdLocal());
+      if ($ticketVenue !== null) {
+        $this->notificationService->notifyOwnerPaymentVerification(
+          (int) $ticketVenue->getIdOwner(),
+          (int) $idBooking
+        );
       }
-
-      DataBase::commit();
-    } catch (\Throwable $e) {
-      DataBase::rollBack();
-
-      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
-        throw $e;
-      }
-
-      ErrorLogger::log($e, __METHOD__);
-      throw new ServiceException(
-        'No se pudo completar la operación. Intenta de nuevo.',
-        0,
-        $e
-      );
     }
   }
 
@@ -312,6 +259,7 @@ class BookingActionService
     }
 
     $this->ownerService->assertOwnsVenue($ownerId, $booking->getIdLocal());
+    $this->assertBookingDatesAvailable($idBooking);
 
     $ticket = $this->ticketRepo->findByBooking($idBooking);
 
@@ -319,27 +267,22 @@ class BookingActionService
       throw new BusinessRuleException('Esta reserva no tiene comprobante.');
     }
 
-    DataBase::beginTransaction($this->connection);
+    $this->bookingTicketService->approve($ticket->getIdTicket(), $ownerRoleId);
 
-    try {
-      $this->bookingTicketService->approve($ticket->getIdTicket(), $ownerRoleId);
+    $this->notificationService->notifyClientPaymentApproved((int) $booking->getIdClient(), (int) $idBooking);
+  }
 
-      $this->notificationService->notifyClientPaymentApproved((int) $booking->getIdClient(), (int) $idBooking);
-
-      DataBase::commit();
-    } catch (\Throwable $e) {
-      DataBase::rollBack();
-
-      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
-        throw $e;
-      }
-
-      ErrorLogger::log($e, __METHOD__);
-      throw new ServiceException(
-        'No se pudo completar la operación. Intenta de nuevo.',
-        0,
-        $e
-      );
+  private function assertBookingDatesAvailable(int $idBooking): void
+  {
+    $booking = $this->bookingRepo->findById($idBooking);
+    if ($booking !== null && $this->bookingRepo->hasActiveRangeConflict(
+      $booking->getIdLocal(),
+      $booking->getBookingDate(),
+      $booking->getBookingEndDate() ?? $booking->getBookingDate(),
+      $idBooking,
+      $booking->getRentalBlockId()
+    )) {
+      throw new BusinessRuleException('Fecha no disponible. Cambia las fechas de la reserva antes de continuar con el pago.');
     }
   }
 
@@ -362,27 +305,8 @@ class BookingActionService
       throw new BusinessRuleException('Esta reserva no tiene comprobante.');
     }
 
-    DataBase::beginTransaction($this->connection);
+    $this->bookingTicketService->reject($ticket->getIdTicket());
 
-    try {
-      $this->bookingTicketService->reject($ticket->getIdTicket());
-
-      $this->notificationService->notifyClientPaymentRejected((int) $booking->getIdClient(), (int) $idBooking);
-
-      DataBase::commit();
-    } catch (\Throwable $e) {
-      DataBase::rollBack();
-
-      if ($e instanceof BusinessRuleException || $e instanceof ServiceException) {
-        throw $e;
-      }
-
-      ErrorLogger::log($e, __METHOD__);
-      throw new ServiceException(
-        'No se pudo completar la operación. Intenta de nuevo.',
-        0,
-        $e
-      );
-    }
+    $this->notificationService->notifyClientPaymentRejected((int) $booking->getIdClient(), (int) $idBooking);
   }
 }

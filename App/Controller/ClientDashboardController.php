@@ -7,6 +7,7 @@ require_once __DIR__ . '/../Repository/HistoryRepository.php';
 require_once __DIR__ . '/../Repository/BookingRepository.php';
 require_once __DIR__ . '/../Repository/LocationRepository.php';
 require_once __DIR__ . '/../Repository/VenueRepository.php';
+require_once __DIR__ . '/../Repository/BlockedClientRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../View/_helpers.php';
 
@@ -18,6 +19,7 @@ class ClientDashboardController
   private LocationRepository $locationRepo;
   private VenueRepository $venueRepo;
   private VenueRatingService $venueRatingService;
+  private BlockedClientRepository $blockedClientRepo;
 
   public function __construct()
   {
@@ -29,6 +31,7 @@ class ClientDashboardController
     $this->locationRepo = new LocationRepository($connection);
     $this->venueRepo = new VenueRepository($connection);
     $this->venueRatingService = new VenueRatingService($connection);
+    $this->blockedClientRepo = new BlockedClientRepository($connection);
   }
 
   // =========================================================
@@ -57,16 +60,20 @@ class ClientDashboardController
     // Div 2 — locales más frecuentes (los que más ha visto al detalle).
     $visitCountByVenue = $this->historyRepo->mostViewedVenueIdsByRole((int) $client->getIdRol(), 5);
 
-    $frequentVenuesById = [];
-    foreach ($this->venueRepo->findByIds(array_keys($visitCountByVenue), false) as $v) {
-      $frequentVenuesById[$v->getIdVenue()] = $v;
+    $frequentVenues = [];
+    $visibleVenues = $this->filterBlockedVenues(
+      $this->venueRepo->findByIds(array_keys($visitCountByVenue), false),
+      (int) $client->getIdClient()
+    );
+    $visibleById = [];
+    foreach ($visibleVenues as $visibleVenue) {
+      $visibleById[$visibleVenue->getIdVenue()] = $visibleVenue;
     }
 
-    $frequentVenues = [];
     $locationByVenue = [];
     $locationCache = [];
     foreach (array_keys($visitCountByVenue) as $id) {
-      $venue = $frequentVenuesById[$id] ?? null;
+      $venue = $visibleById[$id] ?? null;
       if ($venue === null) {
         continue;
       }
@@ -98,17 +105,23 @@ class ClientDashboardController
 
     $client = $_SESSION['user'];
 
-    $recommendations = $this->historyService->recommendForUser(
-      (int) $client->getIdRol(),
-      (int) $client->getLocationId(), // puede ser 0 → null equivalente
-      5
+    $recommendations = $this->filterBlockedVenues(
+      $this->historyService->recommendForUser(
+        (int) $client->getIdRol(),
+        (int) $client->getLocationId(), // puede ser 0 → null equivalente
+        5
+      ),
+      (int) $client->getIdClient()
     );
 
     $hasValidLocation = $client->getLocationId() !== null
       && $this->locationRepo->findById($client->getLocationId()) !== null;
 
     $nearbyVenues = $hasValidLocation
-      ? $this->historyService->recommendNear($client->getLocationId(), 5)
+      ? $this->filterBlockedVenues(
+          $this->historyService->recommendNear($client->getLocationId(), 5),
+          (int) $client->getIdClient()
+        )
       : [];
 
     $hasLocation = $hasValidLocation;
@@ -156,7 +169,10 @@ class ClientDashboardController
     $client = $_SESSION['user'];
 
     $favoriteIds = $this->historyService->favoriteVenueIdsByRole((int) $client->getIdRol());
-    $favoriteVenues = $this->venueRepo->findActiveByIds($favoriteIds);
+    $favoriteVenues = $this->filterBlockedVenues(
+      $this->venueRepo->findActiveByIds($favoriteIds),
+      (int) $client->getIdClient()
+    );
 
     $locationByVenue = [];
     $ratingsByVenue = [];
@@ -177,5 +193,13 @@ class ClientDashboardController
     }
 
     require_once __DIR__ . '/../View/Client/Favorites.php';
+  }
+
+  private function filterBlockedVenues(array $venues, int $clientId): array
+  {
+    return array_values(array_filter(
+      $venues,
+      fn($venue): bool => !$this->blockedClientRepo->isBlocked($venue->getIdOwner(), $clientId)
+    ));
   }
 }

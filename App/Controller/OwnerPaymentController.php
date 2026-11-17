@@ -30,7 +30,7 @@ class OwnerPaymentController
     $owner = $_SESSION['user'];
 
     $ownerPayments = $this->ownerPaymentService->findByOwner($owner->getIdOwner());
-    $paymentMethods = $this->paymentMethodsForOwner();
+    $paymentMethods = $this->paymentMethodRepo->findActive();
 
     require_once __DIR__ . '/../View/Owner/PaymentData.php';
   }
@@ -54,7 +54,7 @@ class OwnerPaymentController
     $holder = trim($_POST['holder'] ?? '');
     $account = trim($_POST['account'] ?? '');
     $instructions = trim($_POST['instructions'] ?? '');
-    $active = isset($_POST['active']);
+    $active = (string) ($_POST['active'] ?? '1') === '1';
 
     try {
       $this->ownerPaymentService->save(
@@ -77,7 +77,7 @@ class OwnerPaymentController
 
       $error = $e->getMessage();
       $ownerPayments = $this->ownerPaymentService->findByOwner($owner->getIdOwner());
-      $paymentMethods = $this->paymentMethodsForOwner();
+      $paymentMethods = $this->paymentMethodRepo->findActive();
       require_once __DIR__ . '/../View/Owner/PaymentData.php';
       return;
     }
@@ -113,23 +113,11 @@ class OwnerPaymentController
 
       $error = $e->getMessage();
       $ownerPayments = $this->ownerPaymentService->findByOwner($owner->getIdOwner());
-      $paymentMethods = $this->paymentMethodsForOwner();
+      $paymentMethods = $this->paymentMethodRepo->findActive();
       require_once __DIR__ . '/../View/Owner/PaymentData.php';
       return;
     }
 
     redirect_to('owner', 'paymentData', ['removed' => 1]);
-  }
-
-  /**
-   * Catálogo para el select del propietario. Si el filtro de activos
-   * no devolviera filas, se muestra el catálogo completo ya sembrado.
-   *
-   * @return list<PaymentMethod>
-   */
-  private function paymentMethodsForOwner(): array
-  {
-    $methods = $this->paymentMethodRepo->findActive();
-    return $methods !== [] ? $methods : $this->paymentMethodRepo->findAll();
   }
 }

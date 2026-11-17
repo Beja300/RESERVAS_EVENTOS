@@ -50,14 +50,6 @@
       return null;
     }
 
-    function accountLabel(name) {
-      var n = String(name || '').toLowerCase();
-      if (n.indexOf('sinpe') !== -1) return 'Teléfono SINPE';
-      if (n.indexOf('efectivo') !== -1) return 'Referencia';
-      if (n.indexOf('transfer') !== -1) return 'IBAN / cuenta bancaria';
-      return 'Cuenta / Teléfono';
-    }
-
     function showInfo(op) {
       if (!op) {
         infoBox.style.display = 'none';
@@ -68,10 +60,25 @@
         return;
       }
       var parts = [];
-      parts.push('<strong>Pagar con ' + App.escape(op.paymentMethod || '') + '</strong>');
+      var methodName = String(op.paymentMethod || '');
+      var normalizedMethod = methodName.toLowerCase();
+      parts.push('<strong>Datos para pagar a ' + App.escape(methodName) + ':</strong>');
       if (op.holder) parts.push('<div>Titular: <strong>' + App.escape(op.holder) + '</strong></div>');
-      if (op.account) parts.push('<div>' + accountLabel(op.paymentMethod) + ': <strong>' + App.escape(op.account) + '</strong></div>');
-      if (op.instructions) parts.push('<div>Instrucciones: ' + App.escape(op.instructions) + '</div>');
+      if (op.account) {
+        var account = String(op.account);
+        var label = 'Cuenta';
+        if (normalizedMethod.indexOf('sinpe') >= 0) {
+          account = account.replace(/\D/g, '');
+          if (account.length === 8) account = '+506 ' + account.slice(0, 4) + '-' + account.slice(4);
+          label = 'SINPE Móvil';
+        } else if (normalizedMethod.indexOf('transfer') >= 0 || normalizedMethod.indexOf('iban') >= 0) {
+          account = account.replace(/\s/g, '').toUpperCase().replace(/(.{4})/g, '$1 ').trim();
+          label = 'IBAN';
+        }
+        parts.push('<div>' + label + ': <strong>' + App.escape(account) + '</strong></div>');
+      }
+      if (!op.account && /efectivo|lugar|local|cash/.test(normalizedMethod)) parts.push('<div>El pago se realiza en el lugar.</div>');
+      if (op.instructions) parts.push('<div>' + App.escape(op.instructions) + '</div>');
       infoBox.innerHTML = parts.join('');
       infoBox.style.display = 'block';
       hidden.value = String(op.idPaymentMethod);
@@ -80,7 +87,31 @@
     }
 
     if (select) {
-      select.addEventListener('change', function () { showInfo(currentPayment()); });
+      select.addEventListener('change', function () {
+        var selectedPayment = currentPayment();
+        if (!selectedPayment) {
+          showInfo(null);
+          return;
+        }
+
+        var requestedValue = select.value;
+        var previousValue = select.getAttribute('data-confirmed-value') || '';
+        select.disabled = true;
+        App.confirmModal(
+          'Al pagar ya no podrá editar su reserva.',
+          'Aviso antes de seleccionar el método de pago'
+        ).then(function (confirmed) {
+          select.disabled = false;
+          if (!confirmed) {
+            select.value = previousValue;
+            showInfo(currentPayment());
+            return;
+          }
+          select.value = requestedValue;
+          select.setAttribute('data-confirmed-value', requestedValue);
+          showInfo(selectedPayment);
+        });
+      });
       showInfo(currentPayment());
     }
 
@@ -110,7 +141,6 @@
         }
 
         var data = new FormData(form);
-
         postJson(form.getAttribute('action') || (window.location.pathname + '?controller=booking&action=uploadTicket'),
           data,
           function (r) {
@@ -132,20 +162,79 @@
   function init() {
     if (!window.App) return;
 
-    // 1) Agregar servicio (AJAX)
-    var addForm = document.querySelector('form[data-add-service]');
-    if (addForm) {
-      addForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        var data = new FormData(addForm);
-        data.set('bookingId', addForm.getAttribute('data-venue-booking'));
-        postJson(getBasePath() + '/index.php?controller=booking&action=addLine',
-          data,
-          function (r) { App.toast(r.message || 'Servicio agregado.', 'success'); setTimeout(function () { window.location.reload(); }, 600); },
-          function (r) { App.toast(r.message || 'No se pudo agregar el servicio.', 'error'); }
-        );
-      });
+// 1) Seleccionar, quitar y cambiar cantidad de servicios.
+var serviceForms = document.querySelectorAll('form[data-service-selection]');
+serviceForms.forEach(function (serviceForm) {
+  var checkbox = serviceForm.querySelector('[data-service-toggle]');
+  var quantityInput = serviceForm.querySelector('[data-service-quantity]');
+  var saveButton = serviceForm.querySelector('[data-save-service-quantity]');
+  var serviceLabel = serviceForm.querySelector('[data-service-label]');
+  var includedPreview = serviceForm.querySelector('[data-included-preview]');
+  if (!checkbox || !quantityInput) return;
+
+  function refreshServiceControls() {
+    quantityInput.disabled = !checkbox.checked;
+    if (saveButton) saveButton.style.display = checkbox.checked ? '' : 'none';
+    if (serviceLabel) serviceLabel.textContent = checkbox.checked ? 'Servicio agregado' : 'Agregar servicio';
+  }
+
+  function refreshIncludedPreview() {
+    if (!includedPreview) return;
+    var included = parseInt(includedPreview.getAttribute('data-included') || '0', 10);
+    var quantity = parseInt(quantityInput.value || '0', 10);
+    includedPreview.textContent = checkbox.checked && quantity > 0
+      ? ' ' + Math.min(included, quantity) + ' de las ' + quantity + ' solicitadas están cubiertas por el precio base.'
+      : '';
+  }
+
+  function saveSelection(selected, previousSelection) {
+    var data = new FormData(serviceForm);
+    data.set('selected', selected ? '1' : '0');
+    data.set('quantity', quantityInput.value || '0');
+    checkbox.disabled = true;
+    quantityInput.disabled = true;
+    if (saveButton) saveButton.disabled = true;
+
+    postJson(
+      serviceForm.getAttribute('action'),
+      data,
+      function (r) {
+        App.toast(r.message || 'Servicio actualizado.', 'success');
+        setTimeout(function () { window.location.reload(); }, 500);
+      },
+      function (r) {
+        checkbox.checked = previousSelection;
+        checkbox.disabled = false;
+        refreshServiceControls();
+        if (saveButton) saveButton.disabled = false;
+        refreshIncludedPreview();
+        App.toast(r.message || 'No se pudo actualizar el servicio.', 'error');
+      }
+    );
+  }
+
+  refreshServiceControls();
+  refreshIncludedPreview();
+
+  checkbox.addEventListener('change', function () {
+    var selected = checkbox.checked;
+    var previousSelection = !selected;
+    refreshServiceControls();
+    if (selected && (!quantityInput.value || parseInt(quantityInput.value, 10) < parseInt(quantityInput.min, 10))) {
+      quantityInput.value = quantityInput.min;
     }
+    refreshIncludedPreview();
+    saveSelection(selected, previousSelection);
+  });
+
+  quantityInput.addEventListener('input', refreshIncludedPreview);
+  serviceForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!checkbox.checked) return;
+    refreshIncludedPreview();
+    saveSelection(true, true);
+  });
+});
 
     // 2 & 3) Flujo de pago
     var flow = document.querySelector('[data-payment-flow]');

@@ -12,6 +12,8 @@ require_once __DIR__ . '/../Repository/ClientRepository.php';
 require_once __DIR__ . '/../Repository/BookingRefundRepository.php';
 require_once __DIR__ . '/../Repository/PaymentMethodRepository.php';
 require_once __DIR__ . '/../Repository/OwnerRepository.php';
+require_once __DIR__ . '/../Repository/ServiceImageRepository.php';
+require_once __DIR__ . '/../Repository/VenueRentalBlockRepository.php';
 
 /**
  * Ensambla el detalle de una reserva (cliente/owner): cabecera, líneas,
@@ -20,6 +22,7 @@ require_once __DIR__ . '/../Repository/OwnerRepository.php';
  */
 class BookingDetailService
 {
+  private ServiceImageRepository $serviceImageRepo;
   private BookingService $bookingService;
   private ServiceService $serviceService;
   private OwnerPaymentService $ownerPaymentService;
@@ -32,9 +35,11 @@ class BookingDetailService
   private BookingRefundRepository $refundRepo;
   private PaymentMethodRepository $paymentMethodRepo;
   private OwnerRepository $ownerRepo;
+  private VenueRentalBlockRepository $rentalBlockRepo;
 
   public function __construct(PDO $connection)
   {
+    $this->serviceImageRepo = new ServiceImageRepository($connection);
     $this->bookingService = new BookingService();
     $this->serviceService = new ServiceService(new ServiceRepository($connection));
     $this->ownerPaymentService = new OwnerPaymentService($connection);
@@ -47,6 +52,7 @@ class BookingDetailService
     $this->refundRepo = new BookingRefundRepository($connection);
     $this->paymentMethodRepo = new PaymentMethodRepository($connection);
     $this->ownerRepo = new OwnerRepository($connection);
+    $this->rentalBlockRepo = new VenueRentalBlockRepository($connection);
   }
 
   /**
@@ -64,6 +70,9 @@ class BookingDetailService
     $details = $this->detailRepo->findByBooking($idBooking);
     $totals = $this->bookingService->calculateTotals($idBooking);
     $venue = $this->venueRepo->findById($booking->getIdLocal());
+    $rentalBlock = $booking->getRentalBlockId() !== null
+      ? $this->rentalBlockRepo->findById($booking->getRentalBlockId())
+      : null;
     $client = $this->clientRepo->findByClientPk($booking->getIdClient());
     $owner = $venue !== null ? $this->ownerRepo->findByOwnerPk($venue->getIdOwner()) : null;
     $ticket = $this->ticketRepo->findByBooking($idBooking);
@@ -118,25 +127,30 @@ class BookingDetailService
       }
     }
 
-    // Servicios disponibles del local, excluyendo los ya agregados.
-    $bookedServiceIds = [];
-    foreach ($details as $d) {
-      if ($d->getIdLocalService() > 0) {
-        $bookedServiceIds[] = $d->getIdLocalService();
-      }
-    }
+    // Servicios disponibles del local. Se permiten líneas adicionales del
+    // mismo servicio hasta alcanzar su cantidad máxima.
+    $availableServices = $this->serviceService->findAvailableByLocal($booking->getIdLocal());
+    $serviceImages = [];
 
-    $availableServices = [];
-    foreach ($this->serviceService->findAvailableByLocal($booking->getIdLocal()) as $s) {
-      if (!in_array($s->getIdService(), $bookedServiceIds, true)) {
-        $availableServices[] = $s;
-      }
+    $servicesWithImages = [];
+    foreach (array_merge($availableServices, array_values($serviceMap)) as $service) {
+      $servicesWithImages[$service->getIdService()] = $service;
+    }
+    foreach ($servicesWithImages as $serviceId => $service) {
+      $serviceImages[$serviceId] = $this->serviceImageRepo->findByService($serviceId);
     }
 
     // El cliente solo puede modificar (agregar servicios / pagar)
     // mientras la reserva esté pendiente y no haya subido comprobante.
     $isPending = $booking->getBookingState() === 'pendiente';
     $isModifiable = $isPending && $ticket === null;
+    $hasDateConflict = $isPending && $this->bookingRepo->hasActiveRangeConflict(
+      $booking->getIdLocal(),
+      $booking->getBookingDate(),
+      $booking->getBookingEndDate() ?? $booking->getBookingDate(),
+      $idBooking,
+      $booking->getRentalBlockId()
+    );
     $isClient = ($_SESSION['type'] ?? null) === 'client';
     $hasTicket = $ticket !== null;
 
@@ -148,6 +162,8 @@ class BookingDetailService
       'totals'               => $totals,
       'total'                => $totals['total'],
       'venue'                => $venue,
+      'rentalBlock'          => $rentalBlock,
+      'hasDateConflict'      => $hasDateConflict,
       'client'               => $client,
       'owner'                => $owner,
       'ticket'               => $ticket,
@@ -156,6 +172,7 @@ class BookingDetailService
       'ownerPaymentMethods'  => $ownerPaymentMethods,
       'ticketPayment'        => $ticketPayment,
       'availableServices'    => $availableServices,
+      'serviceImages' => $serviceImages,
       'isModifiable'         => $isModifiable,
       'isClient'             => $isClient,
       'hasTicket'            => $hasTicket,

@@ -31,7 +31,7 @@ class Role
         $this->name = $name;
         $this->email = $email;
         $this->password = $password;
-        $this->phoneNumber = $phoneNumber;
+        $this->phoneNumber = self::normalizePhoneNumber($phoneNumber);
         $this->isActive = $isActive;
     }
 
@@ -89,7 +89,25 @@ class Role
 
     public function setPhoneNumber(?string $phoneNumber): void
     {
-        $this->phoneNumber = $phoneNumber;
+        $this->phoneNumber = self::normalizePhoneNumber($phoneNumber);
+    }
+
+    private static function normalizePhoneNumber(?string $phoneNumber): ?string
+    {
+        if ($phoneNumber === null || trim($phoneNumber) === '') {
+            return null;
+        }
+
+        $phoneNumber = trim($phoneNumber);
+        if (preg_match('/^\\+?506(?:\\D|$)/', $phoneNumber)) {
+            $phoneNumber = preg_replace('/^\\+?506\\D*/', '', $phoneNumber) ?? $phoneNumber;
+        }
+        $digits = preg_replace('/\\D+/', '', $phoneNumber) ?? '';
+        if (strlen($digits) === 11 && str_starts_with($digits, '506')) {
+            $digits = substr($digits, 3);
+        }
+
+        return $digits !== '' ? $digits : null;
     }
 
     public function setIsActive(bool $isActive): void

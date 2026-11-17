@@ -9,8 +9,8 @@
   <link rel="stylesheet" href="<?= e(css_url('auth/login')) ?>">
   <link rel="stylesheet" href="<?= e(css_url('admin/password-toggle')) ?>">
 </head>
-<body class="auth-page">
-  <div class="auth-card container-narrow">
+<body class="auth-page auth-setup-page">
+  <div class="auth-card auth-card--wide">
     <a class="btn btn-secondary btn-block" href="<?= e(base_url('auth', 'showLogin')) ?>">&larr; Volver al inicio de sesión</a>
     <h1>Crear administrador inicial</h1>
     <p class="subtitle">El sistema no tiene administradores. Crea la primera cuenta para poder gestionar el proyecto.</p>
@@ -21,10 +21,18 @@
 
     <form method="post" action="<?= e(base_url('auth', 'createFirstAdmin')) ?>">
       <?= csrf_field() ?>
-      <div class="form-group">
-        <label for="name">Nombre <span class="required-mark">*</span></label>
-        <input class="form-control" type="text" id="name" name="name" required autofocus>
-        <div class="form-hint">Ej: Laura Fernández</div>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="name">Nombre <span class="required-mark">*</span></label>
+          <input class="form-control" type="text" id="name" name="name" required autofocus>
+          <div class="form-hint">Ej: Laura Fernández</div>
+        </div>
+
+        <div class="form-group">
+          <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
+          <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" required value="<?= e(format_phone_number($_POST['phoneNumber'] ?? '')) ?>" maxlength="15" placeholder="+506 8888-8888">
+          <div class="form-hint">Ej: 8888-7777</div>
+        </div>
       </div>
 
       <div class="form-group">
@@ -33,20 +41,22 @@
         <div class="form-hint">Ej: laura.fdez@correo.com</div>
       </div>
 
-      <div class="form-group">
-        <label for="password">Contraseña <span class="required-mark">*</span></label>
-        <div class="password-wrapper">
-          <input class="form-control" type="password" id="password" name="password"
-                 minlength="8" required>
-          <button class="password-toggle" type="button" id="passwordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label for="password">Contraseña <span class="required-mark">*</span></label>
+          <div class="password-wrapper">
+            <input class="form-control" type="password" id="password" name="password"
+                   minlength="8" required>
+            <button class="password-toggle" type="button" id="passwordToggle" aria-label="Mostrar contraseña">Mostrar</button>
+          </div>
+          <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura1</div>
         </div>
-        <div class="form-hint">Mínimo 8 caracteres y un número. Ej: ClaveSegura1</div>
-      </div>
-
-      <div class="form-group">
-        <label for="phoneNumber">Teléfono <span class="required-mark">*</span></label>
-        <input class="form-control" type="tel" id="phoneNumber" name="phoneNumber" data-mask="phone" data-validate="phone" pattern="[0-9]{4}-?[0-9]{4}" required value="<?= e($_POST['phoneNumber'] ?? '') ?>" maxlength="9" placeholder="8888-8888">
-        <div class="form-hint">Ej: 8888-8888</div>
+        <div class="form-group">
+          <label for="passwordConfirm">Confirmar contraseña <span class="required-mark">*</span></label>
+          <input class="form-control" type="password" id="passwordConfirm"
+                 name="passwordConfirm" minlength="8"
+                 autocomplete="new-password" required>
+        </div>
       </div>
 
       <button class="btn btn-primary btn-block" type="submit">Crear administrador</button>
@@ -57,6 +67,8 @@
     </div>
   </div>
 
+  <script src="<?= e(js_url()) ?>"></script>
   <script src="<?= e(js_url('admin/password-toggle')) ?>"></script>
+  <script>document.addEventListener('DOMContentLoaded', App.init);</script>
 </body>
 </html>

@@ -10,6 +10,8 @@ class Location
     private ?string $descriptionLocation;
     private ?float $latitudeLocation;
     private ?float $longitudeLocation;
+    private string $typeLocation;
+    private ?string $approximateLocation;
 
     public function __construct(
         int $idLocation = 0,
@@ -19,7 +21,9 @@ class Location
         ?string $townLocation = null,
         ?string $descriptionLocation = null,
         ?float $latitudeLocation = null,
-        ?float $longitudeLocation = null
+        ?float $longitudeLocation = null,
+        string $typeLocation = 'exacta',
+        ?string $approximateLocation = null
     ) {
         $this->idLocation = $idLocation;
         $this->provinceLocation = $provinceLocation;
@@ -29,6 +33,8 @@ class Location
         $this->descriptionLocation = $descriptionLocation;
         $this->latitudeLocation = $latitudeLocation;
         $this->longitudeLocation = $longitudeLocation;
+        $this->typeLocation = $typeLocation;
+        $this->approximateLocation = $approximateLocation;
     }
 
     // Getters
@@ -72,6 +78,16 @@ class Location
         return $this->longitudeLocation;
     }
 
+    public function getTypeLocation(): string
+    {
+        return $this->typeLocation;
+    }
+
+    public function getApproximateLocation(): ?string
+    {
+        return $this->approximateLocation;
+    }
+
     // Setters
     public function setIdLocation(int $idLocation): void
     {
@@ -111,5 +127,15 @@ class Location
     public function setLongitudeLocation(?float $longitudeLocation): void
     {
         $this->longitudeLocation = $longitudeLocation;
+    }
+
+    public function setTypeLocation(string $typeLocation): void
+    {
+        $this->typeLocation = $typeLocation;
+    }
+
+    public function setApproximateLocation(?string $approximateLocation): void
+    {
+        $this->approximateLocation = $approximateLocation;
     }
 }

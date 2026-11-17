@@ -10,7 +10,7 @@ $selectedType = $_POST['type'] ?? $paymentMethod->getPaymentMethod();
   </div>
 </div>
 
-<div class="card form-card" style="max-width:520px;">
+<div class="card form-card form-page">
   <?php if (!empty($error)): ?>
     <div class="alert alert-error"><?= e($error) ?></div>
   <?php endif; ?>
@@ -37,7 +37,7 @@ $selectedType = $_POST['type'] ?? $paymentMethod->getPaymentMethod();
       </label>
     </div>
 
-    <div class="form-group" style="display:flex;gap:10px;margin-bottom:0;">
+    <div class="form-actions">
       <a class="btn btn-secondary" href="<?= e(base_url('paymentMethod', 'list')) ?>">Cancelar</a>
       <button class="btn btn-primary" type="submit">Guardar cambios</button>
     </div>

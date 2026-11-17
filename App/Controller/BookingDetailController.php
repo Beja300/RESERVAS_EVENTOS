@@ -8,6 +8,9 @@ require_once __DIR__ . '/../Repository/VenueRepository.php';
 require_once __DIR__ . '/../Repository/BookingTicketRepository.php';
 require_once __DIR__ . '/../Repository/ClientRepository.php';
 require_once __DIR__ . '/../Service/CreditService.php';
+require_once __DIR__ . '/../Repository/CreditInstallmentRepository.php';
+require_once __DIR__ . '/../Repository/BlockedClientRepository.php';
+require_once __DIR__ . '/../Repository/InvoiceRepository.php';
 require_once __DIR__ . '/../../Configuration/DataBase.php';
 require_once __DIR__ . '/../View/_helpers.php';
 
@@ -57,13 +60,24 @@ class BookingDetailController
 
     extract($data, EXTR_SKIP);
 
-    // Estado de crédito (solo relevante para el cliente dueño de la reserva).
+    $clientOverdueCount = 0;
+    $clientIsBlocked = false;
+    if ($type === 'owner') {
+      $clientOverdueCount = (new CreditInstallmentRepository(DataBase::getConnection()))
+        ->overdueCountByClient($booking->getIdClient(), $owner->getIdOwner());
+      $clientIsBlocked = (new BlockedClientRepository(DataBase::getConnection()))
+        ->isBlocked($owner->getIdOwner(), $booking->getIdClient());
+    }
+
+    // Modalidad de pago visible tanto para el cliente como para el propietario.
+    $creditService = new CreditService(DataBase::getConnection());
+    $bookingCredit = $creditService->findByBooking($idBooking);
+    $invoice = (new InvoiceRepository(DataBase::getConnection()))->findByBooking($idBooking);
+
+    // La elegibilidad para solicitar crédito solo aplica al cliente.
     $creditInfo = null;
-    $bookingCredit = null;
     if ($type === 'client') {
-      $creditService = new CreditService(DataBase::getConnection());
       $creditInfo = $creditService->canRequestCredit($idBooking, $client->getIdClient());
-      $bookingCredit = $creditService->findByBooking($idBooking);
     }
 
     require_once __DIR__ . '/../View/Booking/Detail.php';

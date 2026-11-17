@@ -29,25 +29,20 @@
   }
 
   var base = getBasePath();
-  var mapEl = document.getElementById('venue-map');
-  var imagesPath = ((mapEl && mapEl.getAttribute('data-leaflet-images')) || (base + '/vendor/leaflet/images'))
-    .replace(/\/?$/, '/');
 
-  // Leaflet adivina mal la ruta del PIN si el CSS/JS no coinciden con el
-  // front controller. Se fijan las URLs absolutas de los PNG locales.
-  L.Icon.Default.imagePath = imagesPath;
-  delete L.Icon.Default.prototype._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconUrl: imagesPath + 'marker-icon.png',
-    iconRetinaUrl: imagesPath + 'marker-icon-2x.png',
-    shadowUrl: imagesPath + 'marker-shadow.png',
+  var iconBase = base + '/vendor/leaflet/images/';
+
+  var venueIcon = L.icon({
+    iconUrl: iconBase + 'marker-icon.png',
+    iconRetinaUrl: iconBase + 'marker-icon-2x.png',
+    shadowUrl: iconBase + 'marker-shadow.png',
     iconSize: [25, 41],
     iconAnchor: [12, 41],
     popupAnchor: [1, -34],
-    tooltipAnchor: [16, -28],
     shadowSize: [41, 41]
   });
 
+  var mapEl = document.getElementById('venue-map');
   var latInput = document.getElementById('latitude');
   var lngInput = document.getElementById('longitude');
   var displayEl = document.getElementById('geo-display');
@@ -90,7 +85,7 @@
 
   function placeMarker(latLng) {
     if (marker === null) {
-      marker = L.marker([latLng.lat, latLng.lng], { draggable: true }).addTo(map);
+      marker = L.marker([latLng.lat, latLng.lng], { draggable: true, icon: venueIcon }).addTo(map);
       marker.on('dragend', function () {
         setCoords(marker.getLatLng().lat, marker.getLatLng().lng);
       });
@@ -231,17 +226,9 @@
     cantonSel.addEventListener('change', recenterToAddress);
   }
 
-  // =========================================================
-  // Validación cliente: no se guarda sin marcar la ubicación.
-  // Se registra en fase de captura para correr antes que el AJAX de form.js.
-  // =========================================================
-  window.addEventListener('submit', function (e) {
-    if (e.target && e.target.matches && e.target.matches('form[data-ajax-venue-form]')) {
-      if (!latInput.value || !lngInput.value) {
-        e.preventDefault();
-        e.stopPropagation();
-        window.App && App.toast('Marca la ubicación en el mapa antes de guardar.', 'error');
-      }
+  window.VenueLocationMap = {
+    invalidateSize: function () {
+      map.invalidateSize();
     }
-  }, true);
+  };
 })(window, document, window.L);

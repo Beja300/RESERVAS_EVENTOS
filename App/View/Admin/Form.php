@@ -27,10 +27,6 @@
       <h3>Reservas</h3>
       <p class="muted">Revisar y aprobar pagos del mes.</p>
     </a>
-    <a class="card hoverable" href="<?= e(base_url('service', 'pending')) ?>">
-      <h3>Servicios</h3>
-      <p class="muted">Aprobar servicios solicitados por propietarios.</p>
-    </a>
   </div>
 </main>
 <script src="<?= e(js_url()) ?>"></script>
