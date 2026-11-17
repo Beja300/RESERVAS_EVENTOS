@@ -44,14 +44,14 @@
   --warning: #d97706;
   --warning-light: #fef3c7;
 
---neutral-50: #ddead1;
-  --neutral-100: #eef3f1;
-  --neutral-200: #dbe4e0;
-  --neutral-300: #c2d0cb;
-  --neutral-500: #5b6b65;
-  --neutral-700: #33413c;
-  --neutral-800: #1c2723;
-  --neutral-900: #0f1713;
+  --neutral-50: #F6F2EC;
+  --neutral-100: #F0EAE1;
+  --neutral-200: #E6DED3;
+  --neutral-300: #D5C9BB;
+  --neutral-500: #655A53;
+  --neutral-700: #3B302C;
+  --neutral-800: #2B211E;
+  --neutral-900: #241A18;
 
   --radius: 12px;
   --shadow: 0 1px 3px rgba(8, 28, 21, 0.08), 0 4px 12px rgba(8, 28, 21, 0.05);
@@ -263,7 +263,7 @@ a:hover {
 
 /* ============ Tarjetas ============ */
 .card {
-  background: #fff;
+  background: #FFFCF7;
   border: 1px solid var(--neutral-200);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -332,7 +332,7 @@ a:hover {
 
 /* ============ Stats ============ */
 .stat {
-  background: #fff;
+  background: #FFFCF7;
   border: 1px solid var(--neutral-200);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -354,7 +354,7 @@ a:hover {
 
 /* ============ Formularios ============ */
 .form-card {
-  background: #fff;
+  background: #FFFCF7;
   border: 1px solid var(--neutral-200);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -387,7 +387,7 @@ a:hover {
   font-size: 0.95rem;
   font-family: inherit;
   color: var(--neutral-800);
-  background: #fff;
+  background: #FFFCF7;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -538,7 +538,7 @@ textarea.form-control { min-height: 90px; resize: vertical; }
 
 /* ============ Tablas ============ */
 .table-wrap {
-  background: #fff;
+  background: #FFFCF7;
   border: 1px solid var(--neutral-200);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
@@ -920,5 +920,5 @@ table.table {
 
 div.card,
 div.stat {
-  background: #edf3ee;
+  background: #FFFCF7;
 }

@@ -2,7 +2,7 @@
   display: block;
   min-height: 100vh;
   padding: 0;
-  background: #f5f7f5;
+  background: #F6F2EC;
 }
 
 .auth-setup-page {
@@ -47,7 +47,7 @@
   min-height: calc(100vh - 64px);
   padding: 28px 24px 64px;
   background:
-    linear-gradient(90deg, rgba(7, 20, 16, .78), rgba(7, 20, 16, .48)),
+    linear-gradient(90deg, rgba(27, 16, 15, .78), rgba(27, 16, 15, .42)),
     url('../../img/concert.jpg') center 56% / cover no-repeat;
 }
 
@@ -71,7 +71,7 @@
 .hero-eyebrow,
 .path-kicker {
   display: inline-block;
-  color: #f7c96b;
+  color: #F2B84B;
   font-size: .76rem;
   font-weight: 800;
   letter-spacing: .13em;
@@ -108,20 +108,20 @@
   flex-direction: column;
   align-items: flex-start;
   padding: 28px 30px;
-  background: #fff;
-  border: 1px solid #e2e9e4;
+  background: #FFFCF7;
+  border: 1px solid #E6DED3;
   border-radius: 17px;
   box-shadow: 0 14px 35px rgba(8, 28, 21, .12);
 }
 
 .path-card .path-kicker {
-  color: #517466;
+  color: #9A5B1C;
   letter-spacing: .08em;
 }
 
 .path-card h2 {
   margin: 10px 0 8px;
-  color: #172720;
+  color: #241A18;
   font-size: 1.35rem;
   line-height: 1.25;
 }
@@ -129,7 +129,7 @@
 .path-card p {
   flex: 1;
   margin: 0 0 20px;
-  color: #5b6b65;
+  color: #655A53;
   line-height: 1.65;
 }
 
@@ -139,16 +139,16 @@
 }
 
 .path-card-owner {
-  background: #fbfcfa;
+  background: #F8F1E7;
 }
 
 .path-card-owner .btn-outline {
   color: #1b4332;
-  border-color: #b9c9c0;
+  border-color: #D5C9BB;
 }
 
 .path-card-owner .btn-outline:hover {
-  background: #eaf1ed;
+  background: #F0EAE1;
 }
 
 .login-section {
@@ -161,13 +161,13 @@
   max-width: 560px;
   margin: 0 auto;
   padding: 30px 34px;
-  border: 1px solid #e1e8e3;
+  border: 1px solid #E6DED3;
   border-radius: 16px;
   box-shadow: 0 10px 28px rgba(8, 28, 21, .08);
 }
 
 .login-section h2 {
-  color: #172720;
+  color: #241A18;
   font-size: 1.55rem;
   text-align: center;
 }
@@ -315,7 +315,7 @@
 }
 
 .login-prompt a {
-  color: #f7c96b;
+  color: #F2B84B;
   font-weight: 700;
 }
 
